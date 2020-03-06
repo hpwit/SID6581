@@ -28,7 +28,7 @@ sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
 SPI.begin(14,2,15,13); 
 if (!SD.begin(13,SPI,80000000)) {
 Serial.println("initialization failed!");
-return;
+//return;
 }
 
 //if your file is stored in SPIFF
