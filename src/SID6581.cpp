@@ -69,7 +69,8 @@ void SID6581::pausePlay()
             soundOn();
         
             paused=false;
-            xTaskNotifyGive(PausePlayTaskLocker);
+            if(PausePlayTaskLocker!=NULL)
+                xTaskNotifyGive(PausePlayTaskLocker);
         }
     }
 }
@@ -123,7 +124,9 @@ void SID6581::stop()
     if(xPlayerTaskHandle!=NULL)
     {
         //we stop the current song
-        vTaskSuspend( xPlayerTaskHandle );
+        //we unlock the pause locker in case of
+        if(PausePlayTaskLocker!=NULL)
+            xTaskNotifyGive(PausePlayTaskLocker);
         soundOff();
         resetsid();
         free(sidvalues);
@@ -351,6 +354,7 @@ unsigned int SID6581::readFile2(fs::FS &fs, const char * path)
     if(sidvalues==NULL)
     {
         Serial.println("impossible to create memory buffer");
+        return 0;
     }
     else
     {
