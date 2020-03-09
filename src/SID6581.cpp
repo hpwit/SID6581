@@ -10,11 +10,7 @@
 #include "SPI.h"
 #include "Arduino.h"
 
-#define CS 7
-#define WRITE 6
-#define RESET 5
-#define MASK_ADDRESS 31
-#define MASK_CSWRRE 0b11100000
+
 
 SID6581::SID6581(){}
 
@@ -223,7 +219,7 @@ void SID6581::setVoice(uint8_t vo)
     
     Serial.printf("palying:%s\n",p.filename);
     uint8_t *d=sid->sidvalues;
-    sid->sid_spi->beginTransaction(SPISettings(sid->sid_spiClk, MSBFIRST, SPI_MODE0));
+    sid->sid_spi->beginTransaction(SPISettings(sid->sid_spiClk, LSBFIRST, SPI_MODE0));
     for (uint32_t i=0;i<sizet;i++)
     {
        //Serial.printf("%d %d %d\n",*(uint16_t*)(d+2),*(uint8_t*)(d),*(uint8_t*)(d+1));
@@ -393,7 +389,7 @@ void SID6581::push()
 }
 void SID6581::setA(uint8_t val)
 {
-     adcswrre=(val & MASK_ADDRESS) | (adcswrre & MASK_CSWRRE);
+     adcswrre=((val<<3) & MASK_ADDRESS) | (adcswrre & MASK_CSWRRE);
 }
 void SID6581::setcsw()
 {

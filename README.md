@@ -1,6 +1,7 @@
 This library is to control SID 6581 chips from the 1980s era with an Esp32.
-the program allows you to push directly the register to the  SID chip. hence you can program like in the good all times :)
+The program allows you to push directly the register to the  SID chip. hence you can program like in the good all times :)
 it should work with other mcu as it uses SPI but not tested.
+
 NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
 I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
 

@@ -8,11 +8,11 @@
 #ifndef SID6581_h
 #define SID6581_h
 
-#define CS 7
-#define WRITE 6
-#define RESET 5
-#define MASK_ADDRESS 31
-#define MASK_CSWRRE 0b11100000
+#define CS 2
+#define WRITE 1
+#define RESET 0
+#define MASK_ADDRESS 0b11111000
+#define MASK_CSWRRE 0b111
 
 
 #include "SPI.h"
