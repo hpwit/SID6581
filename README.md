@@ -123,19 +123,22 @@ void setup() {
 }
 
 void loop() {
+    sid.setWaveForm(0,SID_WAVEFORM_TRIANGLE);
     for(int i=0;i<255;i++)
     {
         sid.setFrequency(0,i+(255-i)*256);
         delay(10);  
     }
-    sid.setFrequency(0,7382);
+
     sid.setWaveForm(0,SID_WAVEFORM_PULSE);
     for(int i=0;i<5000;i++)
     {
-        float pulse=2047*(cos((i*3.14)/1000)+1);
+        sid.setFrequency(0,i%255+(255-i%255)*256);
+        float pulse=1023*(cos((i*3.14)/1000)+1)+2047;
         sid.setPulse(0,(int)pulse);
         delayMicroseconds(1000);
     }
+
 }
 
 ```
