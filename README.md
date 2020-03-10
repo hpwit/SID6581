@@ -1,14 +1,14 @@
 This library is to control SID 6581 chips from the 1980s era with an Esp32.
 The program allows you to push directly the register to the  SID chip. hence you can program like in the good all times :)
 it should work with other mcu as it uses SPI but not tested.
+
 NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
 I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
 
-look at the schematics for the setup of the shift registers and  MOS 6581
+Please ook at the schematics for the setup of the shift registers and  MOS 6581
 
 
-You have full control of the SID chip
-via the following command
+You have full control of the SID chip via the following commands
 ```
 void sidSetVolume( uint8_t vol);
 
@@ -198,7 +198,7 @@ if(file.isDirectory()){
 }
     file = root.openNextFile();
 }
-sid.sidSetVolume(7); //value between 0 and 15
+sid.sidSetMaxVolume(7); //value between 0 and 15
 
 
 sid.play(); //it will play all songs in loop
@@ -226,7 +226,7 @@ void loop() {
         delay(3000);
 
         delay(3000);
-        Serial.println("nexxt song");
+        Serial.println("next song");
         sid.playNext(); //sid.playPrev(); if you want to go backwards
         delay(10000);
 
