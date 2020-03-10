@@ -95,7 +95,7 @@ possible values:
         SID_CONTROL_REG_2
         SID_ATTACK_DECAY_2
         SID_SUSTAIN_RELEASE_2
-        SID_FC_HO
+        SID_FC_LO
         SID_FC_HI
         SID_RES_FILT
         SID_MOD_VOL

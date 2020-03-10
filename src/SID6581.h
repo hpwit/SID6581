@@ -63,7 +63,7 @@
 
 
 
-#define SID_FC_HO 21
+#define SID_FC_LO 21
 #define SID_FC_HI 22
 #define SID_RES_FILT 23
 #define SID_MOD_VOL 24
