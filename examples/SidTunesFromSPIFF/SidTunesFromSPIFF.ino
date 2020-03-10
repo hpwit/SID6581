@@ -42,7 +42,7 @@ void setup() {
         }
         file = root.openNextFile();
     }
-   sid.sidSetVolume(7); //value between 0 and 15
+   sid.sidSetMaxVolume(7); //value between 0 and 15
 
   
    sid.play(); //it will play all songs in loop
