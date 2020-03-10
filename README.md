@@ -52,7 +52,7 @@ For advance control:
 
 void pushToVoice(int voice,uint8_t address,uint8_t data);
 
-This function will allow you to push a data to a specific register off a specific voice
+This function will allow you to push a data to a specific register of a specific voice
 
 example:
 pushToVoice(0,SID_FREG_HI,255) //to push 255 on the register FREQ_HI of voice 0
