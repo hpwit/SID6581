@@ -2,6 +2,146 @@ This library is to control SID 6581 chips from the 1980s era with an Esp32.
 The program allows you to push directly the register to the  SID chip. hence you can program like in the good all times :)
 it should work with other mcu as it uses SPI but not tested.
 
+You have full control of the SID chip
+via the following command
+```
+void sidSetVolume( uint8_t vol);
+
+void setFrequency(int voice, uint16_t frequency);
+void setPulse(int voice, uint16_t pulse);
+void setEnv(int voice, uint8_t att,uint8_t decay,uint8_t sutain, uint8_t release);
+void setAttack(int voice, uint8_t att);
+void setDecay(int voice, uint8_t decay);
+void setSustain(int voice,uint8_t sutain);
+void setRelease(int voice,uint8_t release);
+void setGate(int voice, int gate);
+void setWaveForm(int voice,int waveform);
+        Waveforms available:
+                SID_WAVEFORM_TRIANGLE 
+                SID_WAVEFORM_SAWTOOTH 
+                SID_WAVEFORM_PULSE 
+                SID_WAVEFORM_NOISE 
+void setTest(int voice,int test);
+void setSync(int voice,int sync);
+void setRingMode(int voice, int ringmode);
+
+
+void setFilterFrequency(int filterfrequency);
+void setResonance(int resonance);
+void setFilter1(int filt1);
+void setFilter2(int filt2);
+void setFilter3(int filt3);
+void setFilterEX(int filtex);
+void set3OFF(int _3off);
+void setHP(int hp);
+void setBP(int bp);
+void setLP(int lp);
+
+
+For advance control:
+
+void pushToVoice(int voice,uint8_t address,uint8_t data);
+
+This function will allow you to push a data to a specific register off a specific voice
+
+example:
+pushToVoice(0,SID_FREG_HI,255) //to push 255 on the register FREQ_HI of voice 0
+possible values:
+        SID_FREQ_LO
+        SID_FREQ_HI
+        SID_PW_LO
+        SID_PW_HI
+        SID_CONTROL_REG
+        SID_ATTACK_DECAY
+        SID_SUSTAIN_RELEASE
+
+
+
+void pushRegister(int address,int data);
+
+This function will allow you to push directly a value to a register
+example:
+
+pushRegister(SID_MOD_VOL,15) //will put the sound at maximum
+possible values:
+        SID_FREQ_LO_0
+        SID_FREQ_HI_0
+        SID_PW_LO_0
+        SID_PW_HI_0
+        SID_CONTROL_REG_0
+        SID_ATTACK_DECAY_0
+        SID_SUSTAIN_RELEASE_0
+        SID_FREQ_LO_1
+        SID_FREQ_HI_1
+        SID_PW_LO_1
+        SID_PW_HI_1
+        SID_CONTROL_REG_1
+        SID_ATTACK_DECAY_1
+        SID_SUSTAIN_RELEASE_1
+        SID_FREQ_LO_2
+        SID_FREQ_HI_2
+        SID_PW_LO_2
+        SID_PW_HI_2
+        SID_CONTROL_REG_2
+        SID_ATTACK_DECAY_2
+        SID_SUSTAIN_RELEASE_2
+        SID_FC_HO
+        SID_FC_HI
+        SID_RES_FILT
+        SID_MOD_VOL
+NB:
+    pushToVoice(0,SID_FREG_HI,255) == pushRegister(SID_FREQ_HI_0,255)
+
+
+
+void resetsid();
+this function will reset the SID chip
+
+```
+Below a code example
+
+```
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+SID6581 sid;
+
+void setup() {
+    Serial.begin(115200);
+    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+
+    sid.sidSetVolume(15); 
+    sid.setGate(0,1);//if not set you will not hear anything
+    sid.setAttack(0,1);
+    sid.setSustain(0,15);
+    sid.setDecay(0,1);
+    sid.setRelease(0,1);
+    sid.setPulse(0,512);
+    sid.setWaveForm(0,SID_WAVEFORM_TRIANGLE);
+
+}
+
+void loop() {
+    for(int i=0;i<255;i++)
+    {
+        sid.setFrequency(0,i+(255-i)*256);
+        delay(10);  
+    }
+    sid.setFrequency(0,7382);
+    sid.setWaveForm(0,SID_WAVEFORM_PULSE);
+    for(int i=0;i<5000;i++)
+    {
+        float pulse=2047*(cos((i*3.14)/1000)+1);
+        sid.setPulse(0,(int)pulse);
+        delayMicroseconds(1000);
+    }
+}
+
+```
+
+
+
 NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
 I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
 
