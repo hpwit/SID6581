@@ -337,6 +337,17 @@ void SID6581::soundOff()
  uint8_t release;
  
  };*/
+
+
+void SID6581::setFrequencyHz(int voice,double frequencyHz)
+{
+    //we do calculate the fréquency used by the 6581
+    //Fout = (Fn * Fclk/16777216) Hz
+    //Fn=Fout*16777216/Fclk here Fclk is the speed of you clock 1Mhz
+    double fout=frequencyHz*16.777216;
+    setFrequency(voice,round(fout));
+}
+
 void SID6581::setFrequency(int voice, uint16_t frequency)
 {
     if(voice <0 or voice >2)
@@ -492,6 +503,8 @@ void SID6581::sidSetVolume( uint8_t vol)
     sid_control.mode_vol=(sid_control.mode_vol & 0xf0 )+( vol & 0x0F);
     pushRegister(0x18,sid_control.mode_vol);
 }
+
+
 
 void  SID6581::setFilterFrequency(int filterfrequency)
 {

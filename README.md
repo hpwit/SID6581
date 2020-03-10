@@ -12,7 +12,12 @@ You have full control of the SID chip via the following commands
 ```
 void sidSetVolume( uint8_t vol);
 
-void setFrequency(int voice, uint16_t frequency);
+void setFrequency(int voice, uint16_t frequency); //this function set the 16 bit frequency is is not the frequency in Hertz
+                The frequency is determined by the following equation:
+                Fout = (Fn * Fclk/16777216) Hz
+                Where Fn is the 16-bit number in the Frequency registers and Fclk is the system clock applied to the 02 input (pin 6). For a standard 1.0 Mhz clock, the frequency is given by:
+                Fout = (Fn * 0.0596) Hz
+void setFrequencyHz(int voice,double frequencyHz); //Use this function to set up the frequency in Hertz ex:setFrquencyHz(0,554.37) == setFrequency(0,9301) 
 void setPulse(int voice, uint16_t pulse);
 void setEnv(int voice, uint8_t att,uint8_t decay,uint8_t sutain, uint8_t release);
 void setAttack(int voice, uint8_t att);

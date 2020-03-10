@@ -130,6 +130,7 @@ public:
     
     void sidSetVolume( uint8_t vol);
     void setFrequency(int voice, uint16_t frequency);
+    void setFrequencyHz(int voice,double frequencyHz);
     void setPulse(int voice, uint16_t pulse);
     void setEnv(int voice, uint8_t att,uint8_t decay,uint8_t sutain, uint8_t release);
     void setAttack(int voice, uint8_t att);
