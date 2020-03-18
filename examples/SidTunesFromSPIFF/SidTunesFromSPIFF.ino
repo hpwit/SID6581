@@ -3,7 +3,7 @@
 #define SID_DATA 33
 #define SID_LATCH 27
 #include "SPIFFS.h"
-SID6581 sid;
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -60,13 +60,13 @@ void loop() {
   sid.pausePlay();
   delay(3000);
   Serial.println("hi volume");
-  sid.sidSetVolume(15);
+  sid.sidSetVolume(0,15);
   delay(3000);
   Serial.println("low volume ");
-  sid.sidSetVolume(3);
+  sid.sidSetVolume(0,3);
   delay(3000);
   Serial.println("medium");
-  sid.sidSetVolume(7);
+  sid.sidSetVolume(0,7);
   delay(3000);
   
   delay(3000);
