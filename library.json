@@ -1,13 +1,13 @@
 {
   "name": "SID6581",
   "keywords": "SID CHIP, 6581",
-  "description": "Control old 6581 CHIPS with esp32",
+  "description": "ID Player for esp32. Play SID tunes, create instruments play keyboard. control up to 5 SID Chips",
   "repository":
   {
     "type": "git",
     "url": "https://github.com/hpwit/SID6581"
   },
-  "version": "0.0.1",
+  "version": "1.0.1",
   "frameworks": "arduino",
   "platforms": "atmelavr, atmelsam, freescalekinetis, nordicnrf51, nxplpc, ststm32, teensy, espressif8266, espressif32, nordicnrf52",
   "authors" :
