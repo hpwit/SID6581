@@ -36,8 +36,11 @@ here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the
 You can play SIDTunes stored on the SPIFF or the SD card this will play on chip 0
 
 
-NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
+NB 1: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
 
+NB2: the player si for the moment outputing only on the first chip. if you have stereo sid example I will be more than happy to implement that too
+
+Below the list of command to control the player
 
 ```
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
