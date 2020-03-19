@@ -27,7 +27,7 @@ sid.begin(int clock_pin,int data_pin, int latch);
 //if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 
-here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 NB: thi spin number has to be >=16
+here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 NB: this pin number has to be >=16
 
 ```
 
