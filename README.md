@@ -322,7 +322,7 @@ void loop() {
 
 ## Keyboard Player
 
-You can turn the SID Chip into a synthetizer with up to 15 voices.
+You can turn the SID Chip into a synthetizer with up to 15 voices depending on the number of sid chips you have.
 The following commands will allow you to create instruments and simplify the creation of music. It can also be used for MIDI see example.
 
 ### to start the keyboard
@@ -340,7 +340,7 @@ SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)
 or
 SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)
 or
-SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses this value
+SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses the velocity
 
 NB: the duration is in milliseconds
 
@@ -393,7 +393,7 @@ void setup() {
 
 void loop()
 {
-    SIDKeyBoardPlayer::playNoteHz(2,440,6000); //will play a A4 for 2 seconds
+    SIDKeyBoardPlayer::playNoteHz(2,440,6000); 
     delay(1000); 
     SIDKeyBoardPlayer::playNoteHz(0,880,2000);
     delay(500); 
@@ -427,7 +427,7 @@ void setup() {
 
 void loop()
 {
-        SIDKeyBoardPlayer::playNoteHz(2,440,0); //will play a A4 for 2 seconds
+        SIDKeyBoardPlayer::playNoteHz(2,440,0); 
         delay(1000); 
         SIDKeyBoardPlayer::stopNote(2);
         delay(500);
@@ -441,7 +441,7 @@ The library give you the possibility to change instruments there are 5 in 'store
 1) Change instrument for all voices
 
 ```
-to change the instruments for all voices
+To change the instruments for all voices
 changeAllInstruments<instrument>();
 possible values:
             sid_piano
@@ -541,7 +541,7 @@ void loop()
         SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>();
         playtunes(); //all the voices will play the same instrument
         SIDKeyBoardPlayer::changeInstrumentOnVoice<sid_piano>(1);
-        playtunes(); //ther second voice will be palyed with a different instrument
+        playtunes(); //ther second voice will be played with a different instrument
         delay(1000);
 }
 
@@ -571,13 +571,15 @@ the library allows to create your own instruments.
         }
 
          virtual void after_off(int voice,int note){
-         //here goes the code when the note ends (here to play release for instance
+         //here goes the code when the note ends (here to play release for instance)
          }
  };
  
- to activate the intrument
+ to use the intrument
  
  SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
+ or
+ SIDKeyBoardPlayer::changeInstrumentOnVoice<new_instrument>(int voice);
  
  ```
 
@@ -803,9 +805,11 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
 
-Do not hesitate if you have questions
+# Conclusions
+
+1) Let me know if you're using the library
+2) Do not hesitate if you have questions
 
 
-here it goes
 
 Updated 18 March 2020
