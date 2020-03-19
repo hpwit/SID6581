@@ -63,78 +63,78 @@ void stopPlayer(); //stop the player to restart use play()
 #include "SPIFFS.h"
 
 void setup() {
-// put your setup code here, to run once:
-Serial.begin(115200);
+    // put your setup code here, to run once:
+    Serial.begin(115200);
 
-sid.begin(SID_CLOCK,SID_DATA,SID_LATCH); //if you have an external clock circuit
-//or sid.begin(SID_CLOCK,SID_DATA,SID_LATCH,SID_CLOCK_PIN); //(if you do not have a external clock cicuit)
+    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH); //if you have an external clock circuit
+    //or sid.begin(SID_CLOCK,SID_DATA,SID_LATCH,SID_CLOCK_PIN); //(if you do not have a external clock cicuit)
 
-if(!SPIFFS.begin(true)){
-Serial.println("SPIFFS Mount Failed");
-return;
-}
-
-
-//the following line will go through all the files in the SPIFFS
-//Do not forget to do "Tools-> ESP32 Scketch data upload"
-File root = SPIFFS.open("/");
-if(!root){
-Serial.println("- failed to open directory");
-return;
-}
-if(!root.isDirectory()){
-Serial.println(" - not a directory");
-return;
-}
-
-File file = root.openNextFile();
-while(file){
-if(file.isDirectory()){
-
-} else {
-Serial.print(" add file  FILE: ");
-Serial.print(file.name());
-Serial.print("\tSIZE: ");
-Serial.println(file.size());
-sid.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-}
-file = root.openNextFile();
-}
-sid.sidSetMaxVolume(7); //value between 0 and 15
+    if(!SPIFFS.begin(true)){
+    Serial.println("SPIFFS Mount Failed");
+    return;
+    }
 
 
-sid.play(); //it will play all songs in loop
+    //the following line will go through all the files in the SPIFFS
+    //Do not forget to do "Tools-> ESP32 Scketch data upload"
+    File root = SPIFFS.open("/");
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+
+        } else {
+        Serial.print(" add file  FILE: ");
+        Serial.print(file.name());
+        Serial.print("\tSIZE: ");
+        Serial.println(file.size());
+        sid.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+    }
+        file = root.openNextFile();
+    }
+    sid.sidSetMaxVolume(7); //value between 0 and 15
+
+
+    sid.play(); //it will play all songs in loop
 }
 
 void loop() {
 //if you jsut want to hear the songs just comment the lines below
 
 
-delay(5000);
-Serial.println("Pause the song");
-sid.pausePlay();
-delay(4000);
-Serial.println("restart the song");
-sid.pausePlay();
-delay(3000);
-Serial.println("hi volume");
-sid.sidSetVolume(0,15);
-delay(3000);
-Serial.println("low volume ");
-sid.sidSetVolume(0,3);
-delay(3000);
-Serial.println("medium");
-sid.sidSetVolume(0,7);
-delay(3000);
+    delay(5000);
+    Serial.println("Pause the song");
+    sid.pausePlay();
+    delay(4000);
+    Serial.println("restart the song");
+    sid.pausePlay();
+    delay(3000);
+    Serial.println("hi volume");
+    sid.sidSetMaxVolume(15);
+    delay(3000);
+    Serial.println("low volume ");
+    sid.sidSetMaxVolume(3);
+    delay(3000);
+    Serial.println("medium");
+    sid.sidSetMaxVolume(7);
+    delay(3000);
 
-delay(3000);
-Serial.println("next song");
-sid.playNext(); //sid.playPrev(); if you want to go backwards
-delay(10000);
+    delay(3000);
+    Serial.println("next song");
+    sid.playNext(); //sid.playPrev(); if you want to go backwards 
+    delay(10000);
 
-//sid.stopPlayer(); //to stop the plater completly
-//delay(10000);
-//sid.play(); //to restart it
+    //sid.stopPlayer(); //to stop the plater completly
+    //delay(10000);
+    //sid.play(); //to restart it
 
 }
 ```
@@ -730,6 +730,77 @@ void loop()
 }
 ```
  
+ 3) to go further
+ if you have sample from a sid as a set of register calls you can do this
+ ```
+ class sid_piano:public sid_instrument{
+     public:
+         int i;
+         int flo,fhi,plo,phi;
+         sid_piano()
+         {
+         
+            df2=sample1;
+         }
+         virtual void start_sample(int voice,int note)
+         {
+            i=0;
+         }
+         uint16_t *df2;
+         virtual void next_instruction(int voice,int note)
+         {
+         
+             i=(i+1)%1918;
+             
+             if(i==0)
+             i=1651;
+             
+             
+             switch(df2[i*3])
+             {
+                 case 0:
+                    flo=df2[i*3+1];
+                 break;
+                 
+                 
+                 case 1:
+                    fhi=df2[i*3+1];
+                 sid.setFrequency(voice,((fhi*256+flo)*note/7977)); //i am modifyinhg the final note with rule if you do not modify this it will be always the same sound
+                 
+                 break;
+                 
+                 default:
+                     if(df2[i*3]<7)
+                     sid.pushRegister(voice/3,df2[i*3]+(voice%3)*7,df2[i*3+1]);
+                 
+                 break;
+             }
+             
+             vTaskDelay(df2[i*3+2]/1000);
+         
+         }
+         
+         virtual void after_off(int voice,int note){
+             
+             sid.setFrequency(voice,0);
+             sid.setGate(voice,0);
+             i=0;
+         }
+ 
+ 
+ };
+ ```
+
+
+## MIDI
+
+There is an example of a simple midi implementation. 
+
+To plug the Midi to the esp32 please look around internet it will depend on what is available around you I use a 4N25 optocoupleur but you could find a lot of different implementations.
+
+NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
+
+Do not hesitate if you have questions
 
 
 here it goes

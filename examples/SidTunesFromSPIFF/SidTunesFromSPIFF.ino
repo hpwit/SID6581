@@ -60,13 +60,13 @@ void loop() {
   sid.pausePlay();
   delay(3000);
   Serial.println("hi volume");
-  sid.sidSetVolume(0,15);
+  sid.sidSetMaxVolume(15);
   delay(3000);
   Serial.println("low volume ");
-  sid.sidSetVolume(0,3);
+   sid.sidSetMaxVolume(3);
   delay(3000);
   Serial.println("medium");
-  sid.sidSetVolume(0,7);
+   sid.sidSetMaxVolume(7);
   delay(3000);
   
   delay(3000);
