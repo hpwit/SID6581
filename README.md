@@ -37,7 +37,7 @@ You can play SIDTunes stored on the SPIFF or the SD card this will play on chip 
 
 
 NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
-I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
+
 
 ```
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
