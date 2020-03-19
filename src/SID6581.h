@@ -88,18 +88,21 @@
 #include "FS.h"
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-
+#include "driver/i2s.h"
+#include "freertos/queue.h"
 
 static TaskHandle_t xPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerLoopTaskHandle = NULL;
 static TaskHandle_t PausePlayTaskLocker = NULL;
 static TaskHandle_t xPushToRegisterHandle = NULL;
-static QueueHandle_t _sid_queue;
-static QueueHandle_t _sid_voicesQueues[9];
-static uint16_t _sid_play_notes[96];
-static TaskHandle_t _sid_xHandletab[9];
-static uint8_t keyboardnbofvoices;
+ static QueueHandle_t _sid_queue;
+ static QueueHandle_t _sid_voicesQueues[15];
+ static uint16_t _sid_play_notes[96];
+static TaskHandle_t _sid_xHandletab[15];
+ static uint8_t keyboardnbofvoices;
+volatile static bool _sid_voices_busy[15];
+volatile static bool _sid_taskready_busy[15];
 //to save the
 
 struct _sid_register_to_send{
@@ -183,6 +186,7 @@ class SID6581 {
 public:
     SID6581();
     bool begin(int clock_pin,int data_pin, int latch );
+    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
     
     void play();
     void playNext();
@@ -270,20 +274,23 @@ static   SID6581 sid;
 template<int voice>
 class VoiceTask{
 public:
+    
     static void  vTaskCode( void * pvParameters )
     {
-        
-        
+        _sid_taskready_busy[voice]=true;
+         uint32_t start_time;
         _sid_command element;
         for( ;; )
         {
             /* Task code goes here. */
-            // Serial.println("té");
+            //Serial.printf("wait voice:%d\n",voice);
             xQueueReceive(_sid_voicesQueues[voice], &element, portMAX_DELAY);
+            //Serial.println("té");
             //   Serial.println("tép  s");
             int i=0;
+            
             current_instruments[voice]->start_sample(voice,element.note);
-            uint16_t start_time=millis();
+            start_time=millis();
             while(uxQueueMessagesWaiting( _sid_voicesQueues[voice] )==0)
             {
                 if(element.duration>0)
@@ -291,7 +298,10 @@ public:
                     if(millis()-start_time>=element.duration)
                     {
                         Serial.println("stop from duration");
+                         _sid_voices_busy[voice]=false;
+                        //Serial.printf("d %d\n",_sid_voices_busy[voice]);
                         current_instruments[voice]->after_off(voice,element.note);
+                       
                         sid.setGate(voice,0);
                         break;
                     }
@@ -307,9 +317,10 @@ public:
                 
                 else
                 {
-                    Serial.println("onstop");
+                    //Serial.println("onstop");
+                    _sid_voices_busy[voice]=false;
                     current_instruments[voice]->after_off(voice,element.note);
-                    //sid.setFrequency(voice,0);
+                    
                     sid.setGate(voice,0);
                     break;
                 }
@@ -319,6 +330,7 @@ public:
             
         }
     }
+    
 };
 
 
@@ -327,11 +339,11 @@ static uint16_t sample1[]={24, 0,0,22, 0,0,21, 0,4512,6, 0,193,5, 0,10,4, 0,10,3
 static uint16_t sample2[]={24,0,0, 0,0,0, 1,0,0, 2,0,0, 3,0,0, 4,0,0, 5,0,0, 6,0,0, 21,0,0, 22,0,0, 23,0,0, 24,0,0, 25,0,0, 26,0,0, 24,15,0, 22,32,0, 22,32,0, 2,192,0, 3,7,0, 22,30,0, 0,117,0, 1,6,0, 4,65,0, 22,30,0, 22,30,0, 2,240,0, 3,7,0, 22,32,0, 0,85,0, 1,6,0, 4,65,0, 23,241,0, 23,241,0, 5,0,0, 6,164,0, 4,64,0, 24,31,0, 23,241,0, 4,9,0, 22,32,0, 22,32,0, 2,32,0, 3,2,0, 22,65,0, 0,163,0, 1,14,0, 4,65,0, 22,65,0, 22,65,0, 2,80,0, 3,2,0, 22,66,0, 0,163,0, 1,14,0, 4,65,0, 22,66,0, 22,66,0, 2,128,0, 3,2,0, 22,67,0, 0,163,0, 1,14,0, 4,65,0, 23,241,0, 22,67,0, 2,176,0, 3,2,0, 22,68,0, 0,163,0, 1,14,0, 4,65,0, 22,68,0, 22,68,0, 2,224,0, 3,2,0, 22,69,0, 0,163,0, 1,14,0, 4,65,0, 22,69,0, 22,69,0, 2,16,0, 3,3,0, 22,70,0, 0,163,0, 1,14,0, 4,65,0, 22,70,0, 22,70,0, 2,64,0, 3,3,0, 22,71,0, 0,163,0, 1,14,0, 4,65,0, 23,241,0, 22,71,0, 2,112,0, 3,3,0, 22,72,0, 0,81,0, 1,7,0, 4,65,0, 22,72,0, 22,72,0, 2,160,0, 3,3,0, 22,73,0, 0,81,0, 1,7,0, 4,65,0, 22,73,0, 22,73,0, 2,208,0, 3,3,0, 22,74,0, 0,81,0, 1,7,0, 4,65,0, 22,74,0, 22,74,0, 2,0,0, 3,4,0, 22,75,0, 0,81,0, 1,7,0, 4,65,0, 23,241,0, 22,75,0, 2,48,0, 3,4,0, 22,76,0, 0,163,0, 1,14,0, 4,65,0, 22,76,0, 22,76,0, 2,96,0, 3,4,0, 22,77,0, 0,163,0, 1,14,0, 4,65,0, 22,77,0, 22,77,0, 2,144,0, 3,4,0, 22,78,0, 0,163,0, 1,14,0, 4,65,0, 22,78,0, 22,78,0, 2,192,0, 3,4,0, 22,79,0, 0,163,0, 1,14,0, 4,65,0, 23,241,0, 22,79,0, 2,240,0, 3,4,0, 22,80,0, 0,163,0, 1,14,0, 4,65,0, 22,80,0, 22,80,0, 2,32,0, 3,5,0, 22,81,0, 0,163,0, 1,14,0, 4,65,0, 22,81,0, 22,81,0, 2,80,0, 3,5,0, 22,82,0, 0,163,0, 1,14,0, 4,65,0, 22,82,0, 22,82,0, 2,128,0, 3,5,0, 22,81,0, 0,81,0, 1,7,0, 4,65,0, 23,241,0, 22,81,0, 2,176,0, 3,5,0, 22,80,0, 0,81,0, 1,7,0, 4,65,0, 22,80,0, 22,80,0, 2,224,0, 3,5,0, 22,79,0, 0,81,0, 1,7,0, 4,65,0, 22,79,0, 22,79,0, 2,16,0, 3,6,0, 22,78,0, 0,81,0, 1,7,0, 4,65,0};
 
 
-class piano5:public sid_instrument{
+class sid_piano5:public sid_instrument{
 public:
     int i;
     int flo,fhi,plo,phi;
-    piano5()
+    sid_piano5()
     {
 
         df2=sample2;
@@ -383,11 +395,11 @@ public:
     
 };
 
-class piano:public sid_instrument{
+class sid_piano:public sid_instrument{
 public:
     int i;
     int flo,fhi,plo,phi;
-    piano()
+    sid_piano()
     {
 
         df2=sample1;
@@ -524,11 +536,11 @@ public:
 };
 
 
-class piano2:public sid_instrument{
+class sid_piano2:public sid_instrument{
 public:
     int i;
     
-    piano2()
+    sid_piano2()
     {
 
     }
@@ -557,7 +569,7 @@ public:
     }
     
     virtual void after_off(int voice,int note){
-        Serial.printf("on eta int %d\n",voice);
+        //Serial.printf("on eta int %d\n",voice);
         //sid.setFrequency(voice,0);
         sid.setGate(voice,0);
         i=0;
@@ -573,11 +585,16 @@ public:
     {
         sid.resetsid();
         createnot();
-        keyboardnbofvoices=(nbofvoices%9)+1;
+        keyboardnbofvoices=(nbofvoices%15)+1;
+        for(int i=0;i<nbofvoices;i++)
+        {
+            _sid_taskready_busy[i]=false;
+        }
         for(int i=0;i<nbofvoices;i++)
         {
             
-            _sid_voicesQueues[i]= xQueueCreate( 80, sizeof( _sid_command ) );
+            _sid_voicesQueues[i]= xQueueCreate( 100, sizeof( _sid_command ) );
+            _sid_voices_busy[i]=false;
         }
         if(nbofvoices>=1)
         {
@@ -671,6 +688,8 @@ public:
         }
         
         changeAllInstruments<sid_piano4>();
+        while(allTaskReady());
+        
         Serial.println("keyboard intiated");
         
     }
@@ -701,21 +720,23 @@ public:
         }
     }
     
-    static void playNoteVelocity(int voice,uint16_t note,int velocity,int duration)
+    static void playNoteVelocity(int voice,uint16_t note,int velocity,uint32_t duration)
     {
         _sid_command c;
         c.note=note;
         c.duration=duration;
         c.velocity=velocity;
+        _sid_voices_busy[voice]=true;
         xQueueSend(_sid_voicesQueues[voice], &c, portMAX_DELAY);
     }
     
-    static void playNote(int voice,uint16_t note,int duration)
+    static void playNote(int voice,uint16_t note,uint32_t duration)
     {
         _sid_command c;
         c.note=note;
         c.duration=duration;
         c.velocity=120;
+        _sid_voices_busy[voice]=true;
         xQueueSend(_sid_voicesQueues[voice], &c, portMAX_DELAY);
     }
     static void stopNote(int voice)
@@ -724,12 +745,43 @@ public:
         c.note=0;
         c.duration=0;
         c.velocity=0;
+        _sid_voices_busy[voice]=true;
         xQueueSend(_sid_voicesQueues[voice], &c, portMAX_DELAY);
     }
-    static void playNoteHz(int voice,int frequencyHz,int duration)
+    static void playNoteHz(int voice,int frequencyHz,uint32_t duration)
     {
         double fout=frequencyHz*16.777216;
         playNote(voice,(uint16_t)fout,duration);
+    }
+    static bool isVoiceBusy(int voice)
+    {
+        vTaskDelay(1);
+       // Serial.printf("inf %d\n",_sid_voices_busy[voice]);
+        return _sid_voices_busy[voice];
+    }
+    static bool areAllVoiceBusy()
+    {
+        bool res=false;
+         vTaskDelay(1);
+        for(int i=0;i<keyboardnbofvoices;i++)
+        {
+            if( _sid_voices_busy[i])
+            {
+                res=true;
+                break;
+            }
+        }
+        return res;
+    }
+    static bool allTaskReady(){
+       
+        vTaskDelay(1);
+        for(int i=0;i<keyboardnbofvoices;i++)
+        {
+            if( _sid_taskready_busy[i]=false)
+                return true;
+        }
+        return false;
     }
 };
 

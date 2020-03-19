@@ -9,11 +9,39 @@
 #include "FS.h"
 #include "SPI.h"
 #include "Arduino.h"
+#include "driver/i2s.h"
+#include "freertos/queue.h"
 
 
 
 SID6581::SID6581(){}
 
+ bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin)
+{
+    const i2s_port_t i2s_num = ( i2s_port_t)0;
+    const i2s_config_t i2s_config = {
+        .mode =(i2s_mode_t) (I2S_MODE_MASTER | I2S_MODE_TX),
+        .sample_rate = 31250,
+        .bits_per_sample = (i2s_bits_per_sample_t)16,
+        .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+        .communication_format = (i2s_comm_format_t) (I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+        .intr_alloc_flags = 0, // default interrupt priority
+        .dma_buf_count = 8,
+        .dma_buf_len = 64,
+        .use_apll = false
+    };
+    const i2s_pin_config_t pin_config = {
+        .bck_io_num = 26,
+        .ws_io_num = NULL,
+        .data_out_num = NULL,
+        .data_in_num = I2S_PIN_NO_CHANGE
+    };
+    
+    i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
+    
+    i2s_set_pin(i2s_num, &pin_config);
+    begin(clock_pin,data_pin,latch );
+}
 bool SID6581::begin(int clock_pin,int data_pin, int latch )
 {
     /*

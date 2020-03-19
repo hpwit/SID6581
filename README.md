@@ -10,25 +10,34 @@ The program allows you to :
 * Assign up to one instrument per voice
 The sound is played is the background so your mcu can do something else at the same time
 
-
+NB: the SID chip requires a 1Mhz clock signal to work ** you can either provide it with an external clock circuit or use a pin of the esp32 to do it ** (clock generated thanks to I2s).
 
 it should work with other mcu as it uses SPI but not tested.
 
-NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
-I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
 
 Please look at the schematics for the setup of the shift registers and  MOS 6581
 
 ## To start
 ```
-The object sid is automatically created hence to start the sid controller
-sid.begin(int clock_pin,int data_pin, int latch );
+The object sid is automatically created.
+//if you have a external circuit that gives you the 1Mhz clock you can use:
+sid.begin(int clock_pin,int data_pin, int latch);
+
+
+//if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
+begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+
+here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 NB: thi spin number has to be >=16
 
 ```
 
 
 ## To play a SIDtunes
 You can play SIDTunes stored on the SPIFF or the SD card this will play on chip 0
+
+
+NB: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
+I intend on writing a MIDI translation to SID chip. Hence a Play midi will be availble soon.
 
 ```
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
@@ -50,13 +59,15 @@ void stopPlayer(); //stop the player to restart use play()
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_CLOCK_PIN 26
 #include "SPIFFS.h"
 
 void setup() {
 // put your setup code here, to run once:
 Serial.begin(115200);
 
-sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+sid.begin(SID_CLOCK,SID_DATA,SID_LATCH); //if you have an external clock circuit
+//or sid.begin(SID_CLOCK,SID_DATA,SID_LATCH,SID_CLOCK_PIN); //(if you do not have a external clock cicuit)
 
 if(!SPIFFS.begin(true)){
 Serial.println("SPIFFS Mount Failed");
@@ -308,9 +319,417 @@ void loop() {
 
 ## Keyboard Player
 
+You can turn the SID Chip into a synthetizer with up to 15 voices.
+The following commands will allow you to create instruments and simplify the creation of music. It can also be used for MIDI see example.
+
+### to start the keyboard
+```
+all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
+
+SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); //prepares everything for 6 simultaneous voices
+
+```
+### play a note
+```
+All this commands will play a note on a specific voice for a certain duration
+
+SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)
+or
+SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)
+or
+SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses this value
+
+NB: the duration is in milliseconds
+
+example:
+
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
 
 
+void setup() {
+// initialize serial:
+        Serial.begin(115200);
+        sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+        SIDKeyBoardPlayer::KeyBoardPlayer(6);
+        sid.sidSetVolume(0,15); 
 
+        
+}
+
+void loop()
+{
+    SIDKeyBoardPlayer::playNoteHz(2,440,2000); //will play a A4 for 2 seconds
+    while(SIDKeyBoardPlayer::isVoiceBusy(2)); //as the note are played in the background you need to wait a bit
+    delay(1000); 
+
+}
+
+```
+You can play several voices at the sametime
+
+```
+
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+
+
+void setup() {
+// initialize serial:
+    Serial.begin(115200);
+    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+    SIDKeyBoardPlayer::KeyBoardPlayer(6);
+    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(1,15); //if you have two chips
+
+}
+
+void loop()
+{
+    SIDKeyBoardPlayer::playNoteHz(2,440,6000); //will play a A4 for 2 seconds
+    delay(1000); 
+    SIDKeyBoardPlayer::playNoteHz(0,880,2000);
+    delay(500); 
+    SIDKeyBoardPlayer::playNoteHz(1,1760,2000);
+    delay(500); 
+    SIDKeyBoardPlayer::playNoteHz(3,220,2000); //we will play on voice 0 of the second chip 
+    while(SIDKeyBoardPlayer::areAllVoiceBusy());
+    delay(2000);
+}
+```
+
+NB: if the duration is equal to 0, then the sound will not stop until you call the function stopNote. 
+
+```
+
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+
+
+void setup() {
+        // initialize serial:
+        Serial.begin(115200);
+        sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+        SIDKeyBoardPlayer::KeyBoardPlayer(6);
+        sid.sidSetVolume(0,15); 
+        sid.sidSetVolume(1,15); //if you have two chips
+
+}
+
+void loop()
+{
+        SIDKeyBoardPlayer::playNoteHz(2,440,0); //will play a A4 for 2 seconds
+        delay(1000); 
+        SIDKeyBoardPlayer::stopNote(2);
+        delay(500);
+ 
+}
+```
+
+### To change instrument
+The library give you the possibility to change instruments there are 5 in 'store'
+
+1) Change instrument for all voices
+
+```
+to change the instruments for all voices
+changeAllInstruments<instrument>();
+possible values:
+            sid_piano
+            sid_piano2
+            sid_piano3
+            sid_piano4
+            sid_piano5
+            
+ example:
+ 
+ 
+ #include "SID6581.h"
+ #define SID_CLOCK 25
+ #define SID_DATA 33
+ #define SID_LATCH 27
+ 
+ void playtunes()
+ {
+     for(int i=0;i<3;i++)
+     {
+         SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1500);
+         while(SIDKeyBoardPlayer::isVoiceBusy(0));
+         delay(100);
+     }
+}
+ 
+ void setup() {
+     // initialize serial:
+     Serial.begin(115200);
+     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+     SIDKeyBoardPlayer::KeyBoardPlayer(6);
+     sid.sidSetVolume(0,15); 
+     sid.sidSetVolume(1,15); //if you have two chips
+     
+ }
+ 
+ void loop()
+ {
+     SIDKeyBoardPlayer::changeAllInstruments<sid_piano>();
+     playtunes();
+    SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>();
+     playtunes();
+     SIDKeyBoardPlayer::changeAllInstruments<sid_piano3>();
+     playtunes();
+     SIDKeyBoardPlayer::changeAllInstruments<sid_piano4>();
+     playtunes();
+     SIDKeyBoardPlayer::changeAllInstruments<sid_piano5>();
+     playtunes();
+     delay(1000);
+ }
+            
+
+```
+
+2) Change instrument for a specific voice
+
+```
+
+to change the instruments for all voices
+changeInstrumentOnVoice<instrument>(uint8_t voice);
+possible values:
+        sid_piano
+        sid_piano2
+        sid_piano3
+        sid_piano4
+        sid_piano5
+
+example:
+
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+
+void playtunes()
+{
+    for(int i=0;i<3;i++)
+    {
+        SIDKeyBoardPlayer::playNoteHz(i,220*(i+1),1500); //playing each note on a specific voice
+        while(SIDKeyBoardPlayer::isVoiceBusy(i));
+        delay(100);
+    }
+}
+
+void setup() {
+    // initialize serial:
+    Serial.begin(115200);
+    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+    SIDKeyBoardPlayer::KeyBoardPlayer(6);
+    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(1,15); //if you have two chips
+
+}
+
+void loop()
+{
+        SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>();
+        playtunes(); //all the voices will play the same instrument
+        SIDKeyBoardPlayer::changeInstrumentOnVoice<sid_piano>(1);
+        playtunes(); //ther second voice will be palyed with a different instrument
+        delay(1000);
+}
+
+
+```
+
+
+### To create an instrument
+the library allows to create your own instruments.
+ ```
+ each instrument is a class
+ 
+ 
+ class new_instrument:public sid_instrument{
+     public:
+         
+         new_instrument(){
+            //her goes the code to initialise your instrument
+                }
+         
+         virtual void start_sample(int voice,int note){
+         //here goes the code when the note starts
+            }
+         
+         virtual void next_instruction(int voice,int note){
+         //here goes the code when you're sustaining the note
+        }
+
+         virtual void after_off(int voice,int note){
+         //here goes the code when the note ends (here to play release for instance
+         }
+ };
+ 
+ to activate the intrument
+ 
+ SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
+ 
+ ```
+
+1)  Simple instrument
+ ```
+ 
+ #include "SID6581.h"
+ #define SID_CLOCK 25
+ #define SID_DATA 33
+ #define SID_LATCH 27
+ 
+ void playtunes()
+ {
+     for(int i=0;i<3;i++)
+     {
+         SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1500);
+         while(SIDKeyBoardPlayer::isVoiceBusy(0));
+         delay(100);
+     }
+ }
+ 
+ class new_instrument:public sid_instrument{
+         public:
+
+         
+         new_instrument()
+         {
+         
+         }
+         
+         virtual void start_sample(int voice,int note)
+         {
+                 sid.setAttack(voice,0);
+                 sid.setSustain(voice,1);
+                 sid.setDecay(voice,10);
+                 sid.setRelease(voice,1);
+                 set.setPulse(voice,3000);
+                 sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
+                 sid.setFrequency(voice,note);
+                 sid.setGate(voice,1);
+                 
+         }
+         
+         virtual void next_instruction(int voice,int note)
+         {
+         
+         //always add a vTaskDelay() to allow other task to work
+            vTaskDelay(20);
+         
+         }
+         
+         virtual void after_off(int voice,int note){
+                 
+                 sid.setFrequency(voice,0);
+                 sid.setGate(voice,0);                
+         }
+ 
+ 
+ };
+ 
+ void setup() {
+     // initialize serial:
+     Serial.begin(115200);
+     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+     SIDKeyBoardPlayer::KeyBoardPlayer(6);
+     sid.sidSetVolume(0,15); 
+     sid.sidSetVolume(1,15); //if you have two chips
+     SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
+     
+ }
+ 
+ void loop()
+ {
+     playtunes();
+     delay(1000);
+ }
+
+```
+2) something mode complicated
+
+```
+#include "SID6581.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+
+void playtunes()
+{
+    for(int i=0;i<3;i++)
+    {
+        SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1000);
+        while(SIDKeyBoardPlayer::isVoiceBusy(0));
+        delay(100);
+    }
+}
+
+class new_instrument:public sid_instrument{
+    public:
+
+    int i;         
+    new_instrument()
+    {
+
+    }
+
+    virtual void start_sample(int voice,int note)
+    {
+        sid.setAttack(voice,0);
+        sid.setSustain(voice,1);
+        sid.setDecay(voice,10);
+        sid.setRelease(voice,3);
+        sid.setPulse(voice,3000);
+        sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
+        sid.setFrequency(voice,note);
+        sid.setGate(voice,1);
+        i=0;
+
+    }
+
+    virtual void next_instruction(int voice,int note)
+    {
+
+        sid.setPulse(voice, 3000+500*cos(2*3.14*i/10)); //we make the pulse vary each time
+        vTaskDelay(30);
+        i=(i+1)%10;
+
+    }
+
+    virtual void after_off(int voice,int note){
+
+        sid.setGate(voice,0);
+
+    }
+
+
+};
+
+void setup() {
+    // initialize serial:
+    Serial.begin(115200);
+    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+    SIDKeyBoardPlayer::KeyBoardPlayer(6);
+    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(1,15); //if you have two chips
+    SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
+
+}
+
+void loop()
+{
+    playtunes();
+    delay(1000);
+}
+```
+ 
 
 
 here it goes
