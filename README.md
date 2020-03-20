@@ -690,7 +690,7 @@ class new_instrument:public sid_instrument{
         sid.setAttack(voice,0);
         sid.setSustain(voice,1);
         sid.setDecay(voice,10);
-        sid.setRelease(voice,3);
+        sid.setRelease(voice,9);
         sid.setPulse(voice,3000);
         sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
         sid.setFrequency(voice,note);

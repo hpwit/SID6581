@@ -97,6 +97,7 @@ void SID6581::addSong(fs::FS &fs,  const char * path)
     //p1.filename=h;
     listsongs[numberOfSongs]=p1;
     numberOfSongs++;
+    Serial.printf("nb song:%d\n",numberOfSongs);
 }
 
 
@@ -699,6 +700,7 @@ void SID6581::pushRegister(int chip,int address,int data)
     setD(data);
     
     clearcsw(chip);*/
+    //Serial.printf("pushing %d %d %d\n",chip, address,data);
     _sid_register_to_send sid_data;
     sid_data.address=address;
     sid_data.chip=chip;

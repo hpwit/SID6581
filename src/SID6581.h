@@ -303,8 +303,11 @@ public:
             //Serial.println("té");
             //   Serial.println("tép  s");
             int i=0;
-            
-            current_instruments[voice]->start_sample(voice,element.note);
+            if(element.velocity>0)
+            {
+                current_instruments[voice]->start_sample(voice,element.note);
+                
+            }
             start_time=millis();
             while(uxQueueMessagesWaiting( _sid_voicesQueues[voice] )==0)
             {
@@ -312,7 +315,7 @@ public:
                 {
                     if(millis()-start_time>=element.duration)
                     {
-                        Serial.println("stop from duration");
+                        //Serial.println("stop from duration");
                          _sid_voices_busy[voice]=false;
                         //Serial.printf("d %d\n",_sid_voices_busy[voice]);
                         current_instruments[voice]->after_off(voice,element.note);
