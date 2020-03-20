@@ -571,7 +571,7 @@ the library allows to create your own instruments.
         }
 
          virtual void after_off(int voice,int note){
-         //here goes the code when the note ends (here to play release for instance)
+         //here gies the code exucted during the release part of the note
          }
  };
  
@@ -604,39 +604,18 @@ the library allows to create your own instruments.
  class new_instrument:public sid_instrument{
          public:
 
-         
-         new_instrument()
-         {
-         
-         }
-         
          virtual void start_sample(int voice,int note)
          {
                  sid.setAttack(voice,0);
                  sid.setSustain(voice,1);
                  sid.setDecay(voice,10);
-                 sid.setRelease(voice,1);
+                 sid.setRelease(voice,9);
                  set.setPulse(voice,3000);
                  sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
                  sid.setFrequency(voice,note);
                  sid.setGate(voice,1);
                  
          }
-         
-         virtual void next_instruction(int voice,int note)
-         {
-         
-         //always add a vTaskDelay() to allow other task to work
-            vTaskDelay(20);
-         
-         }
-         
-         virtual void after_off(int voice,int note){
-                 
-                 sid.setFrequency(voice,0);
-                 sid.setGate(voice,0);                
-         }
- 
  
  };
  
@@ -680,17 +659,14 @@ class new_instrument:public sid_instrument{
     public:
 
     int i;         
-    new_instrument()
-    {
 
-    }
 
     virtual void start_sample(int voice,int note)
     {
         sid.setAttack(voice,0);
-        sid.setSustain(voice,1);
+        sid.setSustain(voice,5);
         sid.setDecay(voice,10);
-        sid.setRelease(voice,9);
+        sid.setRelease(voice,12);
         sid.setPulse(voice,3000);
         sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
         sid.setFrequency(voice,note);
@@ -705,12 +681,6 @@ class new_instrument:public sid_instrument{
         sid.setPulse(voice, 3000+500*cos(2*3.14*i/10)); //we make the pulse vary each time
         vTaskDelay(30);
         i=(i+1)%10;
-
-    }
-
-    virtual void after_off(int voice,int note){
-
-        sid.setGate(voice,0);
 
     }
 
@@ -734,6 +704,81 @@ void loop()
     delay(1000);
 }
 ```
+ Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
+ ```
+ #include "SID6581.h"
+ #define SID_CLOCK 25
+ #define SID_DATA 33
+ #define SID_LATCH 27
+ 
+ void playtunes()
+ {
+     for(int i=0;i<3;i++)
+     {
+         SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1000);
+         while(SIDKeyBoardPlayer::isVoiceBusy(0));
+         delay(100);
+     }
+ }
+ 
+ class new_instrument:public sid_instrument{
+     public:
+     
+         int i;         
+         
+         
+         virtual void start_sample(int voice,int note)
+         {
+             sid.setAttack(voice,0);
+             sid.setSustain(voice,5);
+             sid.setDecay(voice,10);
+             sid.setRelease(voice,12);
+             sid.setPulse(voice,3000);
+             sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
+             sid.setFrequency(voice,note);
+             sid.setGate(voice,1);
+             i=0;
+         
+         }
+         
+         virtual void next_instruction(int voice,int note)
+         {
+         
+             sid.setPulse(voice, 3000+500*cos(2*3.14*i/10)); //we make the pulse vary each time
+             vTaskDelay(30);
+             i=(i+1)%10;
+         
+         }
+         
+         virtual void after_off(int voice,int note){
+                next_instruction(voice,note); //we continue the wobbling
+         }
+
+     
+     
+ };
+ 
+ void setup() {
+     // initialize serial:
+     Serial.begin(115200);
+     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+     SIDKeyBoardPlayer::KeyBoardPlayer(6);
+     sid.sidSetVolume(0,15); 
+     sid.sidSetVolume(1,15); //if you have two chips
+     SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
+ 
+ }
+ 
+ void loop()
+ {
+     playtunes();
+     delay(1000);
+ }
+ ```
+ 
+ 
+ 
+ 
  
  3) to go further
  if you have sample from a sid as a set of register calls you can do this
@@ -785,12 +830,6 @@ void loop()
          
          }
          
-         virtual void after_off(int voice,int note){
-             
-             sid.setFrequency(voice,0);
-             sid.setGate(voice,0);
-             i=0;
-         }
  
  
  };

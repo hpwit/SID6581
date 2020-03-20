@@ -138,7 +138,7 @@ void loop() {
             {
               case MIDI_NOTE_ON:
                 next_data=MIDI_NOTE;
-                Serial.println("noton");
+                Serial.println("note on");
               break;
              case MIDI_CONTROL_CHANGE:
                 next_data=MIDI_CONTROLLER_NUMBER;
