@@ -111,11 +111,11 @@ static TaskHandle_t SIDPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerLoopTaskHandle = NULL;
 static TaskHandle_t PausePlayTaskLocker = NULL;
 static TaskHandle_t xPushToRegisterHandle = NULL;
- static QueueHandle_t _sid_queue;
- static QueueHandle_t _sid_voicesQueues[15];
- static uint16_t _sid_play_notes[96];
+static QueueHandle_t _sid_queue;
+static QueueHandle_t _sid_voicesQueues[15];
+static uint16_t _sid_play_notes[96];
 static TaskHandle_t _sid_xHandletab[15];
- static uint8_t keyboardnbofvoices;
+static uint8_t keyboardnbofvoices;
 volatile static bool _sid_voices_busy[15];
 volatile static bool _sid_taskready_busy[15];
 static int _sid_sustain_decay_durations [16]={6,24,48,72,114,168,204,240,300,750,1500,2400,3000,9000,15000,24000};
@@ -286,7 +286,7 @@ public:
     virtual void after_off(int voice,int note){}
     virtual void after_offinstrument(int voice, int note)
     {
- 
+        
         
         
     }
@@ -304,14 +304,14 @@ public:
     static void  vTaskCode( void * pvParameters )
     {
         _sid_taskready_busy[voice]=true;
-         uint32_t start_time;
+        uint32_t start_time;
         uint32_t sustain_time;
         _sid_command element;
         for( ;; )
         {
-
+            
             xQueueReceive(_sid_voicesQueues[voice], &element, portMAX_DELAY);
-
+            
             
             if(element.velocity>0)
             {
@@ -320,7 +320,7 @@ public:
                 current_instruments[voice]->start_sample(voice,element.note);
                 
                 current_instruments[voice]->release=sid.voices[voice].release;
-
+                
             }
             start_time=millis();
             while(uxQueueMessagesWaiting( _sid_voicesQueues[voice] )==0)
@@ -329,13 +329,7 @@ public:
                 {
                     if(millis()-start_time>=element.duration)
                     {
-                        //Serial.println("stop from duration");
                         
-                        //Serial.printf("d %d\n",_sid_voices_busy[voice]);
-                       // current_instruments[voice]->after_offinstrument(voice,element.note);
-//                        _sid_voices_busy[voice]=false;
-//
-//                        sid.setGate(voice,0);
                         sustain_time=millis();
                         
                         sid.setGate(voice,0);
@@ -343,9 +337,9 @@ public:
                         {
                             if(millis()-sustain_time>=_sid_sustain_decay_durations[current_instruments[voice]->release])
                             {
-                               
+                                
                                 sid.setFrequency(voice,0);
-                                 _sid_voices_busy[voice]=false;
+                                _sid_voices_busy[voice]=false;
                                 break;
                             }
                             else
@@ -357,24 +351,22 @@ public:
                         _sid_voices_busy[voice]=false;
                         break;
                     }
-
+                    
                 }
                 
                 if(element.velocity>0)
                 {
                     current_instruments[voice]->next_instruction(voice,element.note);
-                     vTaskDelay(1);
+                    vTaskDelay(1);
                 }
                 
                 else
                 {
-                    //Serial.println("onstop");
-                    //sid.setGate(voice,0);
-                    //current_instruments[voice]->after_offinstrument(voice,element.note);
-                   // _sid_voices_busy[voice]=false;
+                    
                     sustain_time=millis();
                     
                     sid.setGate(voice,0);
+                    _sid_voices_busy[voice]=false;
                     while(uxQueueMessagesWaiting( _sid_voicesQueues[voice] )==0)
                     {
                         if(millis()-sustain_time>=_sid_sustain_decay_durations[current_instruments[voice]->release])
@@ -415,7 +407,7 @@ public:
     int flo,fhi,plo,phi;
     sid_piano5()
     {
-
+        
         df2=sample2;
     }
     virtual void start_sample(int voice,int note)
@@ -450,15 +442,13 @@ public:
                 
                 break;
         }
-        //sid.feedTheDog();
+        
         vTaskDelay(df2[i*3+2]/1000+2);
         
     }
     
     virtual void after_off(int voice,int note){
         
-//        sid.setFrequency(voice,0);
-//        sid.setGate(voice,0);
         i=30;
     }
     
@@ -471,7 +461,7 @@ public:
     int flo,fhi,plo,phi;
     sid_piano()
     {
-
+        
         df2=sample1;
     }
     virtual void start_sample(int voice,int note)
@@ -523,7 +513,7 @@ public:
 class sid_piano4:public sid_instrument{
 public:
     int i;
-
+    
     virtual void start_sample(int voice,int note)
     {
         
@@ -540,7 +530,7 @@ public:
     
     virtual void next_instruction(int voice,int note)
     {
-       
+        
         sid.setFrequency(voice,note+100*(cos(2*3.14*i/10)));
         //sid.setGate(voice,(i/3)%2);
         //x
@@ -550,7 +540,7 @@ public:
     }
     
     virtual void after_off(int voice,int note){
-       sid.setFrequency(voice,note+100*(cos(2*3.14*i/10)));
+        sid.setFrequency(voice,note+100*(cos(2*3.14*i/10)));
         i=(i+1)%50;
         vTaskDelay(20);
     }
@@ -577,7 +567,7 @@ public:
         
     }
     
-
+    
     
     
 };
@@ -586,7 +576,7 @@ public:
 class sid_piano2:public sid_instrument{
 public:
     int i;
-
+    
     
     virtual void start_sample(int voice,int note)
     {
@@ -600,7 +590,7 @@ public:
         sid.setGate(voice,1);
         i=0;
     }
- 
+    
     virtual void next_instruction(int voice,int note)
     {
         
@@ -625,7 +615,7 @@ public:
 
 class SIDKeyBoardPlayer{
 public:
-
+    
     static void KeyBoardPlayer(int nbofvoices)
     {
         sid.resetsid();
@@ -739,7 +729,7 @@ public:
         
     }
     
-   template <typename instrument>static void changeAllInstruments()
+    template <typename instrument>static void changeAllInstruments()
     {
         for(int i=0;i<keyboardnbofvoices;i++)
         {
@@ -750,12 +740,12 @@ public:
     
     template <typename instrument>static void changeInstrumentOnVoice(int voice)
     {
-            if(voice<15)
-            {
-                current_instruments[voice]=new instrument;
-                 sid.voices[voice].release=0;
-            }
-     
+        if(voice<15)
+        {
+            current_instruments[voice]=new instrument;
+            sid.voices[voice].release=0;
+        }
+        
     }
     static void createnot()
     {
@@ -805,13 +795,13 @@ public:
     static bool isVoiceBusy(int voice)
     {
         vTaskDelay(1);
-       // Serial.printf("inf %d\n",_sid_voices_busy[voice]);
+        
         return _sid_voices_busy[voice];
     }
     static bool areAllVoiceBusy()
     {
         bool res=false;
-         vTaskDelay(1);
+        vTaskDelay(1);
         for(int i=0;i<keyboardnbofvoices;i++)
         {
             if( _sid_voices_busy[i])
@@ -823,7 +813,7 @@ public:
         return res;
     }
     static bool allTaskReady(){
-       
+        
         vTaskDelay(1);
         for(int i=0;i<keyboardnbofvoices;i++)
         {

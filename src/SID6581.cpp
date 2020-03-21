@@ -232,12 +232,7 @@ void SID6581::playSongNumber(int number)
         Serial.println("Id too long");
         return;
     }
-    /* if( listsongs[number]==0)
-     {
-     Serial.println("Non existing song");
-     return;
-     
-     }*/
+
     Serial.println("playing song");
     
     paused=false;
@@ -274,10 +269,10 @@ void SID6581::playSIDTunesTask(void *pvParameters)
     uint32_t counttime=0;
     uint32_t counttime1=0;
     
-    //sid->sid_spi->beginTransaction(SPISettings(sid->sid_spiClk, LSBFIRST, SPI_MODE0));
+    
     for (uint32_t i=0;i<sizet;i++)
     {
-        //Serial.printf("%d %d %d\n",*(uint16_t*)(d+2),*(uint8_t*)(d),*(uint8_t*)(d+1));
+        
        
         
         if(*(uint8_t*)d==24) //we delaonf with the sound
@@ -289,58 +284,12 @@ void SID6581::playSIDTunesTask(void *pvParameters)
         }
          sid->pushRegister(0,*(uint8_t*)d,*(uint8_t*)(d+1));
 
-//        if( ( *(uint8_t*)d >=0  && *(uint8_t*)d <7 ) || *(uint8_t*)d>20)
-//        {
-//            Serial.printf(" %d,%d,",*(uint8_t*)d,*(uint8_t*)(d+1));
-//                sid->pushRegister(0,*(uint8_t*)d,*(uint8_t*)(d+1));
-//            Serial.printf("%d,", counttime1-counttime);
-//            counttime=counttime1;
-//        }
-        /* code for voice selection needes to be refined
-         int ad=*(uint8_t*)d;
-         
-         if(ad<=6 && (sid->voice&1))
-         {
-         sid->setA(*(uint8_t*)d);
-         sid->setD(*(uint8_t*)(d+1));
-         sid->clearcsw();
-         }
-         else
-         {
-         if(ad>=7 && ad <=113 && (sid->voice&2))
-         {
-         sid->setA(*(uint8_t*)d);
-         sid->setD(*(uint8_t*)(d+1));
-         sid->clearcsw();
-         }
-         else
-         {
-         if(ad>=14 && ad<=20  && (sid->voice&4))
-         {
-         sid->setA(*(uint8_t*)d);
-         sid->setD(*(uint8_t*)(d+1));
-         sid->clearcsw();
-         }
-         else
-         {
-         if(ad>20)
-         {
-         sid->setA(*(uint8_t*)d);
-         sid->setD(*(uint8_t*)(d+1));
-         sid->clearcsw();
-         }
-         }
-         }
-         }
-         */
-        
-        //counttime1= counttime1 + *(uint16_t*)(d+2);
         if(*(uint16_t*)(d+2)>4)
             delayMicroseconds(*(uint16_t*)(d+2)-4);
         else
             delayMicroseconds(*(uint16_t*)(d+2));
         d+=4;
-        sid->feedTheDog();
+        
         if(sid->paused)
         {
             sid->soundOff();
@@ -379,18 +328,7 @@ void SID6581::soundOff()
     clearcsw(0);
     
 }
-/*
- struct _sid_voice
- {
- uint16_t frequency;
- uint16_t pulse;
- uint8_t waveform;
- uint8_t attack;
- uint8_t decay;
- uint8_t sustain;
- uint8_t release;
- 
- };*/
+
 
 
 void SID6581::setFrequencyHz(int voice,double frequencyHz)
@@ -518,13 +456,6 @@ void SID6581::setWaveForm(int voice,int waveform)
     pushToVoice(voice,4,voices[voice].control_reg);
     
 }
-
-//uint8_t volume;
-//uint8_t filterfrequency;
-//uint8_t res;
-//uint8_t filt1,filt2,filt3,filtex;
-//uint8_t _3off,hp,bp,lp;
-//uint8_t fc_lo,fc_hi,res_filt,mode_vol;
 
 void SID6581::set3OFF(int chip,int _3off)
 {
@@ -692,15 +623,7 @@ void SID6581::resetsid()
 
 void SID6581::pushRegister(int chip,int address,int data)
 {
-    /*
-    setcsw();
-    //delay(1);
-    //address=7*voice+address;
-    setA(address);
-    setD(data);
-    
-    clearcsw(chip);*/
-    //Serial.printf("pushing %d %d %d\n",chip, address,data);
+
     _sid_register_to_send sid_data;
     sid_data.address=address;
     sid_data.chip=chip;
@@ -718,8 +641,7 @@ void SID6581::_pushRegister(void *pvParameters)
     {
          xQueueReceive(_sid_queue, &sid_data, portMAX_DELAY);
         sid->setcsw();
-        //delay(1);
-        //address=7*voice+address;
+
         sid->setA(sid_data.address);
         sid->setD(sid_data.data);
         
@@ -732,21 +654,10 @@ void SID6581::_pushRegister(void *pvParameters)
 void SID6581::pushToVoice(int voice,uint8_t address,uint8_t data)
 {
     
-    // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
-    
-   // setcsw();
-    //delay(1);
-    //Serial.printf("v:%d c:%d",voice,(int)(voice/3));
+
     address=7*(voice%3)+address;
     pushRegister((int)(voice/3),address,data);
-   // setA(address);
-    //setD(data);
-    
-    //clearcsw();
-    //sid_spi->endTransaction();
-    //delay(1);
-    //Serial.printf("push %d %d\n",address,data);
-    //REG_WRITE(GPIO_OUT_W1TS_REG,GPIO_OUT_W1TS_REG| (1<<27));
+
 }
 
 void SID6581::push()

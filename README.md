@@ -168,6 +168,33 @@ to use it
 Put the final_file on a SD card or in your SPIFF
 
 
+### Send register data via serial
+You can send via serial the registers commands. Look at the example sid_serial.ino
+
+```
+to launch the serial from your computer
+first compile the program
+>gcc Send_sid_via_serial.c -o sendserial
+
+to use it
+
+./sendserial export_file usbport
+    * export_file: the result of the first command above "java -jar jsidplay2 ....."
+    * usbport: same name as the usb port in you arduino interface
+
+example:
+./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15         
+
+the file zibehurling-01.csv is in the examples
+
+NB : for it to work the serial console of the arduino will neeed to be closed. Otherwise the USB port will be locked by it.
+NB2: restart the esp32 for each song
+NB3: still have to cope woth the fact that sometimes the transmition and the buffering is not always perfect
+
+```
+
+
+
 ## Details of the other control commands
 
 You have full control of the SID chip via the following commands
