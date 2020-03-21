@@ -289,7 +289,7 @@ void SID6581::playSIDTunesTask(void *pvParameters)
         else
             delayMicroseconds(*(uint16_t*)(d+2));
         d+=4;
-        
+        sid->feedTheDog();
         if(sid->paused)
         {
             sid->soundOff();
