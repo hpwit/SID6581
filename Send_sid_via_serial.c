@@ -1,9 +1,11 @@
 //
-//  sendserial.c
+//  traduct.c
 //  
 //
 //  Created by Yves BAZIN on 04/03/2020.
 //
+
+#include "traduct.h"
 
 
 #include "stdio.h"
@@ -190,6 +192,7 @@ int main(int argc,char* argv[])
                     int decal;
                     int e;
                     int g;
+                    int base;
                     //printf("line %s %s %s\n",*(tokens+1),*(tokens+2)+3,*(tokens+3)+1);
                     sscanf(*(tokens+1),"%d",&decal);
                     sscanf(*(tokens+2)+3,"%x",&e);
@@ -198,8 +201,10 @@ int main(int argc,char* argv[])
                     //                        decal=decal-200;
                     //                    else decal=0;
                     uint8_t df=decal & 0xff;
+                    sscanf(*(tokens+2)+1,"%x",&base);
+                    int based=(base>>8)-0xd4;
                     uint8_t df2=(decal & 0xff00) >>8;
-                    
+                    e=e+based*32;
                     
                     write (fd, &e, 1);           // send 7 character greeting
                     

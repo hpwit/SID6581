@@ -32,7 +32,7 @@ void SIDSerialPlayerTask(void * parameters)
       while(1)
       {
         xQueueReceive(_serial_sid_queue, &element, portMAX_DELAY);
-          sid.pushRegister(0,element.address,element.data);
+          sid.pushRegister(element.address/32,(element.address)%32,element.data);
           
          delayMicroseconds(element.duration);
          sid.feedTheDog();
