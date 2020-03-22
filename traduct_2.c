@@ -114,11 +114,15 @@ int main(int argc,char* argv[])
                     int decal;
                     int ad;
                     int value;
+                    int base;
                    //printf("line %s %s %s\n",*(tokens+1),*(tokens+2)+3,*(tokens+3)+1);
                    sscanf(*(tokens+1),"%d",&decal);
                    sscanf(*(tokens+2)+3,"%x",&ad);
+                    sscanf(*(tokens+2)+1,"%x",&base);
+                    int based=(base>>8)-0xd4;
+                    //printf(" base :%x %x %d %d\n",base,based,ad,ad+based*32);
                    sscanf(*(tokens+3)+1,"%x",&value);
-                    printf("%c%c%c%c",ad,value,decal & 0xFF,(decal &0xFF00)>>8);
+                    printf("%c%c%c%c",ad+based*32,value,decal & 0xFF,(decal &0xFF00)>>8);
                     free(tokens);
                 }
                 

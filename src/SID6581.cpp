@@ -274,15 +274,17 @@ void SID6581::playSIDTunesTask(void *pvParameters)
     {
         
        
+        //Serial.printf("%d %d %ld")
+//        if((*(uint8_t*)d)%24==0) //we delaonf with the sound
+//        {
+//            sid->save24=*(uint8_t*)(d+1);
+//            uint8_t value=*(uint8_t*)(d+1);
+//            value=value& 0xf0 +( ((value& 0x0f)*sid->volume)/15)  ;
+//            *(uint8_t*)(d+1)=value;
+//        }
         
-        if(*(uint8_t*)d==24) //we delaonf with the sound
-        {
-            sid->save24=*(uint8_t*)(d+1);
-            uint8_t value=*(uint8_t*)(d+1);
-            value=value& 0xf0 +( ((value& 0x0f)*sid->volume)/15)  ;
-            *(uint8_t*)(d+1)=value;
-        }
-         sid->pushRegister(0,*(uint8_t*)d,*(uint8_t*)(d+1));
+        
+         sid->pushRegister((*(uint8_t*)d)/32,(*(uint8_t*)d)%32,*(uint8_t*)(d+1));
 
         if(*(uint16_t*)(d+2)>4)
             delayMicroseconds(*(uint16_t*)(d+2)-4);
@@ -573,7 +575,8 @@ unsigned int SID6581::readFile2(fs::FS &fs, const char * path)
 void SID6581::clearcsw(int chip)
 {
     //adcswrre = (adcswrre ^ (1<<WRITE) ) ^ (1<<CS) ;
-   
+    chipcontrol=0xff;
+    
     switch(chip)
     {
         case 0:
@@ -605,6 +608,7 @@ void SID6581::setcsw()
 {
     adcswrre = adcswrre | (1<<WRITE) | (1<<CS);
     chipcontrol= 0xff;//(1<<WRITE_1) | (1<<CS_1);;
+    dataspi=0;
     push();
 }
 
@@ -669,7 +673,9 @@ void SID6581::push()
     sid_spi->transfer(adcswrre);
     sid_spi->transfer(dataspi);
     sid_spi->endTransaction();
+    
     digitalWrite(latch_pin, 1);
+    //delayMicroseconds(1);
     
 }
 

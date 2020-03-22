@@ -96,7 +96,7 @@
 #define SID_MOD_VOL 24
 
 
-#define SID_QUEUE_SIZE 100
+#define SID_QUEUE_SIZE 2000
 
 
 #include "SPI.h"
