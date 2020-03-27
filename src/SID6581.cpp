@@ -46,7 +46,7 @@ SID6581::SID6581(){}
         .use_apll = false
     };
     const i2s_pin_config_t pin_config = {
-        .bck_io_num = 26,
+        .bck_io_num = sid_clock_pin,
         .ws_io_num = NULL,
         .data_out_num = NULL,
         .data_in_num = I2S_PIN_NO_CHANGE
@@ -70,7 +70,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
     pinMode(latch, OUTPUT);
     Serial.println("SID Initialized");
     _sid_queue = xQueueCreate( SID_QUEUE_SIZE, sizeof( _sid_register_to_send ) );
-    xTaskCreate(SID6581::_pushRegister, "_pushRegister", 2048, this,1, &xPushToRegisterHandle);
+    xTaskCreatePinnedToCore(SID6581::_pushRegister, "_pushRegister", 2048, this,1, &xPushToRegisterHandle,0);
     
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
@@ -627,6 +627,7 @@ void SID6581::resetsid()
 
 void SID6581::pushRegister(int chip,int address,int data)
 {
+    //Serial.printf("core p:%d\n",xPortGetCoreID());
 
     _sid_register_to_send sid_data;
     sid_data.address=address;
@@ -644,6 +645,7 @@ void SID6581::_pushRegister(void *pvParameters)
     for(;;)
     {
          xQueueReceive(_sid_queue, &sid_data, portMAX_DELAY);
+        //Serial.printf("core s:%d\n",xPortGetCoreID());
         sid->setcsw();
 
         sid->setA(sid_data.address);
