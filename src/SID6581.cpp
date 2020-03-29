@@ -70,7 +70,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
     pinMode(latch, OUTPUT);
     Serial.println("SID Initialized");
     _sid_queue = xQueueCreate( SID_QUEUE_SIZE, sizeof( _sid_register_to_send ) );
-    xTaskCreatePinnedToCore(SID6581::_pushRegister, "_pushRegister", 2048, this,1, &xPushToRegisterHandle,0);
+    xTaskCreate(SID6581::_pushRegister, "_pushRegister", 2048, this,3, &xPushToRegisterHandle);
     
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
@@ -342,6 +342,12 @@ void SID6581::setFrequencyHz(int voice,double frequencyHz)
     setFrequency(voice,round(fout));
 }
 
+double SID6581::getFrequencyHz(int voice)
+{
+    return (double)getFrequency(voice)/16.777216;
+}
+
+
 void SID6581::setFrequency(int voice, uint16_t frequency)
 {
 //    if(voice <0 or voice >2)
@@ -353,6 +359,13 @@ void SID6581::setFrequency(int voice, uint16_t frequency)
     pushToVoice(voice,0,voices[voice].freq_lo);
     pushToVoice(voice,1,voices[voice].freq_hi);
 }
+
+int SID6581::getFrequency(int voice)
+{
+    int chip=voice/3;
+    return sidregisters[chip*32+voice*7]+sidregisters[chip*32+voice*7+1]*256;
+}
+
 void SID6581::setPulse(int voice, uint16_t pulse)
 {
 //    if(voice <0 or voice >2)
@@ -363,6 +376,14 @@ void SID6581::setPulse(int voice, uint16_t pulse)
     pushToVoice(voice,2,voices[voice].pw_lo);
     pushToVoice(voice,3,voices[voice].pw_hi);
 }
+
+int SID6581::getPulse(int voice)
+{
+    int chip=voice/3;
+    return sidregisters[chip*32+voice*7+2]+sidregisters[chip*32+voice*7+3]*256;
+
+}
+
 void SID6581::setEnv(int voice, uint8_t att,uint8_t decay,uint8_t sutain, uint8_t release)
 {
 //    if(voice <0 or voice >2)
@@ -382,6 +403,15 @@ void SID6581::setAttack(int voice, uint8_t att)
     voices[voice].attack_decay=(voices[voice].attack_decay & 0x0f) +((att<<4) & 0xf0);
     pushToVoice(voice,5,voices[voice].attack_decay);
 }
+
+int SID6581::getAttack(int voice)
+{
+     int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+5];
+    return (reg>>4);
+}
+
+
 void SID6581::setDecay(int voice, uint8_t decay)
 {
 //    if(voice <0 or voice >2)
@@ -389,6 +419,13 @@ void SID6581::setDecay(int voice, uint8_t decay)
     voices[voice].decay=decay;
     voices[voice].attack_decay=(voices[voice].attack_decay & 0xf0) +(decay & 0x0f);
     pushToVoice(voice,5,voices[voice].attack_decay);
+}
+
+int SID6581::getDecay(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+5];
+    return (reg&0xf);
 }
 
 void SID6581::setSustain(int voice,uint8_t sustain)
@@ -399,6 +436,15 @@ void SID6581::setSustain(int voice,uint8_t sustain)
     voices[voice].sustain_release=(voices[voice].sustain_release & 0x0f) +((sustain<<4) & 0xf0);
     pushToVoice(voice,6,voices[voice].sustain_release);
 }
+
+
+int SID6581::getSustain(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+6];
+    return (reg>>4);
+}
+
 void SID6581::setRelease(int voice,uint8_t release)
 {
 //    if(voice <0 or voice >2)
@@ -408,6 +454,12 @@ void SID6581::setRelease(int voice,uint8_t release)
     pushToVoice(voice,6,voices[voice].sustain_release);
 }
 
+int SID6581::getRelease(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+6];
+    return (reg & 0xf);
+}
 
 void SID6581::setGate(int voice, int gate)
 {
@@ -417,6 +469,13 @@ void SID6581::setGate(int voice, int gate)
     voices[voice].control_reg=(voices[voice].control_reg & 0xfE) + (gate & 0x1);
     pushToVoice(voice,4,voices[voice].control_reg);
     
+}
+
+int SID6581::getGate(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+4];
+    return (reg & 0x1);
 }
 
 
@@ -429,6 +488,13 @@ void SID6581::setTest(int voice,int test)
     pushToVoice(voice,4,voices[voice].control_reg);
 }
 
+int SID6581::getTest(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+4];
+    return ((reg & 0x8)>>3);
+}
+
 void SID6581::setSync(int voice,int sync)
 {
 //    if(voice <0 or voice >2)
@@ -436,6 +502,14 @@ void SID6581::setSync(int voice,int sync)
     voices[voice].sync=sync;
     voices[voice].control_reg=(voices[voice].control_reg & (0xff ^ SID_SYNC )) + (sync & SID_SYNC);
     pushToVoice(voice,4,voices[voice].control_reg);
+}
+
+
+int SID6581::getSync(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+4];
+    return ((reg & 0x2)>>1);
 }
 
 void SID6581::setRingMode(int voice, int ringmode)
@@ -449,6 +523,13 @@ void SID6581::setRingMode(int voice, int ringmode)
 }
 
 
+int SID6581::getRingMode(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+4];
+    return ((reg & 0x4)>>2);
+}
+
 void SID6581::setWaveForm(int voice,int waveform)
 {
 //    if(voice <0 or voice >2)
@@ -458,6 +539,15 @@ void SID6581::setWaveForm(int voice,int waveform)
     pushToVoice(voice,4,voices[voice].control_reg);
     
 }
+
+
+int SID6581::getWaveForm(int voice)
+{
+    int chip=voice/3;
+    uint8_t reg=sidregisters[chip*32+voice*7+4];
+    return (reg >>4);
+}
+
 
 void SID6581::set3OFF(int chip,int _3off)
 {
@@ -492,6 +582,11 @@ void SID6581::sidSetVolume(int chip, uint8_t vol)
 }
 
 
+int SID6581::getSidVolume(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+24];
+    return ((reg & 0xf));
+}
 
 void  SID6581::setFilterFrequency(int chip,int filterfrequency)
 {
@@ -628,12 +723,19 @@ void SID6581::resetsid()
 void SID6581::pushRegister(int chip,int address,int data)
 {
     //Serial.printf("core p:%d\n",xPortGetCoreID());
-
+    sidregisters[chip*32+address]=data;
     _sid_register_to_send sid_data;
     sid_data.address=address;
     sid_data.chip=chip;
     sid_data.data=data;
     xQueueSend(_sid_queue, &sid_data, portMAX_DELAY);
+}
+
+
+
+int SID6581::getRegister(int chip,int addr)
+{
+    return sidregisters[chip*32+addr];
 }
 
 

@@ -1,4 +1,4 @@
-#include "SID6581.h"
+//#include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
@@ -40,21 +40,39 @@ void setup() {
             Serial.print(file.name());
             Serial.print("\tSIZE: ");
             Serial.println(file.size());
-           // sid.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+           cpu.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
         }
         file = root.openNextFile();
     }
 
+cpu.playTunes();
 
+ Serial.println();
+  Serial.printf("author:%s\n",cpu.getAuthor());
+   Serial.printf("published:%s\n",cpu.getPublished());
+    Serial.printf("name:%s\n",cpu.getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
 
- cpu.play(SPIFFS,"/Warhawk.sid");
- // cpu.play(SPIFFS,"/Wizball.sid");
-   
-   
+   delay(5000);
+ cpu.playNextSongInSid();
+delay(5000);
+ cpu.playNextSIDFile();
+ delay(5000);
+  Serial.println();
+  Serial.printf("author:%s\n",cpu.getAuthor());
+   Serial.printf("published:%s\n",cpu.getPublished());
+    Serial.printf("name:%s\n",cpu.getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
+
 }
 
 
 void loop() {
-  //do not put anything here for the moment
-  //the background playing is not good 
+ 
+Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
+Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
+Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
+
+ vTaskDelay(100);
+ 
 }

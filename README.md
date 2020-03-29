@@ -31,14 +31,111 @@ here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the
 
 ```
 
+## To play a SIDtunes from a .sid file
+You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
+Below the list of command to control the player
 
-## To play a SIDtunes
-You can play SIDTunes stored on the SPIFF or the SD card this will play on chip 0
+NB1: the sid tunes do not have an end hence they will not stop. to stop a song you need to use stopPlay()
+ 
+```
+void addSong(fs::FS &fs,  const char * path); //to add song to the playlist
+void playSidFile(fs::FS &fs, const char * path); //play a specific sid file. It will play the default song defined in the sid file.
+void playPrevSongInSid(); //to play the previous song in the sid file
+void playNextSongInSid(); //to play the next song in the sid file
+void stopPlay(); //to stop the player
+void playTunes(); //to play the current song of the playlist it will play the default song of the sid file
+void playNextSIDFile(); //to play the next song of the playlist it will play the default song of the sid file
+void playPrevSIDFile(); //to play the prev song of the playlist it will play the default song of the sid file
+
+
+to have info on the sid file
+char * getName(); //get name of the sid file
+char * getPublished(); //get publish information
+char * getAuthor(); //return the author
+int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
+int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
+int getDefaultTuneInSid(); //get the number of the default tunes. 
+
+example:
+
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+#include "SPIFFS.h"
+#include "FS.h"
+#include "mos6501b.hpp"
+
+
+void setup() {
+        // put your setup code here, to run once:
+        Serial.begin(115200);
+
+        sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
+
+        if(!SPIFFS.begin(true)){
+        Serial.println("SPIFFS Mount Failed");
+        return;
+        }
+
+
+        //the following line will go through all the files in the SPIFFS
+        //Do not forget to do "Tools-> ESP32 Scketch data upload"
+        File root = SPIFFS.open("/");
+        if(!root){
+        Serial.println("- failed to open directory");
+        return;
+        }
+        if(!root.isDirectory()){
+            Serial.println(" - not a directory");
+            return;
+            }
+
+        File file = root.openNextFile();
+        while(file){
+        if(file.isDirectory()){
+
+        } else {
+            Serial.print(" add file  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+            cpu.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+        }
+            file = root.openNextFile();
+        }
+
+        cpu.playTunes();
+
+        Serial.println();
+        Serial.printf("author:%s\n",cpu.getAuthor());
+        Serial.printf("published:%s\n",cpu.getPublished());
+        Serial.printf("name:%s\n",cpu.getName());
+        Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
+
+        delay(5000);
+        cpu.playNextSongInSid();
+        
+
+}
+
+void loop() {
+        delay(5000);
+        cpu.playNextSIDFile();
+        Serial.println();
+        Serial.printf("author:%s\n",cpu.getAuthor());
+        Serial.printf("published:%s\n",cpu.getPublished());
+        Serial.printf("name:%s\n",cpu.getName());
+        Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
+}
+
+```
+
+
+## To play a SIDtunes based on registry dump
+You can play SIDTunes stored as register dump on the SPIFF or the SD card
 
 
 NB 1: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
-
-NB2: the player si for the moment outputing only on the first chip. if you have stereo sid example I will be more than happy to implement that too
 
 Below the list of command to control the player
 
@@ -870,6 +967,84 @@ There is an example of a simple midi implementation.
 To plug the Midi to the esp32 please look around internet it will depend on what is available around you I use a 4N25 optocoupleur but you could find a lot of different implementations.
 
 NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
+
+
+## Read the regitsters
+You are able to read the registers
+
+```
+int getSidVolume( int chip);
+int getFrequency(int voice);
+double getFrequencyHz(int voice);
+int getPulse(int voice);
+int getAttack(int voice);
+int getDecay(int voice);
+int getSustain(int voice);
+int getRelease(int voice);
+int getGate(int voice);
+int getWaveForm(int voice);
+values are:
+        SID_WAVEFORM_TRIANGLE 
+        SID_WAVEFORM_SAWTOOTH 
+        SID_WAVEFORM_PULSE 
+        SID_WAVEFORM_NOISE 
+int getTest(int voice);
+int getSync(int voice);
+int getRingMode(int voice);
+not yet implemented:
+    int getFilterFrequency(int chip);
+    int getResonance(int chip);
+    int getFilter1(int chip);
+    int getFilter2(int chip);
+    int getFilter3(int chip);
+    int getFilterEX(int chip);
+    int get3OFF(int chip);
+    int getHP(int chip);
+    int getBP(int chip);
+    int getLP(int chip);
+
+glabal function:
+int getRegister(int chip,int addr);
+here are the  possible addresses:
+        SID_FREQ_LO_0
+        SID_FREQ_HI_0
+        SID_PW_LO_0
+        SID_PW_HI_0
+        SID_CONTROL_REG_0
+        SID_ATTACK_DECAY_0
+        SID_SUSTAIN_RELEASE_0
+        SID_FREQ_LO_1
+        SID_FREQ_HI_1
+        SID_PW_LO_1
+        SID_PW_HI_1
+        SID_CONTROL_REG_1
+        SID_ATTACK_DECAY_1
+        SID_SUSTAIN_RELEASE_1
+        SID_FREQ_LO_2
+        SID_FREQ_HI_2
+        SID_PW_LO_2
+        SID_PW_HI_2
+        SID_CONTROL_REG_2
+        SID_ATTACK_DECAY_2
+        SID_SUSTAIN_RELEASE_2
+        SID_FC_LO
+        SID_FC_HI
+        SID_RES_FILT
+        SID_MOD_VOL
+
+
+example:
+void loop() {
+    
+    Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
+    Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
+    Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
+
+    vTaskDelay(100);
+ 
+}
+
+```
 
 # Conclusions
 

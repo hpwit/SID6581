@@ -50,6 +50,8 @@ enum flag_enum{
 flag_N= 128, flag_V= 64, flag_B= 16, flag_D= 8, flag_I= 4, flag_Z= 2, flag_C= 1
 };
 
+
+
 enum mode_enum {
     mode_imp,
     mode_imm,
@@ -361,18 +363,24 @@ public:
     uint8_t data_offset;
     uint16_t init_addr,play_addr;
     uint8_t subsongs;
-    uint8_t startsong;
+    uint8_t startsong,currentsong,currentfile;
     uint8_t speed;
     uint16_t load_addr;
     uint8_t *mem;
     SID6581 * _sid;
-    
-    
+    uint8_t published[32];
+    uint8_t author[32];
+    uint8_t name[32];
     uint8_t a,x,y,p,s,bval;
     bool frame;
+    int numberOfSongs;
+    
+    songstruct listsongs[80];
     
     MOS6501(){
         _sid=&sid;
+        numberOfSongs=0;
+        currentfile=0;
             }
     
     uint8_t getmem(uint16_t addr);
@@ -393,8 +401,24 @@ public:
     uint16_t cpuParse();
     uint16_t cpuJSR(uint16_t npc, uint8_t na);
     void getNextFrame(uint16_t npc, uint8_t na);
-    void play(fs::FS &fs, const char * path);
+    void playSidFile(fs::FS &fs, const char * path);
     static void SIDTUNESSerialPlayerTask(void * parameters);
+    void _playSongNumber(int songnumbner);
+    void playPrevSongInSid();
+    void playNextSongInSid();
+    void stopPlay();
+    void addSong(fs::FS &fs,  const char * path);
+    void playTunes();
+    void playTunes(int duration);
+    void playNextSIDFile();
+    void playPrevSIDFile();
+    char * getName();
+    char * getPublished();
+    char * getAuthor();
+    int getNumberOfTunesInSid();
+    int getCurrentTuneInSid();
+    int getDefaultTuneInSid();
+    
 };
 
 static MOS6501 cpu;

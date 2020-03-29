@@ -27,6 +27,8 @@ void MOS6501::setmem(uint16_t addr,uint8_t value)
             else
                 t=wait;
             t=t-totalinframe;
+            if(t<0)
+                t=20000;
             frame=false;
         }
         
@@ -669,8 +671,9 @@ uint16_t MOS6501::cpuJSR(uint16_t npc, uint8_t na) {
         buff+=g;
         ccl +=g;
         //sid.feedTheDog ();
-        //printf("cycles %d\n",g);
-        //Serial.printf("after parse:%d %d\n",pc,wval);
+        //printf("cycles %d\n",buff);
+        //if(pc>64000)
+        //Serial.printf("after parse:%d %d %x %x %x\n",pc,wval ,mem[pc],mem[pc+1],mem[pc+2]);
         //Serial.printf("net instr:%d\n",mem[pc+1]);
     }
     return ccl;
@@ -684,7 +687,7 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
         totalinframe=cpuJSR(npc,na);
         wait=waitframe;
         frame=true;
-        waitframe=0;
+        //waitframe=0;
         int nRefreshCIA = (int)( ((20000 * (getmem(0xdc04) | (getmem(0xdc05) << 8)) / 0x4c00) + (getmem(0xdc04) | (getmem(0xdc05) << 8))  )  /2 )    ;
         if ((nRefreshCIA == 0) or speed==0) nRefreshCIA = 20000;
         printf("total:%d\n",nRefreshCIA);
@@ -694,22 +697,31 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
     
 }
 
- void MOS6501::play(fs::FS &fs, const char * path)
+ void MOS6501::playSidFile(fs::FS &fs, const char * path)
 {
-    mem=(uint8_t*)malloc(0xffff);
-    if(mem==NULL)
+    Serial.printf("playing file:%s\n",path);
+    if(this->mem==NULL)
     {
-        Serial.println("not enough memory\n");
-        return;
+        Serial.println("we create the memory buffer");
+        mem=(uint8_t*)malloc(0xffff);
+        if(mem==NULL)
+        {
+            Serial.println("not enough memory\n");
+            return;
+        }
     }
-    memset(mem,0,0xffff);
+    //memset(mem,0,0xffff);
+    memset(mem,0xea,0xffff);
+    memset(name,0,32);
+    memset(author,0,32);
+    memset(published,0,32);
    File file=fs.open(path);
         file.seek(7);
     
          data_offset=0;
        file.read(&data_offset,1);
     
-        Serial.printf("data_offset:%d\n",data_offset);
+        //Serial.printf("data_offset:%d\n",data_offset);
          uint8_t not_load_addr[2];
         file.read(not_load_addr,2);
     
@@ -719,7 +731,7 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
         init_addr  = f*256;
         file.read(&f,1);
         init_addr+=f;
-        Serial.printf("init_addr:%d\n",init_addr);
+       // Serial.printf("init_addr:%d\n",init_addr);
     
     
          play_addr=0;
@@ -728,37 +740,37 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
         play_addr  = f*256;
         file.read(&f,1);
         play_addr+=f;
-        Serial.printf("play_addr:%d\n",play_addr);
+       // Serial.printf("play_addr:%d\n",play_addr);
     
         file.seek( 15);
          subsongs=0;
         file.read(&subsongs,1);
-        Serial.printf("subsongs :%d\n",subsongs-1 );
+        //Serial.printf("subsongs :%d\n",subsongs );
     
         file.seek(17);
        startsong=0;
         file.read(&startsong,1);
-        Serial.printf("startsong :%d\n",startsong -1);
+        //Serial.printf("startsong :%d\n",startsong -1);
     
         file.seek(21);
          speed=0;
         file.read(&speed,1);
-        Serial.printf("speed :%d\n",speed );
+        //Serial.printf("speed :%d\n",speed );
     
         file.seek(22);
-        uint8_t name[32];
+
         file.read(name,32);
-       Serial.printf("name :%s\n",name );
+       //Serial.printf("name :%s\n",name );
     
         file.seek(0x36);
-        uint8_t author[32];
+
         file.read(author,32);
-        Serial.printf("author :%s\n",author );
+        //Serial.printf("author :%s\n",author );
     
         file.seek(0x56);
-        uint8_t published[32];
+
         file.read(published,32);
-        Serial.printf("published :%s\n",published );
+        //Serial.printf("published :%s\n",published );
     
     
     
@@ -772,35 +784,93 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
         Serial.printf("load_addr :%d\n",load_addr );
            size_t g=file.read(&mem[load_addr],file.size());
         Serial.printf("read %d\n",(int)g);
+    _playSongNumber(startsong -1);
+    currentsong=startsong -1;
+}
+ 
+void MOS6501::playNextSongInSid()
+{
     
-    cpuReset();
-    //_sidtunes_voicesQueues= xQueueCreate( 26000, sizeof( serial_command ) );
-   
-        if(play_addr==0)
-        {
-         cpuJSR(init_addr, 0);
-          play_addr = (mem[0x0315] << 8) + mem[0x0314];
-            Serial.printf("new play address %d\n",play_addr);
-        }
+    //Serial.printf("in net:%d\n",subsongs);
+    currentsong=(currentsong+1)%subsongs;
+    _playSongNumber(currentsong);
     
-        cpuJSR(init_addr, startsong -1);
-    delay(100);
-    xTaskCreatePinnedToCore(
-                MOS6501::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
-                "NAME1",          /* Text name for the task. */
-                4096,      /* Stack size in words, not bytes. */
-                this,    /* Parameter passed into the task. */
-                tskIDLE_PRIORITY,/* Priority at which the task is created. */
-                & SIDTUNESSerialPlayerTaskHandle,0);
-    
-       // printf("play\n");
-    
-        //getNextFrame(play_addr, 0);
- delay(1000);
-    xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
 }
 
 
+void MOS6501::playPrevSongInSid()
+{
+    if(currentsong==0)
+        currentsong=(subsongs-1);
+    else
+        currentsong--;
+    _playSongNumber(currentsong);
+    
+}
+void MOS6501::stopPlay()
+{
+    //Serial.printf("playing stop n:%d/%d\n",1,subsongs);
+    if(SIDTUNESSerialPlayerTaskHandle!=NULL)
+    {
+        
+        vTaskDelete(SIDTUNESSerialPlayerTaskHandle);
+        SIDTUNESSerialPlayerTaskHandle=NULL;
+    }
+    //Serial.printf("playing sop n:%d/%d\n",1,subsongs);
+}
+
+void MOS6501::_playSongNumber(int songnumber)
+{
+    buff=0;
+    buffold=0;
+    if(SIDTUNESSerialPlayerTaskHandle!=NULL)
+    {
+        
+        vTaskDelete(SIDTUNESSerialPlayerTaskHandle);
+        SIDTUNESSerialPlayerTaskHandle==NULL;
+    }
+    if(songnumber<0 || songnumber>=subsongs)
+    {
+        Serial.println("Wrong song number");
+        return;
+    }
+    Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
+    cpuReset();
+    //Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
+    //_sidtunes_voicesQueues= xQueueCreate( 26000, sizeof( serial_command ) );
+    
+    if(play_addr==0)
+    {
+        cpuJSR(init_addr, 0);
+        play_addr = (mem[0x0315] << 8) + mem[0x0314];
+        //Serial.printf("new play address %d\n",play_addr);
+    }
+   // Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
+    cpuJSR(init_addr, songnumber);
+    xTaskCreatePinnedToCore(
+                            MOS6501::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
+                            "NAME1",          /* Text name for the task. */
+                            4096,      /* Stack size in words, not bytes. */
+                            this,    /* Parameter passed into the task. */
+                            3,/* Priority at which the task is created. */
+                            & SIDTUNESSerialPlayerTaskHandle,0);
+    
+    //    xTaskCreate(
+    //                            MOS6501::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
+    //                            "NAME1",          /* Text name for the task. */
+    //                            4096,      /* Stack size in words, not bytes. */
+    //                            this,    /* Parameter passed into the task. */
+    //                            3,/* Priority at which the task is created. */
+    //                            & SIDTUNESSerialPlayerTaskHandle);
+    
+    // printf("play\n");
+    
+    //getNextFrame(play_addr, 0);
+    delay(200);
+    xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
+    //Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
+    
+}
 
 void  MOS6501::SIDTUNESSerialPlayerTask(void * parameters)
 {
@@ -812,22 +882,113 @@ void  MOS6501::SIDTUNESSerialPlayerTask(void * parameters)
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         MOS6501 * cpu= (MOS6501 *)parameters;
         
-        Serial.println("We Start");
+        //Serial.println("We Start");
         while(1)
         {
             //cpu->init_addr=23;
             //Serial.println(cpu->play_addr);
             cpu->totalinframe=cpu->cpuJSR(cpu->play_addr,0);
+
            cpu->wait=cpu->waitframe;
             cpu->frame=true;
             cpu->waitframe=0;
-            int nRefreshCIA = (int)( ((20000 * (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8)) / 0x4c00) + (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8))  )  /2 )    ;
-            if ((nRefreshCIA == 0) or cpu->speed==0) nRefreshCIA = 20000;
-            //printf("total:%d\n",nRefreshCIA);
+            int nRefreshCIA = (int)( ((19550 * (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8)) / 0x4c00) + (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8))  )  /2 )    ;
+            if ((nRefreshCIA == 0) or cpu->speed==0) nRefreshCIA = 19550;
+            if(cpu->totalinframe<110)
+            {
+                nRefreshCIA = 19550;
+            //Serial.printf("total:%d\n",nRefreshCIA);
+            }
             cpu->waitframe=nRefreshCIA;
             //sid.feedTheDog();
+            //Serial.printf("playing song n:%d/%d\n",1,cpu->subsongs);
         }
         
         
     }
+}
+
+
+
+void MOS6501::addSong(fs::FS &fs,  const char * path)
+{
+    songstruct p1;
+    p1.fs=(fs::FS *)&fs;
+    //char h[250];
+    sprintf(p1.filename,"%s",path);
+    //p1.filename=h;
+    listsongs[numberOfSongs]=p1;
+    numberOfSongs++;
+    Serial.printf("nb song:%d\n",numberOfSongs);
+}
+
+void MOS6501::playTunes()
+{
+    stopPlay();
+    songstruct p1=listsongs[currentfile];
+   // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
+    
+    playSidFile(*p1.fs,p1.filename);
+}
+
+
+
+void MOS6501::playTunes(int duration)
+{
+    stopPlay();
+    
+    songstruct p1=listsongs[currentfile];
+    // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
+    
+    playSidFile(*p1.fs,p1.filename);
+    
+    
+}
+
+void MOS6501::playNextSIDFile()
+{
+    stopPlay();
+    currentfile=(currentfile+1)%numberOfSongs;
+    songstruct p1=listsongs[currentfile];
+     playSidFile(*p1.fs,p1.filename);
+}
+
+void MOS6501::playPrevSIDFile()
+{
+    stopPlay();
+    if(currentfile==0)
+        currentfile=numberOfSongs-1;
+    else
+        currentfile--;
+    songstruct p1=listsongs[currentfile];
+    playSidFile(*p1.fs,p1.filename);
+}
+
+char * MOS6501::getName()
+{
+    return (char *)name;
+}
+
+char * MOS6501::getPublished()
+{
+    return (char *)published;
+}
+
+char * MOS6501::getAuthor()
+{
+    return (char *)author;
+}
+
+
+int MOS6501::getNumberOfTunesInSid()
+{
+    return subsongs;
+}
+int MOS6501::getCurrentTuneInSid()
+{
+    return currentsong;
+}
+int MOS6501::getDefaultTuneInSid()
+{
+    return startsong-1;
 }

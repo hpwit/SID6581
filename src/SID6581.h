@@ -224,7 +224,37 @@ public:
     void pushRegister(int chip,int address,int data);
     void resetsid();
     void feedTheDog();
+    
+    
+   
+    int getSidVolume( int chip);
+    int getFrequency(int voice);
+    double getFrequencyHz(int voice);
+    int getPulse(int voice);
+    int getAttack(int voice);
+    int getDecay(int voice);
+    int getSustain(int voice);
+    int getRelease(int voice);
+    int getGate(int voice);
+    int getWaveForm(int voice);
+    int getTest(int voice);
+    int getSync(int voice);
+    int getRingMode(int voice);
+    int getFilterFrequency(int chip);
+    int getResonance(int chip);
+    int getFilter1(int chip);
+    int getFilter2(int chip);
+    int getFilter3(int chip);
+    int getFilterEX(int chip);
+    int get3OFF(int chip);
+    int getHP(int chip);
+    int getBP(int chip);
+    int getLP(int chip);
+    
+    int getRegister(int chip,int addr);
+    
     _sid_voice voices[15];
+    uint8_t sidregisters[15*32];
     
 protected:
     
