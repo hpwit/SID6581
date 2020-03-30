@@ -56,6 +56,8 @@ SID6581::SID6581(){}
     
     i2s_set_pin(i2s_num, &pin_config);
     begin(clock_pin,data_pin,latch );
+    
+    
 }
 bool SID6581::begin(int clock_pin,int data_pin, int latch )
 {
@@ -68,6 +70,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
     sid_spi->begin(clock_pin,NULL,data_pin,NULL);
     latch_pin=latch;
     pinMode(latch, OUTPUT);
+    
     Serial.println("SID Initialized");
     _sid_queue = xQueueCreate( SID_QUEUE_SIZE, sizeof( _sid_register_to_send ) );
     xTaskCreate(SID6581::_pushRegister, "_pushRegister", 2048, this,3, &xPushToRegisterHandle);

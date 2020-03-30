@@ -36,24 +36,17 @@ void MOS6501::setmem(uint16_t addr,uint8_t value)
             totalinframe=0;
         }
         
-        //console.log((addr-0xd400)+" "+value +" "+(t+(buff-buffold)));
-        //Serial.printf("%x %x %d\n",addr-0xd400,value,t+buff-buffold);
+mem[addr] = value;
         uint16_t decal=t+buff-buffold;
-        //printf("%c%c%c%c",addr,value,decal & 0xFF,(decal &0xFF00)>>8);
+
         addr=(addr&0xFF)+32*based;
-        //         serial_command c;
-        //        c.address=addr;
-        //        c.data=value;
-        //        c.duration=decal;
-        //        xQueueSend(_sidtunes_voicesQueues, &c, portMAX_DELAY);
+        //Serial.printf("%x %x\n",addr,value);
         _sid->pushRegister(addr/32,addr%32,value);
         //if(decal >4)
-        delayMicroseconds(decal);
-        //Serial.printf("dodp %d\n",pc);
-        // if(decal>1000)
-        //   vTaskDelay(decal/1000);
-        sid.feedTheDog();
-        //vTaskDelay(0);
+         delayMicroseconds(decal);
+
+       // sid.feedTheDog();
+ //mem[addr] = value;
         buffold=buff;
     }
     else
@@ -677,9 +670,12 @@ uint16_t MOS6501::cpuJSR(uint16_t npc, uint8_t na) {
         //sid.feedTheDog ();
         //printf("cycles %d\n",buff);
         //if(pc>64000)
-        //Serial.printf("after parse:%d %d %x %x %x\n",pc,wval ,mem[pc],mem[pc+1],mem[pc+2]);
-        //Serial.printf("net instr:%d\n",mem[pc+1]);
+        //if(plmo>=13595)
+        //Serial.printf("pc: %d net instr:%d\n",pc,mem[pc+1]);
     }
+   plmo++;
+     sid.feedTheDog();
+    //Serial.printf("after parse:%d %d %x %x %x %ld\n",pc,wval ,mem[pc],mem[pc+1],mem[pc+2],plmo);
     return ccl;
 }
 
@@ -694,7 +690,7 @@ void MOS6501::getNextFrame(uint16_t npc, uint8_t na)
         //waitframe=0;
         int nRefreshCIA = (int)( ((19954 * (getmem(0xdc04) | (getmem(0xdc05) << 8)) / 0x4c00) + (getmem(0xdc04) | (getmem(0xdc05) << 8))  )  /2 )    ;
         if ((nRefreshCIA == 0) or speed==0) nRefreshCIA = 48000;
-        printf("tota l:%d\n",nRefreshCIA);
+       // printf("tota l:%d\n",nRefreshCIA);
         waitframe=nRefreshCIA;
         
     }
@@ -707,7 +703,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     if(this->mem==NULL)
     {
         Serial.println("we create the memory buffer");
-        mem=(uint8_t*)malloc(0xffff);
+        mem=(uint8_t*)malloc(0x10000);
         if(mem==NULL)
         {
             Serial.println("not enough memory\n");
@@ -715,7 +711,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
         }
     }
     //memset(mem,0,0xffff);
-    memset(mem,0,0xffff);
+    memset(mem,0x0,0x10000);
     memset(name,0,32);
     memset(author,0,32);
     memset(published,0,32);
@@ -746,7 +742,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     init_addr  = f*256;
     file.read(&f,1);
     init_addr+=f;
-    // Serial.printf("init_addr:%d\n",init_addr);
+    //Serial.printf("init_addr:%d\n",init_addr);
     
     
     play_addr=0;
@@ -755,7 +751,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     play_addr  = f*256;
     file.read(&f,1);
     play_addr+=f;
-    // Serial.printf("play_addr:%d\n",play_addr);
+     //Serial.printf("play_addr:%d\n",play_addr);
     
     file.seek( 15);
     subsongs=0;
@@ -801,9 +797,10 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     file.read(&d1,1);
     file.read(&d2,1);
     load_addr=d1+(d2<<8);
-    // Serial.printf("load_addr :%d\n",load_addr );
+    //Serial.printf("load_addr :%d\n",load_addr );
     size_t g=file.read(&mem[load_addr],file.size());
-    //Serial.printf("read %d\n",(int)g);
+   //memset(&mem[load_addr+g],0xea,0x10000-load_addr+g);
+   //Serial.printf("read %d\n",(int)g);
     for(int i=0;i<32;i++)
     {
         uint8_t fm;
@@ -870,12 +867,32 @@ void MOS6501::_playSongNumber(int songnumber)
     
     if(play_addr==0)
     {
-        cpuJSR(init_addr, 0);
+        Serial.printf("humm");
+        
+        songnumber=2;
+        cpuJSR(init_addr, 0); //0
+        Serial.printf("humm");
         play_addr = (mem[0x0315] << 8) + mem[0x0314];
-        //Serial.printf("new play address %d\n",play_addr);
+        if(play_addr==0)
+        
+        {
+            cpuJSR(init_addr, songnumber);
+            play_addr=(mem[0xffff] << 8) + mem[0xfffe];
+            mem[1]=0x37;
+        }
+        else
+        {
+            cpuJSR(init_addr, songnumber);
+        }
+        
+        Serial.printf("new play address %d %d\n",play_addr,(mem[0xffff] << 8) + mem[0xfffe]);
+    }
+    else
+    {
+        cpuJSR(init_addr, songnumber);
     }
     // Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
-    cpuJSR(init_addr, songnumber);
+    //cpuJSR(init_addr, songnumber);
     
     xTaskCreatePinnedToCore(
                             MOS6501::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
@@ -914,7 +931,7 @@ void  MOS6501::SIDTUNESSerialPlayerTask(void * parameters)
             
             int nRefreshCIA = (int)( ((19650 * (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8)) / 0x4c00) + (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8))  )  /2 )    ;
             
-            if ((nRefreshCIA == 0) || (cpu->speedsong[cpu->currentsong]==0))
+            if ((nRefreshCIA == 0) );//|| (cpu->speedsong[cpu->currentsong]==0))
                     nRefreshCIA = 19650;
             
             cpu->waitframe=nRefreshCIA;
