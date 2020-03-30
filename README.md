@@ -983,28 +983,28 @@ int getSustain(int voice);
 int getRelease(int voice);
 int getGate(int voice);
 int getWaveForm(int voice);
-values are:
-        SID_WAVEFORM_TRIANGLE 
-        SID_WAVEFORM_SAWTOOTH 
-        SID_WAVEFORM_PULSE 
-        SID_WAVEFORM_NOISE 
+        values are:
+                SID_WAVEFORM_TRIANGLE 
+                SID_WAVEFORM_SAWTOOTH 
+                SID_WAVEFORM_PULSE 
+                SID_WAVEFORM_NOISE 
 int getTest(int voice);
 int getSync(int voice);
 int getRingMode(int voice);
-not yet implemented:
-    int getFilterFrequency(int chip);
-    int getResonance(int chip);
-    int getFilter1(int chip);
-    int getFilter2(int chip);
-    int getFilter3(int chip);
-    int getFilterEX(int chip);
-    int get3OFF(int chip);
-    int getHP(int chip);
-    int getBP(int chip);
-    int getLP(int chip);
+int getFilterFrequency(int chip);
+int getResonance(int chip);
+int getFilter1(int chip);
+int getFilter2(int chip);
+int getFilter3(int chip);
+int getFilterEX(int chip);
+int get3OFF(int chip);
+int getHP(int chip);
+int getBP(int chip);
+int getLP(int chip);
 
 glabal function:
 int getRegister(int chip,int addr);
+
 here are the  possible addresses:
         SID_FREQ_LO_0
         SID_FREQ_HI_0
@@ -1053,4 +1053,4 @@ void loop() {
 
 
 
-Updated 18 March 2020
+Updated 31 March 2020

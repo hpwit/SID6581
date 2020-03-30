@@ -558,11 +558,26 @@ void SID6581::set3OFF(int chip,int _3off)
     sid_control[chip].mode_vol=(sid_control[chip].mode_vol & (0xff ^ SID_3OFF )) + (_3off & SID_3OFF);
     pushRegister(chip,0x18,sid_control[chip].mode_vol);
 }
+
+
+int SID6581::get3OFF(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+24];
+    return (reg >>7);
+}
+
+
 void SID6581::setHP(int chip,int hp)
 {
     sid_control[chip].hp=hp;
     sid_control[chip].mode_vol=(sid_control[chip].mode_vol & (0xff ^ SID_HP )) + (hp & SID_HP);
     pushRegister(chip,0x18,sid_control[chip].mode_vol);
+}
+
+int SID6581::getHP(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+24];
+    return (reg >>6) & 1;
 }
 void SID6581::setBP(int chip,int bp)
 {
@@ -570,13 +585,23 @@ void SID6581::setBP(int chip,int bp)
     sid_control[chip].mode_vol=(sid_control[chip].mode_vol & (0xff ^ SID_BP )) + (bp & SID_BP);
     pushRegister(chip,0x18,sid_control[chip].mode_vol);
 }
+
+int SID6581::getBP(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+24];
+    return (reg >>5) & 1;
+}
 void SID6581::setLP(int chip,int lp)
 {
     sid_control[chip].lp=lp;
     sid_control[chip].mode_vol=(sid_control[chip].mode_vol & (0xff ^ SID_LP )) + (lp & SID_LP);
     pushRegister(chip,0x18,sid_control[chip].mode_vol);
 }
-
+int SID6581::getLP(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+24];
+    return (reg >>4) & 1;
+}
 void SID6581::sidSetVolume(int chip, uint8_t vol)
 {
     sid_control[chip].volume=vol;
@@ -599,6 +624,10 @@ void  SID6581::setFilterFrequency(int chip,int filterfrequency)
     pushRegister(chip,0x15,sid_control[chip].fc_lo);
     pushRegister(chip,0x16,sid_control[chip].fc_hi);
 }
+int SID6581::getFilterFrequency(int chip)
+{
+    return sidregisters[chip*32+0x15] +sidregisters[chip*32+0x16]*256;
+}
 
 void SID6581::setResonance(int chip,int resonance)
 {
@@ -607,11 +636,21 @@ void SID6581::setResonance(int chip,int resonance)
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
 
+int SID6581::getResonance(int chip)
+{
+    return sidregisters[chip*32+0x17] >>4;
+}
+
 void SID6581::setFilter1(int chip,int filt1)
 {
     sid_control[chip].filt1;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT1 )) + (filt1 & SID_FILT1);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
+}
+int SID6581::getFilter1(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+0x17];
+    return (reg & 1);
 }
 void SID6581::setFilter2(int chip,int filt2)
 {
@@ -619,11 +658,21 @@ void SID6581::setFilter2(int chip,int filt2)
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT2 )) + (filt2 & SID_FILT2);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
+int SID6581::getFilter2(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+0x17];
+    return (reg>>1) & 1;
+}
 void SID6581::setFilter3(int chip,int filt3)
 {
     sid_control[chip].filt3;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT3 )) + (filt3 & SID_FILT3);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
+}
+int SID6581::getFilter3(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+0x17];
+    return (reg>>2) & 1;
 }
 void SID6581::setFilterEX(int chip,int filtex)
 {
@@ -631,7 +680,11 @@ void SID6581::setFilterEX(int chip,int filtex)
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILTEX )) + (filtex & SID_FILTEX);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
-
+int SID6581::getFilterEX(int chip)
+{
+    uint8_t reg=sidregisters[chip*32+0x17];
+    return (reg>>3) & 1;
+}
 void SID6581::soundOn()
 {
     setcsw();
