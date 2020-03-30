@@ -1041,7 +1041,7 @@ void loop() {
     Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
 
     vTaskDelay(100);
- 
+    
 }
 
 ```

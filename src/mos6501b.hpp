@@ -35,6 +35,14 @@
 #include "soc/timer_group_reg.h"
 
 
+#ifndef SID_CPU_CORE
+    #define SID_CPU_CORE 0
+#endif
+
+#ifndef SID_TASK_PRIORITY
+    #define SID_TASK_PRIORITY 3
+#endif
+
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
@@ -374,9 +382,10 @@ public:
     uint8_t a,x,y,p,s,bval;
     bool frame;
     int numberOfSongs;
-    
-    songstruct listsongs[80];
-    
+    int nRefreshCIAbase;
+    songstruct listsongs[255];
+    int reset;
+    int speedsong[32];
     MOS6501(){
         _sid=&sid;
         numberOfSongs=0;
