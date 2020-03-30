@@ -867,11 +867,11 @@ void MOS6501::_playSongNumber(int songnumber)
     
     if(play_addr==0)
     {
-        Serial.printf("humm");
+        
         
         songnumber=2;
         cpuJSR(init_addr, 0); //0
-        Serial.printf("humm");
+        
         play_addr = (mem[0x0315] << 8) + mem[0x0314];
         if(play_addr==0)
         
@@ -885,7 +885,7 @@ void MOS6501::_playSongNumber(int songnumber)
             cpuJSR(init_addr, songnumber);
         }
         
-        Serial.printf("new play address %d %d\n",play_addr,(mem[0xffff] << 8) + mem[0xfffe]);
+        //Serial.printf("new play address %d %d\n",play_addr,(mem[0xffff] << 8) + mem[0xfffe]);
     }
     else
     {
