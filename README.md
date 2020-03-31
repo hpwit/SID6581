@@ -737,7 +737,7 @@ the library allows to create your own instruments.
                  sid.setSustain(voice,1);
                  sid.setDecay(voice,10);
                  sid.setRelease(voice,9);
-                 set.setPulse(voice,3000);
+                 sid.setPulse(voice,3000);
                  sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
                  sid.setFrequency(voice,note);
                  sid.setGate(voice,1);
