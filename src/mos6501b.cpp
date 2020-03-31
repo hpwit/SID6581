@@ -715,6 +715,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     memset(name,0,32);
     memset(author,0,32);
     memset(published,0,32);
+     memset(currentfilename,0,50);
     if( &fs==NULL || path==NULL)
     {
         Serial.println("Invalid parameter");
@@ -727,6 +728,7 @@ void MOS6501::playSidFile(fs::FS &fs, const char * path)
     }
     File file=fs.open(path);
     
+    sprintf(currentfilename,"%s",path);
     file.seek(7);
     
     data_offset=0;
@@ -1030,4 +1032,16 @@ int MOS6501::getCurrentTuneInSid()
 int MOS6501::getDefaultTuneInSid()
 {
     return startsong-1;
+}
+
+char * MOS6501::getSidFileName(){
+    
+    return currentfilename;
+}
+int MOS6501::getPlaylistSize(){
+    return numberOfSongs;
+}
+int MOS6501::getPositionInPlaylist(){
+    return currentfile+1;
+    
 }

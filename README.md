@@ -52,6 +52,9 @@ to have info on the sid file
 char * getName(); //get name of the sid file
 char * getPublished(); //get publish information
 char * getAuthor(); //return the author
+char * getSidFileName(); //return the filename of the current Sidfile playing
+int getPlaylistSize(); //return the size of the playlist
+int getPositionInPlaylist(); //return the position of the sidfile in the playlist (starting at one);
 int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
 int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
 int getDefaultTuneInSid(); //get the number of the default tunes. 

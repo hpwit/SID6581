@@ -548,7 +548,7 @@ int SID6581::getWaveForm(int voice)
 {
     int chip=voice/3;
     uint8_t reg=sidregisters[chip*32+voice*7+4];
-    return (reg >>4);
+    return (reg  &0xF0);
 }
 
 

@@ -388,6 +388,7 @@ public:
     uint8_t published[32];
     uint8_t author[32];
     uint8_t name[32];
+    char currentfilename[50];
     uint8_t a,x,y,p,s,bval;
     bool frame;
     int numberOfSongs;
@@ -434,6 +435,9 @@ public:
     char * getName();
     char * getPublished();
     char * getAuthor();
+    char * getSidFileName();
+    int getPlaylistSize();
+    int getPositionInPlaylist();
     int getNumberOfTunesInSid();
     int getCurrentTuneInSid();
     int getDefaultTuneInSid();
