@@ -47,7 +47,7 @@ void playPrev(); //play prev song of the playlist
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
-void sidSetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
+void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
 char * getFilename(); //return the filename of the current Sidfile playing
 int getPositionInPlaylist(); 
@@ -192,7 +192,7 @@ void playPrev(); //play prev song of the playlist
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
-void sidSetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
+void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
 char * getFilename(); //return the filename of the current Sidfile playing
 int getPositionInPlaylist(); 
