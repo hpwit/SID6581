@@ -713,8 +713,7 @@ void SIDTunesPlayer::getNextFrame(uint16_t npc, uint8_t na)
 
 void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
 {
-     executeEventCallback(SID_START_PLAY);
-    executeEventCallback(SID_NEW_TRACK);
+
     Serial.printf("playing file:%s\n",path);
     if(mem==NULL)
     {
@@ -754,6 +753,8 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
         return;
     }
     sprintf(currentfilename,"%s",path);
+    executeEventCallback(SID_START_PLAY);
+    executeEventCallback(SID_NEW_TRACK);
     file.seek(7);
     
     data_offset=0;
