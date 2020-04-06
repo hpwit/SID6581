@@ -42,8 +42,9 @@
 #define MASK_CSWRRE 0b111
 #define SID_WAVEFORM_TRIANGLE (1<<4)
 #define SID_WAVEFORM_SAWTOOTH (1<<5)
-#define SID_WAVEFORM_PULSE (1<<6)
+#define SID_WAVEFORM_SQUARE (1<<6)
 #define SID_WAVEFORM_NOISE (1<<7)
+#define SID_WAVEFORM_SILENCE 0
 #define SID_GATE 0
 #define SID_TEST (1<<3)
 #define SID_SYNC 1
@@ -168,7 +169,14 @@ struct _sid_command {
 };
 
 
-
+enum sidEvent {
+    SID_NEW_TRACK,
+    SID_START_PLAY,
+    SID_END_PLAY,
+    SID_PAUSE_PLAY,
+    SID_RESUME_PLAY,
+    SID_END_SONG
+};
 
 
 
@@ -183,7 +191,7 @@ public:
     SID6581();
     bool begin(int clock_pin,int data_pin, int latch );
     bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-    
+  /*
     void play();
     void playNext();
     void playPrev();
@@ -195,6 +203,7 @@ public:
     void playSongNumber(int number);
     void stopPlayer();
     void setVoice(uint8_t vo);
+    */
     
     void sidSetVolume( int chip,uint8_t vol);
     void setFrequency(int voice, uint16_t frequency);
@@ -256,31 +265,6 @@ public:
     
     _sid_voice voices[15];
     uint8_t sidregisters[15*32];
-    
-protected:
-    
-    int  latch_pin;
-    void stop();
-    uint8_t voice=7;
-    _sid_control sid_control[5];
-    void playNextInt();
-    bool stopped=false;
-    int numberToPlay=0;
-    int numberOfSongs=0;
-    int currentSong=0;
-    bool paused=false;
-    
-    const int _maxnumber=80;
-    
-    static void playSIDTunesTask(void *pvParameters);
-    static void _pushRegister(void *pvParameters);
-    static void playSIDTunesLoopTask(void *pvParameters);
-    songstruct listsongs[80];
-    uint8_t save24;
-    uint8_t volume;
-    uint8_t * sidvalues;
-    unsigned int readFile2(fs::FS &fs, const char * path);
-    uint8_t adcswrre,dataspi,chipcontrol;
     void clearcsw(int chip);
     //void resetsid();
     void push();
@@ -289,6 +273,35 @@ protected:
     void setcsw();
     void setD(uint8_t val);
     void cls();
+    void soundOn();
+    void soundOff();
+
+    
+protected:
+    
+    int  latch_pin;
+    //void stop();
+    //uint8_t voice=7;
+    int saveVolume[5];
+    _sid_control sid_control[5];
+    void playNextInt();
+    /*bool stopped=false;
+    int numberToPlay=0;
+    int numberOfSongs=0;
+    int currentSong=0;
+    bool paused=false;*/
+    
+  //  const int _maxnumber=80;
+    
+    //static void playSIDTunesTask(void *pvParameters);
+    static void _pushRegister(void *pvParameters);
+   /* static void playSIDTunesLoopTask(void *pvParameters);
+    songstruct listsongs[80];
+    uint8_t save24;
+    uint8_t volume;
+    uint8_t * sidvalues;
+    unsigned int readFile2(fs::FS &fs, const char * path);*/
+    uint8_t adcswrre,dataspi,chipcontrol;
     SPIClass * sid_spi = NULL;
     const int sid_spiClk = 20000000;
     
@@ -297,7 +310,56 @@ protected:
 static   SID6581 sid;
 
 
+class SIDRegisterPlayer{
+    
+public:
+    
+    void play();
+    void playNext();
+    void playPrev();
+    //void soundOff();
+    //void soundOn();
+    void pausePlay();
+    void SetMaxVolume( uint8_t volume);
+    void addSong(fs::FS &fs,  const char * path);
+    void playSongNumber(int number);
+    void stopPlayer();
+    void setVoice(uint8_t vo);
+    bool begin(int clock_pin,int data_pin, int latch );
+    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+    char * getFilename();
+    int getPositionInPlaylist();
+    int getPlaylistSize();
+    void executeEventCallback(sidEvent event);
+    inline void setEventCallback(void (*fptr)(sidEvent event))
+    {
+        eventCallback = fptr;
+    }
+    
+    
+    
+private:
+    char return_filename[250];
+    uint8_t voice=7;
+    const int _maxnumber=255;
+    void playNextInt();
+    bool stopped=false;
+    int numberToPlay=0;
+    int numberOfSongs=0;
+    int currentSong=0;
+    bool paused=false;
+    void stop();
+     static void playSIDTunesTask(void *pvParameters);
+    static void playSIDTunesLoopTask(void *pvParameters);
+    songstruct listsongs[255];
+    uint8_t save24;
+    uint8_t volume;
+    uint8_t * sidvalues;
+    void (*eventCallback)(sidEvent event)=NULL;
+    unsigned int readFile2(fs::FS &fs, const char * path);
+};
 
+//static SIDRegisterPlayer sidRegisterPlayer;
 
 class sid_instrument{
 public:
@@ -617,7 +679,7 @@ public:
         sid.setDecay(voice,2);
         sid.setRelease(voice,10);
         sid.setPulse(voice,1000);
-        sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
+        sid.setWaveForm(voice,SID_WAVEFORM_SQUARE);
         sid.setGate(voice,1);
         i=0;
     }

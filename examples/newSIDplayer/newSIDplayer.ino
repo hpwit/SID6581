@@ -1,18 +1,21 @@
-//#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
 #include "SPIFFS.h"
 #include "FS.h"
-#include "mos6501b.hpp"
-   
-//uint8_t mem[0xffff];
+#include "SidPlayer.h"
+
+SIDTunesPlayer * player;
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+      player=new SIDTunesPlayer();
+   player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
     
-   sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-    
+   
+     
   if(!SPIFFS.begin(true)){
           Serial.println("SPIFFS Mount Failed");
           return;
@@ -40,39 +43,57 @@ void setup() {
             Serial.print(file.name());
             Serial.print("\tSIZE: ");
             Serial.println(file.size());
-           cpu.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+           player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
         }
         file = root.openNextFile();
     }
 
-cpu.playTunes();
+player->play();
 
  Serial.println();
-  Serial.printf("author:%s\n",cpu.getAuthor());
-   Serial.printf("published:%s\n",cpu.getPublished());
-    Serial.printf("name:%s\n",cpu.getName());
-    Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
+  Serial.printf("author:%s\n",player->getAuthor());
+   Serial.printf("published:%s\n",player->getPublished());
+    Serial.printf("name:%s\n",player->getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
 
    delay(5000);
- cpu.playNextSongInSid();
+  player->playNextSongInSid();
 delay(5000);
- cpu.playNextSIDFile();
+ player->playNext();
  delay(5000);
   Serial.println();
-  Serial.printf("author:%s\n",cpu.getAuthor());
-   Serial.printf("published:%s\n",cpu.getPublished());
-    Serial.printf("name:%s\n",cpu.getName());
-    Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
+  Serial.printf("author:%s\n",player->getAuthor());
+   Serial.printf("published:%s\n",player->getPublished());
+    Serial.printf("name:%s\n",player->getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
 
 }
 
 
 void loop() {
- 
-Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
-Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
-Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
+     delay(5000);
+    Serial.println("Pause the song");
+    player->pausePlay();
+    delay(4000);
+    Serial.println("restart the song");
+    player->pausePlay();
+    delay(3000);
+    Serial.println("hi volume");
+    player->SetMaxVolume(15);
+    delay(3000);
+    Serial.println("low volume ");
+    player->SetMaxVolume(3);
+    delay(3000);
+    Serial.println("medium");
+    player->SetMaxVolume(7);
+    delay(3000);
 
- vTaskDelay(100);
- 
+    delay(3000);
+    Serial.println("next song");
+    player->playNext(); //sid.playPrev(); if you want to go backwards 
+    delay(10000);
+
+    //player->stopPlayer(); //to stop the plater completely
+    //delay(10000);
+    //player->play(); //to restart it
 }

@@ -21,7 +21,7 @@ Please look at the schematics for the setup of the shift registers and  MOS 6581
 ```
 The object sid is automatically created.
 //if you have a external circuit that gives you the 1Mhz clock you can use:
-sid.begin(int clock_pin,int data_pin, int latch);
+begin(int clock_pin,int data_pin, int latch);
 
 
 //if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
@@ -31,118 +31,15 @@ here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the
 
 ```
 
-## To play a SIDtunes from a .sid file
+## To play a SIDtunes from a .sid file (SIDTunesPlayer Class)
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
-NB1: the sid tunes do not have an end hence they will not stop. to stop a song you need to use stopPlay()
+NB1: the sid tunes do not have an end hence they will not stop. to stop a song you need to use stopPlayer()
  
 ```
-void addSong(fs::FS &fs,  const char * path); //to add song to the playlist
-void playSidFile(fs::FS &fs, const char * path); //play a specific sid file. It will play the default song defined in the sid file.
-void playPrevSongInSid(); //to play the previous song in the sid file
-void playNextSongInSid(); //to play the next song in the sid file
-void stopPlay(); //to stop the player
-void playTunes(); //to play the current song of the playlist it will play the default song of the sid file
-void playNextSIDFile(); //to play the next song of the playlist it will play the default song of the sid file
-void playPrevSIDFile(); //to play the prev song of the playlist it will play the default song of the sid file
-
-
-to have info on the sid file
-char * getName(); //get name of the sid file
-char * getPublished(); //get publish information
-char * getAuthor(); //return the author
-char * getSidFileName(); //return the filename of the current Sidfile playing
-int getPlaylistSize(); //return the size of the playlist
-int getPositionInPlaylist(); //return the position of the sidfile in the playlist (starting at one);
-int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
-int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
-int getDefaultTuneInSid(); //get the number of the default tunes. 
-
-example:
-
-#define SID_CLOCK 25
-#define SID_DATA 33
-#define SID_LATCH 27
-#include "SPIFFS.h"
-#include "FS.h"
-#include "mos6501b.hpp"
-
-
-void setup() {
-        // put your setup code here, to run once:
-        Serial.begin(115200);
-
-        sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-
-        if(!SPIFFS.begin(true)){
-        Serial.println("SPIFFS Mount Failed");
-        return;
-        }
-
-
-        //the following line will go through all the files in the SPIFFS
-        //Do not forget to do "Tools-> ESP32 Scketch data upload"
-        File root = SPIFFS.open("/");
-        if(!root){
-        Serial.println("- failed to open directory");
-        return;
-        }
-        if(!root.isDirectory()){
-            Serial.println(" - not a directory");
-            return;
-            }
-
-        File file = root.openNextFile();
-        while(file){
-        if(file.isDirectory()){
-
-        } else {
-            Serial.print(" add file  FILE: ");
-            Serial.print(file.name());
-            Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-            cpu.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-        }
-            file = root.openNextFile();
-        }
-
-        cpu.playTunes();
-
-        Serial.println();
-        Serial.printf("author:%s\n",cpu.getAuthor());
-        Serial.printf("published:%s\n",cpu.getPublished());
-        Serial.printf("name:%s\n",cpu.getName());
-        Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
-
-        delay(5000);
-        cpu.playNextSongInSid();
-        
-
-}
-
-void loop() {
-        delay(5000);
-        cpu.playNextSIDFile();
-        Serial.println();
-        Serial.printf("author:%s\n",cpu.getAuthor());
-        Serial.printf("published:%s\n",cpu.getPublished());
-        Serial.printf("name:%s\n",cpu.getName());
-        Serial.printf("nb tunes:%d default tunes:%d\n",cpu.getNumberOfTunesInSid(),cpu.getDefaultTuneInSid());
-}
-
-```
-
-
-## To play a SIDtunes based on registry dump
-You can play SIDTunes stored as register dump on the SPIFF or the SD card
-
-
-NB 1: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
-
-Below the list of command to control the player
-
-```
+begin(int clock_pin,int data_pin, int latch);
+begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
 void play(); //play in loop the playlist
 void playNext(); //play next song of the playlist
@@ -152,29 +49,46 @@ void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
 void sidSetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
+char * getFilename(); //return the filename of the current Sidfile playing
+int getPositionInPlaylist(); 
+int getPlaylistSize();
 
-```
 
-### Example
+Specific functions to have info on the sid file
+char * getName(); //get name of the sid file
+char * getPublished(); //get publish information
+char * getAuthor(); //return the author
+int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
+int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
+int getDefaultTuneInSid(); //get the number of the default tunes. 
 
-```
-#include "SID6581.h"
+
+
+
+example:
+
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
-#define SID_CLOCK_PIN 26
 #include "SPIFFS.h"
+#include "FS.h"
+#include "SidPlayer.h"
+
+SIDTunesPlayer * player;
+
 
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
+    player=new SIDTunesPlayer();
+    player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
 
-    sid.begin(SID_CLOCK,SID_DATA,SID_LATCH); //if you have an external clock circuit
-    //or sid.begin(SID_CLOCK,SID_DATA,SID_LATCH,SID_CLOCK_PIN); //(if you do not have a external clock cicuit)
+
 
     if(!SPIFFS.begin(true)){
-    Serial.println("SPIFFS Mount Failed");
-    return;
+        Serial.println("SPIFFS Mount Failed");
+        return;
     }
 
 
@@ -195,18 +109,155 @@ void setup() {
         if(file.isDirectory()){
 
         } else {
-        Serial.print(" add file  FILE: ");
-        Serial.print(file.name());
-        Serial.print("\tSIZE: ");
-        Serial.println(file.size());
-        sid.addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-    }
+            Serial.print(" add file  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+        }
         file = root.openNextFile();
     }
-    sid.sidSetMaxVolume(7); //value between 0 and 15
+
+    player->play();
+
+    Serial.println();
+    Serial.printf("author:%s\n",player->getAuthor());
+    Serial.printf("published:%s\n",player->getPublished());
+    Serial.printf("name:%s\n",player->getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
+
+    delay(5000);
+    player->playNextSongInSid();
+    delay(5000);
+    player->playNext();
+    delay(5000);
+    Serial.println();
+    Serial.printf("author:%s\n",player->getAuthor());
+    Serial.printf("published:%s\n",player->getPublished());
+    Serial.printf("name:%s\n",player->getName());
+    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
+
+}
 
 
-    sid.play(); //it will play all songs in loop
+void loop() {
+
+    delay(5000);
+    Serial.println("Pause the song");
+    player->pausePlay();
+    delay(4000);
+    Serial.println("restart the song");
+    player->pausePlay();
+    delay(3000);
+    Serial.println("hi volume");
+    player->SetMaxVolume(15);
+    delay(3000);
+    Serial.println("low volume ");
+    player->SetMaxVolume(3);
+    delay(3000);
+    Serial.println("medium");
+    player->SetMaxVolume(7);
+    delay(3000);
+
+    delay(3000);
+    Serial.println("next song");
+    player->playNext(); //sid.playPrev(); if you want to go backwards 
+    delay(10000);
+
+    //player->stopPlayer(); //to stop the plater completely
+    //delay(10000);
+    //player->play(); //to restart it
+
+
+}
+
+```
+
+
+## To play a SIDtunes based on registry dump (SIDRegisterPlayer Class)
+You can play SIDTunes stored as register dump on the SPIFF or the SD card
+
+
+NB 1: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
+
+Below the list of command to control the player
+
+```
+begin(int clock_pin,int data_pin, int latch);
+begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+void addSong(fs::FS &fs,  const char * path); //add song to the playlist
+void play(); //play in loop the playlist
+void playNext(); //play next song of the playlist
+void playPrev(); //play prev song of the playlist
+void soundOff(); //cut off the sound
+void soundOn(); //trun the sound on
+void pausePlay(); //pause/play the player
+void sidSetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
+void stopPlayer(); //stop the player to restart use play()
+char * getFilename(); //return the filename of the current Sidfile playing
+int getPositionInPlaylist(); 
+int getPlaylistSize();
+void executeEventCallback(sidEvent event);
+inline void setEventCallback(void (*fptr)(sidEvent event))
+
+
+```
+
+### Example
+
+```
+#include "SidPlayer.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+#include "SPIFFS.h"
+
+
+SIDRegisterPlayer * player;
+
+void setup() {
+    // put your setup code here, to run once:
+    Serial.begin(115200);
+    player=new SIDRegisterPlayer();
+    player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
+
+
+
+    if(!SPIFFS.begin(true)){
+        Serial.println("SPIFFS Mount Failed");
+        return;
+    }
+
+
+    //the following line will go through all the files in the SPIFFS
+    //Do not forget to do "Tools-> ESP32 Scketch data upload"
+    File root = SPIFFS.open("/");
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+
+        } else {
+            Serial.print(" add file  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+        }
+        file = root.openNextFile();
+    }
+    player->SetMaxVolume(7); //value between 0 and 15
+
+
+    player->play(); //it will play all songs in loop
 }
 
 void loop() {
@@ -215,29 +266,29 @@ void loop() {
 
     delay(5000);
     Serial.println("Pause the song");
-    sid.pausePlay();
+    player->pausePlay();
     delay(4000);
     Serial.println("restart the song");
-    sid.pausePlay();
+    player->pausePlay();
     delay(3000);
     Serial.println("hi volume");
-    sid.sidSetMaxVolume(15);
+    player->SetMaxVolume(15);
     delay(3000);
     Serial.println("low volume ");
-    sid.sidSetMaxVolume(3);
+    player->SetMaxVolume(3);
     delay(3000);
     Serial.println("medium");
-    sid.sidSetMaxVolume(7);
+    player->SetMaxVolume(7);
     delay(3000);
 
     delay(3000);
     Serial.println("next song");
-    sid.playNext(); //sid.playPrev(); if you want to go backwards 
+    player->playNext(); //sid.playPrev(); if you want to go backwards 
     delay(10000);
 
-    //sid.stopPlayer(); //to stop the plater completly
+    //player->stopPlayer(); //to stop the plater completely
     //delay(10000);
-    //sid.play(); //to restart it
+    //player->play(); //to restart it
 
 }
 ```
@@ -293,9 +344,118 @@ NB3: still have to cope woth the fact that sometimes the transmition and the buf
 
 ```
 
+## callback events of the players
+In both player you can set events to add better control via:
+
+```
+inline void setEventCallback(void (*fptr)(sidEvent event))
 
 
-## Details of the other control commands
+example:
+
+#include "SidPlayer.h"
+#define SID_CLOCK 25
+#define SID_DATA 33
+#define SID_LATCH 27
+#include "SPIFFS.h"
+#include "SD.h"
+SIDRegisterPlayer * player;
+
+void myCallback(  sidEvent event ) {
+
+        
+        switch( event ) {
+            case SID_NEW_TRACK: 
+            Serial.printf( "New track: %s\n",player->getFilename() );
+            break;
+            case SID_START_PLAY: 
+            Serial.printf( "Start play: %s\n",player->getFilename() );
+            break;
+            case SID_END_PLAY: 
+            Serial.printf( "stopping play: %s\n",player->getFilename() );
+            break;
+            case SID_PAUSE_PLAY: 
+            Serial.printf( "pausing play: %s\n",player->getFilename() );
+            break;
+            case SID_RESUME_PLAY: 
+            Serial.printf( "resume play: %s\n",player->getFilename() );
+            break;
+            case SID_END_SONG:
+            Serial.println("End of track");
+            break;
+        }
+}
+
+void setup() {
+// put your setup code here, to run once:
+    Serial.begin(115200);
+    player=new SIDRegisterPlayer();
+    player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
+    player->setEventCallback(myCallback);
+
+    if(!SPIFFS.begin(true)){
+    Serial.println("SPIFFS Mount Failed");
+    return;
+}
+
+
+    //the following line will go through all the files in the SPIFFS
+    //Do not forget to do "Tools-> ESP32 Scketch data upload"
+    File root = SPIFFS.open("/");
+
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+
+        } else {
+            Serial.print(" add file  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
+        }
+        file = root.openNextFile();
+    }
+    
+    player->SetMaxVolume(7); //value between 0 and 15
+
+
+    player->play(); //it will play all songs in loop
+
+}
+
+void loop() {
+//if you jsut want to hear the songs just comment the lines below
+delay(10000);
+
+player->pausePlay();
+delay(8000);
+//  Serial.println("restart the song");
+player->pausePlay();
+delay(3000);
+
+Serial.println("next song");
+player->playNext(); //sid.playPrev(); if you want to go backwards 
+
+
+}
+
+```
+
+## Example to control the Player using GPIOs
+look at the example  SIDPlayerControl
+
+
+# Details of the other control commands (sid object)
 
 You have full control of the SID chip via the following commands
 ```
@@ -447,7 +607,7 @@ void loop() {
 ```
 
 
-## Keyboard Player
+## Keyboard Player (SIDKeyBoardPlayer Class)
 
 You can turn the SID Chip into a synthetizer with up to 15 voices depending on the number of sid chips you have.
 The following commands will allow you to create instruments and simplify the creation of music. It can also be used for MIDI see example.
@@ -963,14 +1123,6 @@ void loop()
  ```
 
 
-## MIDI
-
-There is an example of a simple midi implementation. 
-
-To plug the Midi to the esp32 please look around internet it will depend on what is available around you I use a 4N25 optocoupleur but you could find a lot of different implementations.
-
-NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
-
 
 ## Read the regitsters
 You are able to read the registers
@@ -1048,6 +1200,16 @@ void loop() {
 }
 
 ```
+
+
+## MIDI
+
+There is an example of a simple midi implementation. 
+
+To plug the Midi to the esp32 please look around internet it will depend on what is available around you I use a 4N25 optocoupleur but you could find a lot of different implementations.
+
+NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
+
 
 # Conclusions
 

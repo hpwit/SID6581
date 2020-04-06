@@ -77,21 +77,31 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
     
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
-    volume=15;
-    numberOfSongs=0;
-    currentSong=0;
+
     
 }
 
-void SID6581::sidSetMaxVolume( uint8_t vol)
+void SIDRegisterPlayer::SetMaxVolume( uint8_t vol)
 {
     volume=vol;
 }
+bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin)
+{
+    sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
+    
+    volume=15;
+    numberOfSongs=0;
+    currentSong=0;
+}
+bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch )
+{
+    sid.begin(clock_pin,data_pin,latch);
+        volume=15;
+        numberOfSongs=0;
+        currentSong=0;
+}
 
-
-
-
-void SID6581::addSong(fs::FS &fs,  const char * path)
+void SIDRegisterPlayer::addSong(fs::FS &fs,  const char * path)
 {
     songstruct p1;
     p1.fs=(fs::FS *)&fs;
@@ -104,7 +114,7 @@ void SID6581::addSong(fs::FS &fs,  const char * path)
 }
 
 
-void SID6581::pausePlay()
+void SIDRegisterPlayer::pausePlay()
 {
     
     if(xPlayerTaskHandle!=NULL)
@@ -112,13 +122,14 @@ void SID6581::pausePlay()
         
         if(!paused)
         {
-            
+            sid.soundOff();
             paused=true;
+            executeEventCallback(SID_PAUSE_PLAY);
         }
         else
         {
-            soundOn();
-            
+            sid.soundOn();
+            executeEventCallback(SID_RESUME_PLAY);
             paused=false;
             if(PausePlayTaskLocker!=NULL)
                 xTaskNotifyGive(PausePlayTaskLocker);
@@ -126,16 +137,16 @@ void SID6581::pausePlay()
     }
 }
 
-void SID6581::playSIDTunesLoopTask(void *pvParameters)
+void SIDRegisterPlayer::playSIDTunesLoopTask(void *pvParameters)
 {
-    SID6581 * sid= (SID6581 *)pvParameters;
+    SIDRegisterPlayer * sidReg= (SIDRegisterPlayer *)pvParameters;
     
     
-    while(1 && !sid->stopped)
+    while(1 && !sidReg->stopped)
     {
         if(SIDPlayerTaskHandle  == NULL)
         {
-            sid->playNextInt();
+            sidReg->playNextInt();
             SIDPlayerTaskHandle  = xTaskGetCurrentTaskHandle();
             //yield();
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -147,7 +158,7 @@ void SID6581::playSIDTunesLoopTask(void *pvParameters)
     vTaskDelete(SIDPlayerLoopTaskHandle);
 }
 
-void SID6581::play()
+void SIDRegisterPlayer::play()
 {
     if(SIDPlayerLoopTaskHandle!=NULL)
     {
@@ -157,20 +168,23 @@ void SID6581::play()
     stopped=false;
     paused=false;
     currentSong=numberOfSongs-1;
-    xTaskCreate(SID6581::playSIDTunesLoopTask, "playSIDTunesLoopTask", 4096, this,1, &SIDPlayerLoopTaskHandle);
+    
+    xTaskCreate(SIDRegisterPlayer::playSIDTunesLoopTask, "playSIDTunesLoopTask", 4096, this,3, &SIDPlayerLoopTaskHandle);
+    executeEventCallback(SID_START_PLAY);
 }
 
-void SID6581::stopPlayer()
+void SIDRegisterPlayer::stopPlayer()
 {
     stop();
     stopped=true;
+    executeEventCallback(SID_END_PLAY);
     if(SIDPlayerTaskHandle!=NULL)
         xTaskNotifyGive(SIDPlayerTaskHandle);
     SIDPlayerLoopTaskHandle=NULL;
     SIDPlayerTaskHandle=NULL;
 }
 
-void SID6581::stop()
+void SIDRegisterPlayer::stop()
 {
     if(xPlayerTaskHandle!=NULL)
     {
@@ -178,9 +192,10 @@ void SID6581::stop()
         //we unlock the pause locker in case of
         if(PausePlayTaskLocker!=NULL)
             xTaskNotifyGive(PausePlayTaskLocker);
-        soundOff();
-        resetsid();
+        sid.soundOff();
+        sid.resetsid();
         free(sidvalues);
+        executeEventCallback(SID_END_PLAY);
         vTaskDelete(xPlayerTaskHandle);
         xPlayerTaskHandle=NULL;
         //sid_spi->endTransaction();
@@ -190,15 +205,16 @@ void SID6581::stop()
 
 
 
-void SID6581::playNext()
+void SIDRegisterPlayer::playNext()
 {
     stop();
     if(SIDPlayerTaskHandle!=NULL)
         xTaskNotifyGive(SIDPlayerTaskHandle);
     
+    
 }
 
-void SID6581::playPrev()
+void SIDRegisterPlayer::playPrev()
 {
     stop();
     if(SIDPlayerTaskHandle!=NULL)
@@ -207,6 +223,7 @@ void SID6581::playPrev()
             currentSong=numberOfSongs-2;
         else
             currentSong=currentSong-2;
+        
         xTaskNotifyGive(SIDPlayerTaskHandle);
     }
     
@@ -214,16 +231,17 @@ void SID6581::playPrev()
 }
 
 
-void SID6581::playNextInt()
+void SIDRegisterPlayer::playNextInt()
 {
     stop();
     
     currentSong=(currentSong+1)%numberOfSongs;
+    
     playSongNumber(currentSong);
     
 }
 
-void SID6581::playSongNumber(int number)
+void SIDRegisterPlayer::playSongNumber(int number)
 {
     if(xPlayerTaskHandle!=NULL)
     {
@@ -240,26 +258,50 @@ void SID6581::playSongNumber(int number)
     
     paused=false;
     numberToPlay=number;
-    xTaskCreate(SID6581::playSIDTunesTask, "playSIDTunesTask", 4096, this,1, &xPlayerTaskHandle);
+    executeEventCallback(SID_NEW_TRACK);
+    xTaskCreate(SIDRegisterPlayer::playSIDTunesTask, "playSIDTunesTask", 4096, this,3, &xPlayerTaskHandle);
     
 }
 
-void SID6581::setVoice(uint8_t vo)
+void SIDRegisterPlayer::setVoice(uint8_t vo)
 {
     voice=vo;
 }
-void SID6581::playSIDTunesTask(void *pvParameters)
+
+int SIDRegisterPlayer::getPlaylistSize()
 {
-    SID6581 * sid= (SID6581 *)pvParameters;
-    sid->resetsid();
+    return numberOfSongs;
+}
+
+char * SIDRegisterPlayer::getFilename()
+{
+    
+    memset(return_filename,0,250);
     songstruct p;
-    p=sid->listsongs[sid->numberToPlay];
-    unsigned int sizet=sid->readFile2(*p.fs,p.filename);
+    p=listsongs[numberToPlay];
+    sprintf(return_filename,"%s",p.filename);
+    //Serial.println(filename);
+    return  return_filename;
+}
+
+
+int SIDRegisterPlayer::getPositionInPlaylist()
+{
+    return numberToPlay+1;
+}
+
+void SIDRegisterPlayer::playSIDTunesTask(void *pvParameters)
+{
+    SIDRegisterPlayer * sidReg= (SIDRegisterPlayer *)pvParameters;
+    sid.resetsid();
+    songstruct p;
+    p=sidReg->listsongs[sidReg->numberToPlay];
+    unsigned int sizet=sidReg->readFile2(*p.fs,p.filename);
     if(sizet==0)
     {
         Serial.println("error reading the file");
-        if(sid->sidvalues==NULL)
-            free(sid->sidvalues);
+        if(sidReg->sidvalues==NULL)
+            free(sidReg->sidvalues);
         xPlayerTaskHandle=NULL;
         if(SIDPlayerTaskHandle!=NULL)
             xTaskNotifyGive(SIDPlayerTaskHandle);
@@ -268,7 +310,7 @@ void SID6581::playSIDTunesTask(void *pvParameters)
     }
     
     Serial.printf("palying:%s\n",p.filename);
-    uint8_t *d=sid->sidvalues;
+    uint8_t *d=sidReg->sidvalues;
     uint32_t counttime=0;
     uint32_t counttime1=0;
     
@@ -278,26 +320,26 @@ void SID6581::playSIDTunesTask(void *pvParameters)
         
        
         //Serial.printf("%d %d %ld")
-//        if((*(uint8_t*)d)%24==0) //we delaonf with the sound
-//        {
-//            sid->save24=*(uint8_t*)(d+1);
-//            uint8_t value=*(uint8_t*)(d+1);
-//            value=value& 0xf0 +( ((value& 0x0f)*sid->volume)/15)  ;
-//            *(uint8_t*)(d+1)=value;
-//        }
+        if(((*(uint8_t*)d)%32)%24==0) //we delaonf with the sound
+        {
+            //sidReg->save24=*(uint8_t*)(d+1);
+            uint8_t value=*(uint8_t*)(d+1);
+            value=value& 0xf0 +( ((value& 0x0f)*sidReg->volume)/15)  ;
+            *(uint8_t*)(d+1)=value;
+        }
         
         
-         sid->pushRegister((*(uint8_t*)d)/32,(*(uint8_t*)d)%32,*(uint8_t*)(d+1));
+         sid.pushRegister((*(uint8_t*)d)/32,(*(uint8_t*)d)%32,*(uint8_t*)(d+1));
 
         if(*(uint16_t*)(d+2)>4)
             delayMicroseconds(*(uint16_t*)(d+2)-4);
         else
             delayMicroseconds(*(uint16_t*)(d+2));
         d+=4;
-        sid->feedTheDog();
-        if(sid->paused)
+        sid.feedTheDog();
+        if(sidReg->paused)
         {
-            sid->soundOff();
+            sid.soundOff();
             PausePlayTaskLocker  = xTaskGetCurrentTaskHandle();
             //yield();
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -305,9 +347,10 @@ void SID6581::playSIDTunesTask(void *pvParameters)
         }
     }
     //sid->sid_spi->endTransaction();
-    sid->resetsid();
-    free(sid->sidvalues);
+    sid.resetsid();
+    free(sidReg->sidvalues);
     Serial.println("end Play");
+    sidReg->executeEventCallback(SID_END_SONG);
     xPlayerTaskHandle=NULL;
     if(SIDPlayerTaskHandle!=NULL)
         xTaskNotifyGive(SIDPlayerTaskHandle);
@@ -325,14 +368,8 @@ void SID6581::feedTheDog(){
     TIMERG1.wdt_wprotect=0;                   // write protect
 }
 
-void SID6581::soundOff()
-{
-    setcsw();
-    setA(24);
-    setD(save24 &0xf0);
-    clearcsw(0);
-    
-}
+
+
 
 
 
@@ -610,6 +647,23 @@ void SID6581::sidSetVolume(int chip, uint8_t vol)
 }
 
 
+void SID6581::soundOn()
+{
+    for(int i=0;i<5;i++)
+    {
+        sidSetVolume(i,  saveVolume[i]);
+    }
+}
+
+void SID6581::soundOff()
+{
+    for(int i=0;i<5;i++)
+    {
+        saveVolume[i]=getSidVolume(i);
+        sidSetVolume(i,0);
+    }
+}
+
 int SID6581::getSidVolume(int chip)
 {
     uint8_t reg=sidregisters[chip*32+24];
@@ -685,15 +739,15 @@ int SID6581::getFilterEX(int chip)
     uint8_t reg=sidregisters[chip*32+0x17];
     return (reg>>3) & 1;
 }
-void SID6581::soundOn()
-{
-    setcsw();
-    setA(24);
-    setD(save24);
-    clearcsw(0);
-    
+
+
+
+void SIDRegisterPlayer::executeEventCallback(sidEvent event){
+   
+    if (eventCallback) (*eventCallback)(event);
 }
-unsigned int SID6581::readFile2(fs::FS &fs, const char * path)
+
+unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path)
 {
     unsigned int sizet;
     Serial.printf("Reading file: %s\r\n", path);
@@ -778,7 +832,7 @@ void SID6581::resetsid()
 
 void SID6581::pushRegister(int chip,int address,int data)
 {
-    //Serial.printf("core p:%d\n",xPortGetCoreID());
+    //Serial.printf("chip %d %x %x\n",chip,address,data);
     sidregisters[chip*32+address]=data;
     _sid_register_to_send sid_data;
     sid_data.address=address;

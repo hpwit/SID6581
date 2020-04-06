@@ -19,8 +19,8 @@
 //LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //SOFTWARE.
-#ifndef mos6501b_hpp
-#define mos6501b_hpp
+#ifndef mos6501b_h
+#define mos6501b_h
 
 #include <stdio.h>
 
@@ -48,13 +48,15 @@
     #define SID_CPU_CORE 0
 #endif
 
-#ifndef SID_TASK_PRIORITY
-    #define SID_TASK_PRIORITY 3
+#ifndef SID_CPU_TASK_PRIORITY
+    #define SID_CPU_TASK_PRIORITY 3
 #endif
 
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
+static int _sid_cpu_core=SID_CPU_CORE;
+static int _sid_cpu_task_priority=SID_CPU_TASK_PRIORITY;
 
 
 struct serial_command {
@@ -373,7 +375,7 @@ static volatile instruction opcodes[256]=
     {inst_xxx, mode_xxx}
 };
 
-class MOS6501{
+class SIDTunesPlayer{
 public:
     uint16_t cycles,wval,pc;
     long int buff,buffold,waitframe,wait,waitframeold,totalinframe;
@@ -383,8 +385,9 @@ public:
     uint8_t startsong,currentsong,currentfile;
     uint8_t speed;
     uint16_t load_addr;
-    uint8_t *mem;
+    uint8_t *mem=NULL;
     SID6581 * _sid;
+    uint8_t sidtype[5];
     uint8_t published[32];
     uint8_t author[32];
     uint8_t name[32];
@@ -394,19 +397,22 @@ public:
     int numberOfSongs;
     int nRefreshCIAbase;
     songstruct listsongs[255];
+    int volume;
     int reset;
     int speedsong[32];
     uint16_t plmo;
-    MOS6501(){
+    SIDTunesPlayer(){
         _sid=&sid;
         numberOfSongs=0;
         currentfile=0;
-            }
+        volume=15;
+    }
     
     uint8_t getmem(uint16_t addr);
-    
+    bool begin(int clock_pin,int data_pin, int latch );
+    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
     void setmem(uint16_t addr,uint8_t value);
-    
+    void SetMaxVolume( uint8_t volume);
     uint16_t pcinc();
     
     void cpuReset();
@@ -426,23 +432,32 @@ public:
     void _playSongNumber(int songnumbner);
     void playPrevSongInSid();
     void playNextSongInSid();
-    void stopPlay();
+    void stopPlayer();
     void addSong(fs::FS &fs,  const char * path);
-    void playTunes();
-    void playTunes(int duration);
-    void playNextSIDFile();
-    void playPrevSIDFile();
+    void play();
+    void play(int duration);
+    void playNext();
+    void playPrev();
+    void pausePlay();
     char * getName();
     char * getPublished();
     char * getAuthor();
-    char * getSidFileName();
+    char * getFilename();
     int getPlaylistSize();
     int getPositionInPlaylist();
     int getNumberOfTunesInSid();
     int getCurrentTuneInSid();
     int getDefaultTuneInSid();
+    void executeEventCallback(sidEvent event);
+    inline void setEventCallback(void (*fptr)(sidEvent event))
+    {
+        eventCallback = fptr;
+    }
+private:
+     void (*eventCallback)(sidEvent event)=NULL;
+    bool paused=false;
     
 };
 
-static MOS6501 cpu;
+//static MOS6501 sidFilePlayer;
 #endif /* mos6501b_hpp */
