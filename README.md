@@ -31,7 +31,7 @@ here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the
 
 ```
 
-## To play a SIDtunes from a .sid file (SIDTunesPlayer Class)
+## To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
@@ -178,7 +178,7 @@ void loop() {
 You can play SIDTunes stored as register dump on the SPIFF or the SD card
 
 
-NB 1: playSIDTunes will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
+NB 1: playSIDTunes based on registry dump will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
 
 Below the list of command to control the player
 
