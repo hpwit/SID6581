@@ -40,10 +40,11 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value)
         uint16_t decal=t+buff-buffold;
         
         addr=(addr&0xFF)+32*based;
-        //Serial.printf("%x %x\n",addr,value);
+        //Serial.printf("%x %x %d\n",addr,value,decal);
         //Serial.printf("%d %d %ld")
-        if((addr%32)%24==0) //we delaonf with the sound
+        if((addr%32)%24==0 and (addr%32)>0) //we delaonf with the sound
         {
+            //Serial.printf("sound :%x %x\n",addr,value&0xf);
             //sidReg->save24=*(uint8_t*)(d+1);
             value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
             
@@ -970,7 +971,7 @@ void SIDTunesPlayer::_playSongNumber(int songnumber)
     }
     // Serial.printf("playing song n:%d/%d\n",(songnumber+1),subsongs);
     //cpuJSR(init_addr, songnumber);
-    sid.soundOn();
+    //sid.soundOn();
     xTaskCreatePinnedToCore(
                             SIDTunesPlayer::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
                             "NAME1",          /* Text name for the task. */
@@ -1075,6 +1076,7 @@ void SIDTunesPlayer::play(int duration)
 
 void SIDTunesPlayer::playNext()
 {
+    sid.soundOff();
     stopPlayer();
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct p1=listsongs[currentfile];

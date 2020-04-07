@@ -192,11 +192,11 @@ void SIDRegisterPlayer::stop()
         //we unlock the pause locker in case of
         if(PausePlayTaskLocker!=NULL)
             xTaskNotifyGive(PausePlayTaskLocker);
+        executeEventCallback(SID_END_PLAY);
+        vTaskDelete(xPlayerTaskHandle);
         sid.soundOff();
         sid.resetsid();
         free(sidvalues);
-        executeEventCallback(SID_END_PLAY);
-        vTaskDelete(xPlayerTaskHandle);
         xPlayerTaskHandle=NULL;
         //sid_spi->endTransaction();
     }
@@ -320,7 +320,7 @@ void SIDRegisterPlayer::playSIDTunesTask(void *pvParameters)
         
        
         //Serial.printf("%d %d %ld")
-        if(((*(uint8_t*)d)%32)%24==0) //we delaonf with the sound
+        if(((*(uint8_t*)d)%32)%24==0 and ((*(uint8_t*)d)%32) >0) //we delaonf with the sound
         {
             //sidReg->save24=*(uint8_t*)(d+1);
             uint8_t value=*(uint8_t*)(d+1);
