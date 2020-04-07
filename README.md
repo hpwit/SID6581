@@ -10,7 +10,7 @@ The program allows you to :
 * Assign up to one instrument per voice
 The sound is played is the background so your mcu can do something else at the same time
 
-NB: the SID chip requires a 1Mhz clock signal to work ** you can either provide it with an external clock circuit or use a pin of the esp32 to do it ** (clock generated thanks to I2s).
+NB: the SID chip requires a 1Mhz clock signal to work  __you can either provide it with an external clock circuit or use a pin of the esp32 to do it __  (clock generated thanks to I2s).
 
 it should work with other mcu as it uses SPI but not tested.
 
