@@ -703,7 +703,7 @@ The following commands will allow you to create instruments and simplify the cre
 ```
 all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
 
-SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); //prepares everything for 6 simultaneous voices
+SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); 
 
 ```
 ## Play a note
