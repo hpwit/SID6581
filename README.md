@@ -10,7 +10,7 @@ The program allows you to :
 * Assign up to one instrument per voice
 The sound is played is the background so your mcu can do something else at the same time
 
-NB: the SID chip requires a 1Mhz clock signal to work  __you can either provide it with an external clock circuit or use a pin of the esp32 to do it __  (clock generated thanks to I2s).
+NB: the SID chip requires a 1Mhz clock signal to work  **you can either provide it with an external clock circuit or use a pin of the esp32 to do it**  (clock generated thanks to I2s).
 
 it should work with other mcu as it uses SPI but not tested.
 
@@ -30,8 +30,13 @@ begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 NB: this pin number has to be >=16
 
 ```
+# Playing SID tunes
 
-## To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
+You have to ways of playing sid tunes
+1) Playing .sid files (PSID for the moment) the player is still under development so if you have issues do not hesistate to link the file which you have encountered issues with
+2) Playing registers dump. 
+
+## 1 - To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
@@ -174,7 +179,7 @@ void loop() {
 ```
 
 
-## To play a SIDtunes based on registry dump (SIDRegisterPlayer Class)
+## 2 - To play a SIDtunes based on registry dump (SIDRegisterPlayer Class)
 You can play SIDTunes stored as register dump on the SPIFF or the SD card
 
 
@@ -344,7 +349,7 @@ NB3: still have to cope woth the fact that sometimes the transmition and the buf
 
 ```
 
-## callback events of the players
+## 3 - callback events of the players
 In both player you can set events to add better control via:
 
 ```
@@ -451,13 +456,16 @@ player->playNext(); //sid.playPrev(); if you want to go backwards
 
 ```
 
-## Example to control the Player using GPIOs
+## 4 - Example to control the Player using GPIOs
 look at the example  SIDPlayerControl
 
 
-# Details of the other control commands (sid object)
+# Directly control the SID chip via register
 
 You have full control of the SID chip via the following commands
+
+## 1 - Set the registers
+
 ```
 void sidSetVolume( uint8_t chip,uint8_t vol); set the volume off a specific SID chip (start with 0)
 
@@ -517,7 +525,7 @@ possible values:
         SID_CONTROL_REG
         SID_ATTACK_DECAY
         SID_SUSTAIN_RELEASE
-
+        SID_WAVEFORM_SILENCE
 
 
 void pushRegister(uint8_t chip,int address,int data);
@@ -607,19 +615,173 @@ void loop() {
 ```
 
 
-## Keyboard Player (SIDKeyBoardPlayer Class)
+## 2 - Read the regitsters
+You are able to read the value of the registers
+
+```
+int getSidVolume( int chip);
+int getFrequency(int voice);
+double getFrequencyHz(int voice);
+int getPulse(int voice);
+int getAttack(int voice);
+int getDecay(int voice);
+int getSustain(int voice);
+int getRelease(int voice);
+int getGate(int voice);
+int getWaveForm(int voice);
+        values are:
+            SID_WAVEFORM_TRIANGLE 
+            SID_WAVEFORM_SAWTOOTH 
+            SID_WAVEFORM_PULSE 
+            SID_WAVEFORM_NOISE 
+            SID_WAVEFORM_SILENCE
+int getTest(int voice);
+int getSync(int voice);
+int getRingMode(int voice);
+int getFilterFrequency(int chip);
+int getResonance(int chip);
+int getFilter1(int chip);
+int getFilter2(int chip);
+int getFilter3(int chip);
+int getFilterEX(int chip);
+int get3OFF(int chip);
+int getHP(int chip);
+int getBP(int chip);
+int getLP(int chip);
+
+glabal function:
+int getRegister(int chip,int addr);
+
+        here are the  possible addresses:
+        SID_FREQ_LO_0
+        SID_FREQ_HI_0
+        SID_PW_LO_0
+        SID_PW_HI_0
+        SID_CONTROL_REG_0
+        SID_ATTACK_DECAY_0
+        SID_SUSTAIN_RELEASE_0
+        SID_FREQ_LO_1
+        SID_FREQ_HI_1
+        SID_PW_LO_1
+        SID_PW_HI_1
+        SID_CONTROL_REG_1
+        SID_ATTACK_DECAY_1
+        SID_SUSTAIN_RELEASE_1
+        SID_FREQ_LO_2
+        SID_FREQ_HI_2
+        SID_PW_LO_2
+        SID_PW_HI_2
+        SID_CONTROL_REG_2
+        SID_ATTACK_DECAY_2
+        SID_SUSTAIN_RELEASE_2
+        SID_FC_LO
+        SID_FC_HI
+        SID_RES_FILT
+        SID_MOD_VOL
+
+
+example:
+void loop() {
+
+    Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
+    Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
+    Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
+
+    vTaskDelay(100);
+
+}
+
+```
+## Read the regitsters
+You are able to read the registers
+
+```
+int getSidVolume( int chip);
+int getFrequency(int voice);
+double getFrequencyHz(int voice);
+int getPulse(int voice);
+int getAttack(int voice);
+int getDecay(int voice);
+int getSustain(int voice);
+int getRelease(int voice);
+int getGate(int voice);
+int getWaveForm(int voice);
+values are:
+SID_WAVEFORM_TRIANGLE 
+SID_WAVEFORM_SAWTOOTH 
+SID_WAVEFORM_PULSE 
+SID_WAVEFORM_NOISE 
+int getTest(int voice);
+int getSync(int voice);
+int getRingMode(int voice);
+int getFilterFrequency(int chip);
+int getResonance(int chip);
+int getFilter1(int chip);
+int getFilter2(int chip);
+int getFilter3(int chip);
+int getFilterEX(int chip);
+int get3OFF(int chip);
+int getHP(int chip);
+int getBP(int chip);
+int getLP(int chip);
+
+glabal function:
+int getRegister(int chip,int addr);
+
+here are the  possible addresses:
+SID_FREQ_LO_0
+SID_FREQ_HI_0
+SID_PW_LO_0
+SID_PW_HI_0
+SID_CONTROL_REG_0
+SID_ATTACK_DECAY_0
+SID_SUSTAIN_RELEASE_0
+SID_FREQ_LO_1
+SID_FREQ_HI_1
+SID_PW_LO_1
+SID_PW_HI_1
+SID_CONTROL_REG_1
+SID_ATTACK_DECAY_1
+SID_SUSTAIN_RELEASE_1
+SID_FREQ_LO_2
+SID_FREQ_HI_2
+SID_PW_LO_2
+SID_PW_HI_2
+SID_CONTROL_REG_2
+SID_ATTACK_DECAY_2
+SID_SUSTAIN_RELEASE_2
+SID_FC_LO
+SID_FC_HI
+SID_RES_FILT
+SID_MOD_VOL
+
+
+example:
+void loop() {
+
+Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
+Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
+Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
+
+vTaskDelay(100);
+
+}
+
+```
+
+# Keyboard Player (SIDKeyBoardPlayer Class)
 
 You can turn the SID Chip into a synthetizer with up to 15 voices depending on the number of sid chips you have.
 The following commands will allow you to create instruments and simplify the creation of music. It can also be used for MIDI see example.
 
-### to start the keyboard
+## To start the keyboard
 ```
 all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
 
 SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); //prepares everything for 6 simultaneous voices
 
 ```
-### play a note
+## Play a note
 ```
 All this commands will play a note on a specific voice for a certain duration
 
@@ -722,7 +884,7 @@ void loop()
 }
 ```
 
-### To change instrument
+## To change instrument
 The library give you the possibility to change instruments there are 5 in 'store'
 
 1) Change instrument for all voices
@@ -836,7 +998,7 @@ void loop()
 ```
 
 
-### To create an instrument
+## To create an instrument
 the library allows to create your own instruments.
  ```
  each instrument is a class
@@ -1124,85 +1286,7 @@ void loop()
 
 
 
-## Read the regitsters
-You are able to read the registers
-
-```
-int getSidVolume( int chip);
-int getFrequency(int voice);
-double getFrequencyHz(int voice);
-int getPulse(int voice);
-int getAttack(int voice);
-int getDecay(int voice);
-int getSustain(int voice);
-int getRelease(int voice);
-int getGate(int voice);
-int getWaveForm(int voice);
-        values are:
-                SID_WAVEFORM_TRIANGLE 
-                SID_WAVEFORM_SAWTOOTH 
-                SID_WAVEFORM_PULSE 
-                SID_WAVEFORM_NOISE 
-int getTest(int voice);
-int getSync(int voice);
-int getRingMode(int voice);
-int getFilterFrequency(int chip);
-int getResonance(int chip);
-int getFilter1(int chip);
-int getFilter2(int chip);
-int getFilter3(int chip);
-int getFilterEX(int chip);
-int get3OFF(int chip);
-int getHP(int chip);
-int getBP(int chip);
-int getLP(int chip);
-
-glabal function:
-int getRegister(int chip,int addr);
-
-here are the  possible addresses:
-        SID_FREQ_LO_0
-        SID_FREQ_HI_0
-        SID_PW_LO_0
-        SID_PW_HI_0
-        SID_CONTROL_REG_0
-        SID_ATTACK_DECAY_0
-        SID_SUSTAIN_RELEASE_0
-        SID_FREQ_LO_1
-        SID_FREQ_HI_1
-        SID_PW_LO_1
-        SID_PW_HI_1
-        SID_CONTROL_REG_1
-        SID_ATTACK_DECAY_1
-        SID_SUSTAIN_RELEASE_1
-        SID_FREQ_LO_2
-        SID_FREQ_HI_2
-        SID_PW_LO_2
-        SID_PW_HI_2
-        SID_CONTROL_REG_2
-        SID_ATTACK_DECAY_2
-        SID_SUSTAIN_RELEASE_2
-        SID_FC_LO
-        SID_FC_HI
-        SID_RES_FILT
-        SID_MOD_VOL
-
-
-example:
-void loop() {
-    
-    Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
-    Serial.printf("Waveform voice 1:%d voice 2:%d voice 3:%d\n",sid.getWaveForm(0),sid.getWaveForm(1),sid.getWaveForm(2));
-    Serial.printf("Pulse voice 1:%d voice 2:%d voice 3:%d\n",sid.getPulse(0),sid.getPulse(1),sid.getPulse(2));
-
-    vTaskDelay(100);
-    
-}
-
-```
-
-
-## MIDI
+# MIDI
 
 There is an example of a simple midi implementation. 
 
@@ -1218,4 +1302,4 @@ NB: the number  found for the change of the instruments are those found in my ya
 
 
 
-Updated 31 March 2020
+Updated 6 April 2020
