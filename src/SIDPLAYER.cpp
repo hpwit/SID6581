@@ -50,7 +50,7 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value)
             
         }
         _sid->pushRegister(addr/32,addr%32,value);
-        decal=(decal*90)/100;
+        decal=(decal*95)/100;
         delayMicroseconds(decal);
         
         // sid.feedTheDog();
