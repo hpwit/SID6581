@@ -735,27 +735,31 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     if( &fs==NULL || path==NULL)
     {
         Serial.println("Invalid parameter");
+        
+        getcurrentfile=currentfile;
         return;
     }
     if(!fs.exists(path))
     {
         Serial.printf("file %s unknown\n",path);
+        getcurrentfile=currentfile;
         return;
     }
     File file=fs.open(path);
     if(!file)
     {
         Serial.printf("Unable to open %s\n",path);
+        getcurrentfile=currentfile;
+        return;
     }
     file.read(sidtype,4);
     if(sidtype[0]!=0x50 || sidtype[1]!=0x53 || sidtype[2]!=0x49 || sidtype[3]!=0x44)
     {
         Serial.printf("File type:%s not handle yet\n",sidtype);
+        getcurrentfile=currentfile;
         return;
     }
-    sprintf(currentfilename,"%s",path);
-    executeEventCallback(SID_START_PLAY);
-    executeEventCallback(SID_NEW_TRACK);
+
     file.seek(7);
     
     data_offset=0;
@@ -838,7 +842,10 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
         speedsong[31-i]= (fm & (byte)pow(2,7-i%8))?1:0;
         //Serial.printf("%d %1d\n",31-i, (fm & (byte)pow(2,7-i%8))?1:0);
     }
-    
+    sprintf(currentfilename,"%s",path);
+    getcurrentfile=currentfile;
+    executeEventCallback(SID_START_PLAY);
+    executeEventCallback(SID_NEW_TRACK);
     _playSongNumber(startsong -1);
     currentsong=startsong -1;
 }
@@ -1131,6 +1138,6 @@ int SIDTunesPlayer::getPlaylistSize(){
     return numberOfSongs;
 }
 int SIDTunesPlayer::getPositionInPlaylist(){
-    return currentfile+1;
+    return getcurrentfile+1;
     
 }

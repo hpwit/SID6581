@@ -382,7 +382,7 @@ public:
     uint8_t data_offset;
     uint16_t init_addr,play_addr;
     uint8_t subsongs;
-    uint8_t startsong,currentsong,currentfile;
+    uint8_t startsong,currentsong,currentfile,getcurrentfile;
     uint8_t speed;
     uint16_t load_addr;
     uint8_t *mem=NULL;
@@ -391,6 +391,7 @@ public:
     uint8_t published[32];
     uint8_t author[32];
     uint8_t name[32];
+    
     char currentfilename[50];
     uint8_t a,x,y,p,s,bval;
     bool frame;
@@ -406,6 +407,7 @@ public:
         numberOfSongs=0;
         currentfile=0;
         volume=15;
+        getcurrentfile=0;
     }
     
     uint8_t getmem(uint16_t addr);

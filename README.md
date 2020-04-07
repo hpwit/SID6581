@@ -730,7 +730,7 @@ void setup() {
 // initialize serial:
         Serial.begin(115200);
         sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-        SIDKeyBoardPlayer::KeyBoardPlayer(6);
+        SIDKeyBoardPlayer::KeyBoardPlayer(3);
         sid.sidSetVolume(0,15); 
 
         
