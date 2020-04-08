@@ -18,9 +18,9 @@ it should work with other mcu as it uses SPI but not tested.
 Please look at the schematics for the setup of the shift registers and  MOS 6581
 
 ## To start
-```
-The object sid is automatically created.
-//if you have a external circuit that gives you the 1Mhz clock you can use:
+```C
+// The object sid is automatically created.
+// if you have a external circuit that gives you the 1Mhz clock you can use:
 begin(int clock_pin,int data_pin, int latch);
 
 
@@ -42,7 +42,7 @@ Below the list of command to control the player
 
 NB1: the sid tunes do not have an end hence they will not stop. to stop a song you need to use stopPlayer()
  
-```
+```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
@@ -187,7 +187,7 @@ NB 1: playSIDTunes based on registry dump will only work with WROOVER because I 
 
 Below the list of command to control the player
 
-```
+```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 void addSong(fs::FS &fs,  const char * path); //add song to the playlist
@@ -210,7 +210,7 @@ inline void setEventCallback(void (*fptr)(sidEvent event))
 
 ### Example
 
-```
+```C
 #include "SidPlayer.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -304,7 +304,8 @@ PS: to transform the .sid into register commands
 
 1) I use the fantastic program of Ken Händel
 https://haendel.ddns.net/~ken/#_latest_beta_version
-```
+
+```bash
 java -jar jsidplay2_console-4.1.jar --audio LIVE_SID_REG --recordingFilename export_file sid_file
 
 use SID_REG instead of LIVE_SID_REG to keep you latptop quiet
@@ -313,11 +314,12 @@ use SID_REG instead of LIVE_SID_REG to keep you latptop quiet
 ```
 2) I use the program traduct_2.c
 to compile it for your platform:
-```
+```SH
 >gcc traduct_2.c -o traduct
 ```
 to use it
-```
+
+```bash
 ./traduct export_file > final_file
 
 ```
@@ -327,19 +329,27 @@ Put the final_file on a SD card or in your SPIFF
 ### Send register data via serial
 You can send via serial the registers commands. Look at the example sid_serial.ino
 
-```
+
 to launch the serial from your computer
 first compile the program
->gcc Send_sid_via_serial.c -o sendserial
+
+```
+> gcc Send_sid_via_serial.c -o sendserial
+```
 
 to use it
 
+```
 ./sendserial export_file usbport
+```
+
     * export_file: the result of the first command above "java -jar jsidplay2 ....."
     * usbport: same name as the usb port in you arduino interface
 
 example:
+```
 ./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15         
+```
 
 the file zibehurling-01.csv is in the examples
 
@@ -347,12 +357,11 @@ NB : for it to work the serial console of the arduino will neeed to be closed. O
 NB2: restart the esp32 for each song
 NB3: still have to cope woth the fact that sometimes the transmition and the buffering is not always perfect
 
-```
 
 ## 3 - callback events of the players
 In both player you can set events to add better control via:
 
-```
+```C
 inline void setEventCallback(void (*fptr)(sidEvent event))
 
 
@@ -466,7 +475,7 @@ You have full control of the SID chip via the following commands
 
 ## 1 - Set the registers
 
-```
+```C
 void sidSetVolume( uint8_t chip,uint8_t vol); set the volume off a specific SID chip (start with 0)
 
 below the chip number is deduced using the voice number (start with 0)
@@ -571,7 +580,7 @@ this function will reset all the SID chip
 ```
 Below a code example
 
-```
+```C
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -618,7 +627,7 @@ void loop() {
 ## 2 - Read the regitsters
 You are able to read the value of the registers
 
-```
+```C
 int getSidVolume( int chip);
 int getFrequency(int voice);
 double getFrequencyHz(int voice);
@@ -700,6 +709,7 @@ You can turn the SID Chip into a synthetizer with up to 15 voices depending on t
 The following commands will allow you to create instruments and simplify the creation of music. It can also be used for MIDI see example.
 
 ## To start the keyboard
+
 ```
 all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
 
@@ -707,19 +717,19 @@ SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices);
 
 ```
 ## Play a note
-```
-All this commands will play a note on a specific voice for a certain duration
 
-SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)
-or
-SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)
-or
-SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses the velocity
+
+All these commands will play a note on a specific voice for a certain duration:
+
+- SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)
+- SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)
+- SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses the velocity
 
 NB: the duration is in milliseconds
 
 example:
 
+```C
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -747,7 +757,7 @@ void loop()
 ```
 You can play several voices at the sametime
 
-```
+```C
 
 #include "SID6581.h"
 #define SID_CLOCK 25
@@ -781,7 +791,7 @@ void loop()
 
 NB: if the duration is equal to 0, then the sound will not stop until you call the function stopNote. 
 
-```
+```C
 
 #include "SID6581.h"
 #define SID_CLOCK 25
@@ -823,10 +833,11 @@ possible values:
             sid_piano3
             sid_piano4
             sid_piano5
-            
+```
+
  example:
  
- 
+```C 
  #include "SID6581.h"
  #define SID_CLOCK 25
  #define SID_DATA 33
@@ -882,9 +893,11 @@ possible values:
         sid_piano3
         sid_piano4
         sid_piano5
+```
 
 example:
 
+```C
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -924,11 +937,9 @@ void loop()
 
 
 ## To create an instrument
-the library allows to create your own instruments.
- ```
- each instrument is a class
+the library allows to create your own instruments, each instrument is a class
  
- 
+ ```C 
  class new_instrument:public sid_instrument{
      public:
          
@@ -948,17 +959,17 @@ the library allows to create your own instruments.
          //here gies the code exucted during the release part of the note
          }
  };
+```
+
+ to use the intrument:
  
- to use the intrument
+ - `SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();`
+ - `SIDKeyBoardPlayer::changeInstrumentOnVoice<new_instrument>(int voice);`
  
- SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
- or
- SIDKeyBoardPlayer::changeInstrumentOnVoice<new_instrument>(int voice);
- 
- ```
 
 1)  Simple instrument
- ```
+
+ ```C
  
  #include "SID6581.h"
  #define SID_CLOCK 25
@@ -1013,7 +1024,7 @@ the library allows to create your own instruments.
 ```
 2) something mode complicated
 
-```
+```C
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -1078,8 +1089,10 @@ void loop()
     delay(1000);
 }
 ```
+
  Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
- ```
+ 
+ ```C
  #include "SID6581.h"
  #define SID_CLOCK 25
  #define SID_DATA 33
@@ -1155,8 +1168,9 @@ void loop()
  
  
  3) to go further
- if you have sample from a sid as a set of register calls you can do this
- ```
+ if you have sample from a sid as a set of register calls you can do this:
+ 
+ ```C
  class sid_piano:public sid_instrument{
      public:
          int i;
