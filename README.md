@@ -180,7 +180,7 @@ void loop() {
 You can play SIDTunes stored as register dump on the SPIFF or the SD card
 
 
-NB 1: playSIDTunes based on registry dump will only work with WROOVER because I use PSRAM for the moment. all the rest will run with all esp32.
+⚠️ playSIDTunes based on registry dump will only work with WROVER because I use PSRAM for the moment. all the rest will run with all esp32.
 
 Below the list of command to control the player
 
@@ -300,41 +300,45 @@ void loop() {
 PS: to transform the .sid into register commands 
 
 1) I use the fantastic program of Ken Händel
-https://haendel.ddns.net/~ken/#_latest_beta_version
+
+  - https://haendel.ddns.net/~ken/#_latest_beta_version
 
 ```bash
 java -jar jsidplay2_console-4.1.jar --audio LIVE_SID_REG --recordingFilename export_file sid_file
-
-use SID_REG instead of LIVE_SID_REG to keep you latptop quiet
-
-
 ```
+
+ⓘ use SID_REG instead of LIVE_SID_REG to keep you latptop quiet
+
+
 2) I use the program traduct_2.c
-to compile it for your platform:
+
+To compile it for your platform:
+
 ```SH
 >gcc traduct_2.c -o traduct
 ```
-to use it
+
+Usage:
 
 ```bash
 ./traduct export_file > final_file
 
 ```
-Put the final_file on a SD card or in your SPIFF
+
+ⓘ Put the final_file on a SDCard or SPIFFS
 
 
 ### Send register data via serial
 You can send via serial the registers commands. Look at the example sid_serial.ino
 
 
-to launch the serial from your computer
-first compile the program
+To launch the serial from your computer, first compile the program:
 
 ```
 > gcc Send_sid_via_serial.c -o sendserial
 ```
 
-to use it
+Usage:
 
 ```
 ./sendserial export_file usbport
@@ -343,20 +347,23 @@ to use it
     * export_file: the result of the first command above "java -jar jsidplay2 ....."
     * usbport: same name as the usb port in you arduino interface
 
-example:
+Example:
+
 ```
 ./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15         
 ```
 
-the file zibehurling-01.csv is in the examples
+The file zibehurling-01.csv is in the `Examples` folder
 
-NB : for it to work the serial console of the arduino will neeed to be closed. Otherwise the USB port will be locked by it.
-NB2: restart the esp32 for each song
-NB3: still have to cope woth the fact that sometimes the transmition and the buffering is not always perfect
+  - ⚠️ The serial console of the Arduino IDE will need to be closed to prevent any conflict with the USB port
+  - ⚠️ Restart the esp32 for each song
+  - ⚠️ Still have to cope with the fact that sometimes the transmission and the buffering isn't always perfect
 
 
 ## 3 - callback events of the players
-In both player you can set events to add better control via:
+
+Both players can fire custom events for better control:
+
 
 ```C
 inline void setEventCallback(void (*fptr)(sidEvent event))
@@ -496,11 +503,15 @@ void setSustain(int voice,uint8_t sutain);
 void setRelease(int voice,uint8_t release);
 void setGate(int voice, int gate);
 void setWaveForm(int voice,int waveform);
-        Waveforms available:
-                SID_WAVEFORM_TRIANGLE 
-                SID_WAVEFORM_SAWTOOTH 
-                SID_WAVEFORM_PULSE 
-                SID_WAVEFORM_NOISE 
+```
+
+Available waveforms:
+  - SID_WAVEFORM_TRIANGLE 
+  - SID_WAVEFORM_SAWTOOTH 
+  - SID_WAVEFORM_PULSE 
+  - SID_WAVEFORM_NOISE 
+
+```C
 void setTest(int voice,int test);
 void setSync(int voice,int sync);
 
@@ -577,15 +588,14 @@ Possible values:
   - SID_RES_FILT
   - SID_MOD_VOL
   
-NB:
-    `sid.pushToVoice(0,SID_FREG_HI,255)` == `sid.pushRegister(0,SID_FREQ_HI_0,255)`
+⚠️ `sid.pushToVoice(0,SID_FREG_HI,255)` == `sid.pushRegister(0,SID_FREQ_HI_0,255)`
 
 
 ```C
 void resetsid();
 ```
 
-this function will reset all the SID chip
+This function will reset all the SID chips
 
 Example
 
@@ -634,7 +644,8 @@ void loop() {
 
 
 ## 2 - Read the regitsters
-You are able to read the value of the registers
+
+Getters to read the value of the registers
 
 ```C
 int getSidVolume( int chip);
@@ -647,12 +658,16 @@ int getSustain(int voice);
 int getRelease(int voice);
 int getGate(int voice);
 int getWaveForm(int voice);
-        values are:
-            SID_WAVEFORM_TRIANGLE 
-            SID_WAVEFORM_SAWTOOTH 
-            SID_WAVEFORM_PULSE 
-            SID_WAVEFORM_NOISE 
-            SID_WAVEFORM_SILENCE
+```
+
+values are:
+  - SID_WAVEFORM_TRIANGLE 
+  - SID_WAVEFORM_SAWTOOTH 
+  - SID_WAVEFORM_PULSE 
+  - SID_WAVEFORM_NOISE 
+  - SID_WAVEFORM_SILENCE
+            
+```C
 int getTest(int voice);
 int getSync(int voice);
 int getRingMode(int voice);
@@ -668,7 +683,8 @@ int getBP(int chip);
 int getLP(int chip);
 ```
 
-global function:
+Global function:
+
 ```C
 int getRegister(int chip,int addr);
 ```
@@ -734,13 +750,13 @@ SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices);
 
 All these commands will play a note on a specific voice for a certain duration:
 
-- SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)
-- SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)
-- SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)  //if you have an instrument that uses the velocity
+  - `SIDKeyBoardPlayer::playNote(int voice,uint16_t note,int duration)`
+  - `SIDKeyBoardPlayer::playNoteHz(int voice,int frequencyHz,int duration)`
+  - `SIDKeyBoardPlayer::playNoteVelocity(int voice,uint16_t note,int velocity,int duration)` if you have an instrument that uses the velocity
 
-NB: the duration is in milliseconds
+ⓘ The duration is in milliseconds
 
-example:
+Example:
 
 ```C
 #include "SID6581.h"
@@ -768,7 +784,7 @@ void loop()
 }
 
 ```
-You can play several voices at the sametime
+You can play several voices at the same time
 
 ```C
 
@@ -802,7 +818,7 @@ void loop()
 }
 ```
 
-NB: if the duration is equal to 0, then the sound will not stop until you call the function stopNote. 
+⚠️ If the duration is equal to 0, then the sound will not stop until you call the function stopNote. 
 
 ```C
 
@@ -833,14 +849,18 @@ void loop()
 ```
 
 ## To change instrument
-The library give you the possibility to change instruments there are 5 in 'store'
+
+The library gives you the possibility to change instruments. There are 5 in 'store'.
 
 1) Change instrument for all voices
 
 
 To change the instruments for all voices
+```C
 changeAllInstruments<instrument>();
-possible values:
+```
+Possible values:
+  
   - sid_piano
   - sid_piano2
   - sid_piano3
@@ -896,10 +916,12 @@ Example:
 
 2) Change instrument for a specific voice
 
-
 To change the instruments for all voices
+
+```C
 changeInstrumentOnVoice<instrument>(uint8_t voice);
-possible values:
+```
+Possible values:
   - sid_piano
   - sid_piano2
   - sid_piano3
@@ -1033,7 +1055,7 @@ the library allows to create your own instruments, each instrument is a class
  }
 
 ```
-2) something mode complicated
+2) Slightly more complicated use case:
 
 ```C
 #include "SID6581.h"
@@ -1178,8 +1200,7 @@ void loop()
  
  
  
- 3) to go further
- if you have sample from a sid as a set of register calls you can do this:
+ 3) to go further, if you have sample from a sid as a set of register calls you can do this:
  
  ```C
  class sid_piano:public sid_instrument{
@@ -1238,11 +1259,11 @@ void loop()
 
 # MIDI
 
-There is an example of a simple midi implementation. 
+See the `Examples` folder for a simple midi implementation. 
 
-To plug the Midi to the esp32 please look around internet it will depend on what is available around you I use a 4N25 optocoupleur but you could find a lot of different implementations.
+To plug the Midi to the esp32 please look around internet it will depend on what is available around you. I use a 4N25 optocoupler but you could find a lot of different implementations.
 
-NB: the number  found for the change of the instruments are those found in my yamaha P-140 user guide.
+ⓘ The numbers assigned to instruments are those found in my yamaha P-140 user guide.
 
 
 # Conclusions
