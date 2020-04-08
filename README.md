@@ -24,10 +24,10 @@ Please look at the schematics for the setup of the shift registers and  MOS 6581
 begin(int clock_pin,int data_pin, int latch);
 
 
-//if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
+// if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-
-here the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 NB: this pin number has to be >=16
+// the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 
+// !!! NB: this pin number has to be >=16
 
 ```
 # Playing SID tunes
@@ -59,20 +59,18 @@ int getPositionInPlaylist();
 int getPlaylistSize();
 
 
-Specific functions to have info on the sid file
+// Specific functions to have info on the sid file
 char * getName(); //get name of the sid file
 char * getPublished(); //get publish information
 char * getAuthor(); //return the author
 int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
 int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
 int getDefaultTuneInSid(); //get the number of the default tunes. 
+```
 
+Example:
 
-
-
-example:
-
-
+```C
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
@@ -363,10 +361,11 @@ In both player you can set events to add better control via:
 
 ```C
 inline void setEventCallback(void (*fptr)(sidEvent event))
+```
 
+Example:
 
-example:
-
+```C
 #include "SidPlayer.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -466,7 +465,8 @@ player->playNext(); //sid.playPrev(); if you want to go backwards
 ```
 
 ## 4 - Example to control the Player using GPIOs
-look at the example  SIDPlayerControl
+
+See the `SIDPlayerControl.ino` sketch in the `Examples` folder.
 
 
 # Directly control the SID chip via register
@@ -478,10 +478,10 @@ You have full control of the SID chip via the following commands
 ```C
 void sidSetVolume( uint8_t chip,uint8_t vol); set the volume off a specific SID chip (start with 0)
 
-below the chip number is deduced using the voice number (start with 0)
-chip number = voice/3
-voice on the chip = voice%3
-hence if you have two chips, if voice=4,  sid.setFrequencyHz(voice, 440) will put 440Hz on the 2nd  voice of the chip n°1
+// below the chip number is deduced using the voice number (start with 0)
+// chip number = voice/3
+// voice on the chip = voice%3
+// hence if you have two chips, if voice=4,  sid.setFrequencyHz(voice, 440) will put 440Hz on the 2nd  voice of the chip n°1
 
 void setFrequency(int voice, uint16_t frequency); //this function set the 16 bit frequency is is not the frequency in Hertz
                 The frequency is determined by the following equation:
@@ -516,69 +516,79 @@ void set3OFF(int chip,int _3off);
 void setHP(int chip,int hp);
 void setBP(int chip,int bp);
 void setLP(int chip,int lp);
+```
 
+For advanced controls:
 
-For advance control:
-
+```C
 void pushToVoice(int voice,uint8_t address,uint8_t data);
+```
 
 This function will allow you to push a data to a specific register of a specific voice
 
-example:
+Example:
+
+```C
 sid.pushToVoice(0,SID_FREG_HI,255) //to push 255 on the register FREQ_HI of voice 0
-possible values:
-        SID_FREQ_LO
-        SID_FREQ_HI
-        SID_PW_LO
-        SID_PW_HI
-        SID_CONTROL_REG
-        SID_ATTACK_DECAY
-        SID_SUSTAIN_RELEASE
-        SID_WAVEFORM_SILENCE
+```
+Possible values:
+  - SID_FREQ_LO
+  - SID_FREQ_HI
+  - SID_PW_LO
+  - SID_PW_HI
+  - SID_CONTROL_REG
+  - SID_ATTACK_DECAY
+  - SID_SUSTAIN_RELEASE
+  - SID_WAVEFORM_SILENCE
 
-
+```C
 void pushRegister(uint8_t chip,int address,int data);
+```
 
 This function will allow you to push directly a value to a register of a specific chip
 example:
 
+```C
 sid.pushRegister(0,SID_MOD_VOL,15) //will put the sound at maximum
-possible values:
-        SID_FREQ_LO_0
-        SID_FREQ_HI_0
-        SID_PW_LO_0
-        SID_PW_HI_0
-        SID_CONTROL_REG_0
-        SID_ATTACK_DECAY_0
-        SID_SUSTAIN_RELEASE_0
-        SID_FREQ_LO_1
-        SID_FREQ_HI_1
-        SID_PW_LO_1
-        SID_PW_HI_1
-        SID_CONTROL_REG_1
-        SID_ATTACK_DECAY_1
-        SID_SUSTAIN_RELEASE_1
-        SID_FREQ_LO_2
-        SID_FREQ_HI_2
-        SID_PW_LO_2
-        SID_PW_HI_2
-        SID_CONTROL_REG_2
-        SID_ATTACK_DECAY_2
-        SID_SUSTAIN_RELEASE_2
-        SID_FC_LO
-        SID_FC_HI
-        SID_RES_FILT
-        SID_MOD_VOL
+```
+Possible values:
+  - SID_FREQ_LO_0
+  - SID_FREQ_HI_0
+  - SID_PW_LO_0
+  - SID_PW_HI_0
+  - SID_CONTROL_REG_0
+  - SID_ATTACK_DECAY_0
+  - SID_SUSTAIN_RELEASE_0
+  - SID_FREQ_LO_1
+  - SID_FREQ_HI_1
+  - SID_PW_LO_1
+  - SID_PW_HI_1
+  - SID_CONTROL_REG_1
+  - SID_ATTACK_DECAY_1
+  - SID_SUSTAIN_RELEASE_1
+  - SID_FREQ_LO_2
+  - SID_FREQ_HI_2
+  - SID_PW_LO_2
+  - SID_PW_HI_2
+  - SID_CONTROL_REG_2
+  - SID_ATTACK_DECAY_2
+  - SID_SUSTAIN_RELEASE_2
+  - SID_FC_LO
+  - SID_FC_HI
+  - SID_RES_FILT
+  - SID_MOD_VOL
+  
 NB:
-    sid.pushToVoice(0,SID_FREG_HI,255) == sid.pushRegister(0,SID_FREQ_HI_0,255)
+    `sid.pushToVoice(0,SID_FREG_HI,255)` == `sid.pushRegister(0,SID_FREQ_HI_0,255)`
 
 
-
+```C
 void resetsid();
+```
+
 this function will reset all the SID chip
 
-```
-Below a code example
+Example
 
 ```C
 #include "SID6581.h"
@@ -657,39 +667,43 @@ int get3OFF(int chip);
 int getHP(int chip);
 int getBP(int chip);
 int getLP(int chip);
+```
 
-glabal function:
+global function:
+```C
 int getRegister(int chip,int addr);
+```
 
-        here are the  possible addresses:
-        SID_FREQ_LO_0
-        SID_FREQ_HI_0
-        SID_PW_LO_0
-        SID_PW_HI_0
-        SID_CONTROL_REG_0
-        SID_ATTACK_DECAY_0
-        SID_SUSTAIN_RELEASE_0
-        SID_FREQ_LO_1
-        SID_FREQ_HI_1
-        SID_PW_LO_1
-        SID_PW_HI_1
-        SID_CONTROL_REG_1
-        SID_ATTACK_DECAY_1
-        SID_SUSTAIN_RELEASE_1
-        SID_FREQ_LO_2
-        SID_FREQ_HI_2
-        SID_PW_LO_2
-        SID_PW_HI_2
-        SID_CONTROL_REG_2
-        SID_ATTACK_DECAY_2
-        SID_SUSTAIN_RELEASE_2
-        SID_FC_LO
-        SID_FC_HI
-        SID_RES_FILT
-        SID_MOD_VOL
+Here are the  possible addresses:
+  - SID_FREQ_LO_0
+  - SID_FREQ_HI_0
+  - SID_PW_LO_0
+  - SID_PW_HI_0
+  - SID_CONTROL_REG_0
+  - SID_ATTACK_DECAY_0
+  - SID_SUSTAIN_RELEASE_0
+  - SID_FREQ_LO_1
+  - SID_FREQ_HI_1
+  - SID_PW_LO_1
+  - SID_PW_HI_1
+  - SID_CONTROL_REG_1
+  - SID_ATTACK_DECAY_1
+  - SID_SUSTAIN_RELEASE_1
+  - SID_FREQ_LO_2
+  - SID_FREQ_HI_2
+  - SID_PW_LO_2
+  - SID_PW_HI_2
+  - SID_CONTROL_REG_2
+  - SID_ATTACK_DECAY_2
+  - SID_SUSTAIN_RELEASE_2
+  - SID_FC_LO
+  - SID_FC_HI
+  - SID_RES_FILT
+  - SID_MOD_VOL
 
+Example:
 
-example:
+```C
 void loop() {
 
     Serial.printf("Frequency voice 1:%d voice 2:%d voice 3:%d\n",sid.getFrequency(0),sid.getFrequency(1),sid.getFrequency(2));
@@ -711,7 +725,7 @@ The following commands will allow you to create instruments and simplify the cre
 ## To start the keyboard
 
 ```
-all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
+// all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
 
 SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); 
 
@@ -824,18 +838,18 @@ The library give you the possibility to change instruments there are 5 in 'store
 
 1) Change instrument for all voices
 
-```
+
 To change the instruments for all voices
 changeAllInstruments<instrument>();
 possible values:
-            sid_piano
-            sid_piano2
-            sid_piano3
-            sid_piano4
-            sid_piano5
-```
+  - sid_piano
+  - sid_piano2
+  - sid_piano3
+  - sid_piano4
+  - sid_piano5
 
- example:
+
+Example:
  
 ```C 
  #include "SID6581.h"
@@ -883,19 +897,17 @@ possible values:
 
 2) Change instrument for a specific voice
 
-```
 
-to change the instruments for all voices
+To change the instruments for all voices
 changeInstrumentOnVoice<instrument>(uint8_t voice);
 possible values:
-        sid_piano
-        sid_piano2
-        sid_piano3
-        sid_piano4
-        sid_piano5
-```
+  - sid_piano
+  - sid_piano2
+  - sid_piano3
+  - sid_piano4
+  - sid_piano5
 
-example:
+Example:
 
 ```C
 #include "SID6581.h"
@@ -961,7 +973,7 @@ the library allows to create your own instruments, each instrument is a class
  };
 ```
 
- to use the intrument:
+ To use the intrument:
  
  - `SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();`
  - `SIDKeyBoardPlayer::changeInstrumentOnVoice<new_instrument>(int voice);`
