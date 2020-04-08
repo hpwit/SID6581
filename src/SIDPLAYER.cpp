@@ -712,7 +712,7 @@ void SIDTunesPlayer::getNextFrame(uint16_t npc, uint8_t na)
     
 }
 
-void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
+bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
 {
 
     Serial.printf("playing file:%s\n",path);
@@ -723,7 +723,7 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
         if(mem==NULL)
         {
             Serial.println("not enough memory\n");
-            return;
+            return false;
         }
     }
     //memset(mem,0,0xffff);
@@ -737,27 +737,27 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
         Serial.println("Invalid parameter");
         
         getcurrentfile=currentfile;
-        return;
+        return false;
     }
     if(!fs.exists(path))
     {
         Serial.printf("file %s unknown\n",path);
         getcurrentfile=currentfile;
-        return;
+        return false;
     }
     File file=fs.open(path);
     if(!file)
     {
         Serial.printf("Unable to open %s\n",path);
         getcurrentfile=currentfile;
-        return;
+        return false;
     }
     file.read(sidtype,4);
     if(sidtype[0]!=0x50 || sidtype[1]!=0x53 || sidtype[2]!=0x49 || sidtype[3]!=0x44)
     {
         Serial.printf("File type:%s not handle yet\n",sidtype);
         getcurrentfile=currentfile;
-        return;
+        return false;
     }
 
     file.seek(7);
@@ -848,6 +848,7 @@ void SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     executeEventCallback(SID_NEW_TRACK);
     _playSongNumber(startsong -1);
     currentsong=startsong -1;
+    return true;
 }
 
 void SIDTunesPlayer::playNextSongInSid()
@@ -1057,14 +1058,18 @@ void SIDTunesPlayer::addSong(fs::FS &fs,  const char * path)
     Serial.printf("nb song:%d\n",numberOfSongs);
 }
 
-void SIDTunesPlayer::play()
+bool SIDTunesPlayer::play()
 {
     stopPlayer();
      sid.soundOff();
     songstruct p1=listsongs[currentfile];
     // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
     
-    playSidFile(*p1.fs,p1.filename);
+    if(!playSidFile(*p1.fs,p1.filename))
+    {
+       return playNext();
+    }
+    return true;
 }
 
 
@@ -1081,16 +1086,20 @@ void SIDTunesPlayer::play(int duration)
     
 }
 
-void SIDTunesPlayer::playNext()
+bool SIDTunesPlayer::playNext()
 {
     sid.soundOff();
     stopPlayer();
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct p1=listsongs[currentfile];
-    playSidFile(*p1.fs,p1.filename);
+    if(!playSidFile(*p1.fs,p1.filename))
+    {
+       return playNext();
+    }
+    return true;
 }
 
-void SIDTunesPlayer::playPrev()
+bool SIDTunesPlayer::playPrev()
 {
     stopPlayer();
     if(currentfile==0)
@@ -1098,7 +1107,12 @@ void SIDTunesPlayer::playPrev()
     else
         currentfile--;
     songstruct p1=listsongs[currentfile];
-    playSidFile(*p1.fs,p1.filename);
+
+    if(!playSidFile(*p1.fs,p1.filename))
+    {
+       return playPrev();
+    }
+    return true;
 }
 
 char * SIDTunesPlayer::getName()
