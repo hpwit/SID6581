@@ -1,30 +1,28 @@
 SID 6581 library
 ===========
 
-This library is to control  up to 5 SID 6581 chips from the 1980s era with an esp32.
+This library is to control up to 5 SID 6581 chips from the 1980s era using an esp32.
 The program allows you to :
-* Directly push the register to the  SID chip. Hence you can program like in the good all times :)
+* Directly push the register to the  SID chip. Hence you can program like in the good old times :)
 * Play old (or new) sid tunes
 * Play notes over up to 15 voices (3 voices per SID chip)
 * Design and play different instruments
 * Assign up to one instrument per voice
-The sound is played is the background so your mcu can do something else at the same time
+The sound is played is the background so your mcu can do something else at the same time.
 
 NB: the SID chip requires a 1Mhz clock signal to work  **you can either provide it with an external clock circuit or use a pin of the esp32 to do it**  (clock generated thanks to I2s).
 
-it should work with other mcu as it uses SPI but not tested.
+It should work with other mcu as it uses SPI but this hasn't been tested yet (contributors welcome).
 
-
-Please look at the schematics for the setup of the shift registers and  MOS 6581
+Please look at the schematics for the setup of the shift registers. [MOS 6581 documentation](http://archive.6502.org/datasheets/mos_6581_sid.pdf ).
 
 ## To start
 ```C
-// The object sid is automatically created.
-// if you have a external circuit that gives you the 1Mhz clock you can use:
+// The sid object is automatically created.
+// if you have a external oscillator that gives you the 1Mhz clock you can use:
 begin(int clock_pin,int data_pin, int latch);
 
-
-// if you do not have an external circuit the esp32 can create the 1Mhz signal uisng i2s using this
+// if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 // the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 
 // !!! NB: this pin number has to be >=16
@@ -32,15 +30,16 @@ begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 ```
 # Playing SID tunes
 
-You have to ways of playing sid tunes
-1) Playing .sid files (PSID for the moment) the player is still under development so if you have issues do not hesistate to link the file which you have encountered issues with
-2) Playing registers dump. 
+You have to ways of playing sid tunes:
+
+  1) Playing .sid files (PSID for the moment) the player is still under development so if you have issues do not hesistate to link the file which you have encountered issues with
+  2) Playing registers dump 
 
 ## 1 - To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
-NB1: the sid tunes do not have an end hence they will not stop. to stop a song you need to use stopPlayer()
+NB1: the sid tunes do not have an end hence they will play endlessly. To stop a song you need to use stopPlayer()
  
 ```C
 begin(int clock_pin,int data_pin, int latch);
