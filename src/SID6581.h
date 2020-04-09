@@ -171,11 +171,12 @@ struct _sid_command {
 
 enum sidEvent {
     SID_NEW_TRACK,
+    SID_NEW_FILE,
     SID_START_PLAY,
     SID_END_PLAY,
     SID_PAUSE_PLAY,
     SID_RESUME_PLAY,
-    SID_END_SONG
+    SID_END_TRACK
 };
 
 

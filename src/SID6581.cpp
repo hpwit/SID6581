@@ -350,7 +350,7 @@ void SIDRegisterPlayer::playSIDTunesTask(void *pvParameters)
     sid.resetsid();
     free(sidReg->sidvalues);
     Serial.println("end Play");
-    sidReg->executeEventCallback(SID_END_SONG);
+    sidReg->executeEventCallback(SID_END_TRACK);
     xPlayerTaskHandle=NULL;
     if(SIDPlayerTaskHandle!=NULL)
         xTaskNotifyGive(SIDPlayerTaskHandle);

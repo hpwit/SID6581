@@ -39,7 +39,7 @@ You have to ways of playing sid tunes:
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
-NB1: the sid tunes do not have an end hence they will play endlessly. To stop a song you need to use stopPlayer()
+NB1: the sid tunes do not have an end hence they will play by default for 3minutes. To stop a song you need to use stopPlayer()
  
 ```C
 begin(int clock_pin,int data_pin, int latch);
@@ -56,6 +56,24 @@ void stopPlayer(); //stop the player to restart use play()
 char * getFilename(); //return the filename of the current Sidfile playing
 int getPositionInPlaylist(); 
 int getPlaylistSize();
+
+void setDefaultDuration(uint32_t duration); //will sert the default duration of a track
+uint32_t getDefaultDuration();
+uint32_t getElapseTime(); //send you back the elapstimea song was played in milliseconds
+
+void setLoopMode(loopmode mode); //set the loop mode for playing the tracks and files
+possible values
+    MODE_SINGLE_TRACK, // don't loop (default, will play next until end of sid and/or track)
+    MODE_SINGLE_SID,// play all songs available in one sid once
+    MODE_LOOP_SID, //loop all songs in on sid file
+    MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
+    MODE_LOOP_PLAYLIST_SINGLE_SID /
+loopmode getLoopMode();
+
+bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
+bool getPlayerStatus(); //tells you if the runner is playing or not
+
+
 
 
 // Specific functions to have info on the sid file
@@ -368,6 +386,14 @@ Both players can fire custom events for better control:
 ```C
 inline void setEventCallback(void (*fptr)(sidEvent event))
 ```
+possible values of the event
+    - SID_NEW_TRACK : playing new song
+    - SID_NEW_FILE : playing a new file 
+    - SID_START_PLAY : start the player
+    - SID_END_PLAY : end the player
+    - SID_PAUSE_PLAY :pause track
+    - SID_RESUME_PLAY : resume track
+    - SID_END_TRACK : end of a track
 
 Example:
 
@@ -381,8 +407,6 @@ Example:
 SIDRegisterPlayer * player;
 
 void myCallback(  sidEvent event ) {
-
-        
         switch( event ) {
             case SID_NEW_TRACK: 
             Serial.printf( "New track: %s\n",player->getFilename() );

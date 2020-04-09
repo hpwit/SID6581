@@ -55,9 +55,18 @@
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
+static TaskHandle_t SIDTUNESSerialSongPlayerTaskLock= NULL;
+static TaskHandle_t SIDTUNESSerialLoopPlayerTask= NULL;
 static int _sid_cpu_core=SID_CPU_CORE;
 static int _sid_cpu_task_priority=SID_CPU_TASK_PRIORITY;
 
+enum loopmode {
+    MODE_SINGLE_TRACK, // don't loop (default, will play next until end of sid and/or track)
+    MODE_SINGLE_SID,// play all songs available in one sid once
+    MODE_LOOP_SID, //loop all songs in on sid file
+    MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
+    MODE_LOOP_PLAYLIST_SINGLE_SID //loop all tracks available in one playlist playing all the subtunes
+};
 
 struct serial_command {
     uint8_t data;
@@ -377,6 +386,7 @@ static volatile instruction opcodes[256]=
 
 class SIDTunesPlayer{
 public:
+    loopmode currentloopmode=MODE_SINGLE_TRACK;
     uint16_t cycles,wval,pc;
     long int buff,buffold,waitframe,wait,waitframeold,totalinframe;
     uint8_t data_offset;
@@ -391,6 +401,13 @@ public:
     uint8_t published[32];
     uint8_t author[32];
     uint8_t name[32];
+    uint32_t default_song_duration=180000;
+    uint32_t song_duration;
+    uint32_t delta_song_duration=0;
+    uint32_t pause_duration=0;
+    uint32_t int_speed=93;
+    bool playerrunning=false;
+    bool stop_song=false;
     
     char currentfilename[50];
     uint8_t a,x,y,p,s,bval;
@@ -416,6 +433,10 @@ public:
     void setmem(uint16_t addr,uint8_t value);
     void SetMaxVolume( uint8_t volume);
     uint16_t pcinc();
+    uint32_t getElapseTime();
+    void setDefaultDuration(uint32_t duration);
+    uint32_t getDefaultDuration();
+    void setSpeed(uint32_t speed);
     
     void cpuReset();
     void cpuResetTo(uint16_t npc, uint16_t na);
@@ -431,7 +452,8 @@ public:
     void getNextFrame(uint16_t npc, uint8_t na);
     bool playSidFile(fs::FS &fs, const char * path);
     static void SIDTUNESSerialPlayerTask(void * parameters);
-    void _playSongNumber(int songnumbner);
+    static void loopPlayer(void *param);
+     void _playSongNumber(int songnumber);
     void playPrevSongInSid();
     void playNextSongInSid();
     void stopPlayer();
@@ -450,6 +472,11 @@ public:
     int getNumberOfTunesInSid();
     int getCurrentTuneInSid();
     int getDefaultTuneInSid();
+    bool  playNextSong();
+    bool getPlayerStatus();
+    
+    void setLoopMode(loopmode mode);
+    loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
     inline void setEventCallback(void (*fptr)(sidEvent event))
     {
