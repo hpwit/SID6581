@@ -852,6 +852,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     getcurrentfile=currentfile;
     //executeEventCallback(SID_START_PLAY);
     currentsong=startsong -1;
+    executeEventCallback(SID_NEW_FILE);
     _playSongNumber(startsong -1);
     
     //xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
@@ -1250,9 +1251,10 @@ bool SIDTunesPlayer::playNext()
     
     sid.soundOff();
     stopPlayer();
-    executeEventCallback(SID_NEW_FILE);
+    
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct p1=listsongs[currentfile];
+    
    if(!playSidFile(*p1.fs,p1.filename))
     {
         return playNext();
@@ -1269,7 +1271,7 @@ bool SIDTunesPlayer::playPrev()
     else
         currentfile--;
     songstruct p1=listsongs[currentfile];
-    executeEventCallback(SID_NEW_FILE);
+    //executeEventCallback(SID_NEW_FILE);
 
     if(!playSidFile(*p1.fs,p1.filename))
     {
