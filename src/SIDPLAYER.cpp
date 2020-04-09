@@ -1250,6 +1250,7 @@ bool SIDTunesPlayer::playNext()
     
     sid.soundOff();
     stopPlayer();
+    executeEventCallback(SID_NEW_FILE);
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct p1=listsongs[currentfile];
    if(!playSidFile(*p1.fs,p1.filename))
