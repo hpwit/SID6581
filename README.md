@@ -63,7 +63,6 @@ uint32_t getElapseTime(); //send you back the elapstimea song was played in mill
 
 void setLoopMode(loopmode mode); //set the loop mode for playing the tracks and files
 loopmode getLoopMode(); // returns the current loop mode
-
 ```
 
 Possible `loopmode` values:
@@ -75,8 +74,6 @@ Possible `loopmode` values:
   - `MODE_LOOP_PLAYLIST_SINGLE_SID` : loop all tracks available in one playlist playing all the subtunes
     
 ```C
-
-
 bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
 bool getPlayerStatus(); //tells you if the runner is playing or not
 
@@ -101,7 +98,6 @@ Example:
 
 SIDTunesPlayer * player;
 
-
 void setup() {
     // put your setup code here, to run once:
     Serial.begin(115200);
@@ -123,7 +119,6 @@ void setup() {
         Serial.println(" - not a directory");
         return;
     }
-
     File file = root.openNextFile();
     while(file){
         if(file.isDirectory()){
@@ -376,6 +371,7 @@ Example:
 #define SID_LATCH 27
 #include "SPIFFS.h"
 #include "SD.h"
+
 SIDRegisterPlayer * player;
 
 void myCallback(  sidEvent event ) {
@@ -463,12 +459,10 @@ You have full control of the SID chip via the following commands
 
 ```C
 void sidSetVolume( uint8_t chip,uint8_t vol); set the volume off a specific SID chip (start with 0);
-
 // below the chip number is deduced using the voice number (start with 0)
 // chip number = voice/3
 // voice on the chip = voice%3
 // hence if you have two chips, if voice=4,  sid.setFrequencyHz(voice, 440) will put 440Hz on the 2nd  voice of the chip n°1
-
 void setFrequency(int voice, uint16_t frequency); //this function set the 16 bit frequency is is not the frequency in Hertz
 // The frequency is determined by the following equation:
 // Fout = (Fn * Fclk/16777216) Hz
@@ -675,7 +669,7 @@ Here are the  possible addresses:
   - `SID_PW_HI_0`
   - `SID_CONTROL_REG_0`
   - `SID_ATTACK_DECAY_0`
-  - `SID_SUSTAIN_RELEASE_0
+  - `SID_SUSTAIN_RELEASE_0`
   - `SID_FREQ_LO_1`
   - `SID_FREQ_HI_1`
   - `SID_PW_LO_1`
