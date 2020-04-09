@@ -57,7 +57,7 @@ char * getFilename(); //return the filename of the current Sidfile playing
 int getPositionInPlaylist(); 
 int getPlaylistSize();
 
-void setDefaultDuration(uint32_t duration); //will sert the default duration of a track
+void setDefaultDuration(uint32_t duration); //will sert the default duration of a track in milliseconds
 uint32_t getDefaultDuration();
 uint32_t getElapseTime(); //send you back the elapstimea song was played in milliseconds
 
