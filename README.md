@@ -67,7 +67,7 @@ possible values
     MODE_SINGLE_SID,// play all songs available in one sid once
     MODE_LOOP_SID, //loop all songs in on sid file
     MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
-    MODE_LOOP_PLAYLIST_SINGLE_SID /
+    MODE_LOOP_PLAYLIST_SINGLE_SID //loop all tracks available in one playlist playing all the subtunes
 loopmode getLoopMode();
 
 bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
