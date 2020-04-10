@@ -289,7 +289,7 @@ public:
 protected:
     
     int  latch_pin;
-     
+     Sid_md5 md5;
     //void stop();
     //uint8_t voice=7;
     int saveVolume[5];

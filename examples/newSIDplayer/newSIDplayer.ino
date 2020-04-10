@@ -19,28 +19,8 @@ void setup() {
     }
     //the following line will go through all the files in the SPIFFS
     //Do not forget to do "Tools-> ESP32 Scketch data upload"
-    File root = SPIFFS.open("/");
-    if(!root){
-        Serial.println("- failed to open directory");
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(" - not a directory");
-        return;
-    }
-    File file = root.openNextFile();
-    while(file){
-        if(file.isDirectory()){
-
-        } else {
-            Serial.print(" add file  FILE: ");
-            Serial.print(file.name());
-            Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-        }
-        file = root.openNextFile();
-    }
+    player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory 
+    //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
 
     //list all information of the songs
   player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");

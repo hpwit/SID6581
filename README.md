@@ -44,7 +44,8 @@ NB1: the sid tunes do not have an end hence they will play by default for 3minut
 ```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-void addSong(fs::FS &fs,  const char * path); //add song to the playlist
+void addSong(fs::FS &fs,  const char * path); //add a song to the playlist
+void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ); //Add all the song of a directory (can be recursive)
 void play(); //play in loop the playlist
 void playNext(); //play next song of the playlist
 void playPrev(); //play prev song of the playlist
@@ -130,32 +131,13 @@ void setup() {
     }
     //the following line will go through all the files in the SPIFFS
     //Do not forget to do "Tools-> ESP32 Scketch data upload"
-    File root = SPIFFS.open("/");
-    if(!root){
-        Serial.println("- failed to open directory");
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(" - not a directory");
-        return;
-    }
-    File file = root.openNextFile();
-    while(file){
-        if(file.isDirectory()){
-
-        } else {
-            Serial.print(" add file  FILE: ");
-            Serial.print(file.name());
-            Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-        }
-        file = root.openNextFile();
-    }
-
-    //list all information of the songs
+    
+    
+    player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory 
+    //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
     player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");
     
+    //list all information of the songs
     for(int i=0;i<player->getPlaylistSize();i++)
     {
         songstruct song=player->getSidFileInfo(i);
@@ -325,7 +307,7 @@ PS: to transform the .sid into register commands
 
 1) I use the fantastic program of Ken Händel
 
-  - https://haendel.ddns.net/~ken/#_latest_beta_version
+  - [https://haendel.ddns.net/~ken/#_latest_beta_version](https://haendel.ddns.net/~ken/#_latest_beta_version)
 
 ```
 java -jar jsidplay2_console-4.1.jar --audio LIVE_SID_REG --recordingFilename export_file sid_file
@@ -1179,10 +1161,22 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 ⓘ The numbers assigned to instruments are those found in my yamaha P-140 user guide.
 
+# Credits & Thanks
+
+- [Tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
+    Please check his repo where he's using this library to implement not only a full player but also a vizualizer.
+
+- [Ken Händel](https://haendel.ddns.net/~ken/#_latest_beta_version) for his advices and his tools
+
+- [jhohertz](https://github.com/jhohertz/jsSID) for his work on jsSID engine that I have reimplemented on C++
+
+- Other inspiration like cSID
+
+
 # Conclusions
 
 1) Let me know if you're using the library
 2) Do not hesitate if you have questions
 
 
-Updated 6 April 2020
+Updated 8 April 2020

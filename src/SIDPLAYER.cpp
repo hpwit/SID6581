@@ -843,6 +843,37 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
     //free(parsestr);
 }
 
+//The following is a function from tobozo
+//thank to him
+
+void SIDTunesPlayer::addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype, bool recursive ) {
+    
+    File root = fs.open( foldername );
+    if(!root){
+        Serial.printf("[ERROR] Failed to open %s directory\n", foldername);
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.printf("[ERROR] %s is not a directory\b", foldername);
+        return;
+    }
+    File file = root.openNextFile();
+    while(file){
+        if( file.isDirectory() || !String( file.name() ).endsWith( filetype ) ) {
+            if( recursive ) {
+                addSongsFromFolder( fs, file.name(), filetype, true );
+            } else {
+                Serial.printf("[INFO] Ignored [%s]\n", file.name() );
+            }
+        } else {
+            addSong(fs, file.name() );
+            // Serial.printf("[INFO] Added [%s] ( %d bytes )\n", file.name(), file.size() );
+        }
+        file = root.openNextFile();
+    }
+}
+
+
 songstruct  SIDTunesPlayer::getSidFileInfo(int songnumber)
 {
     if(songnumber<numberOfSongs && songnumber>=0)
@@ -858,7 +889,8 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     if(mem==NULL)
     {
         Serial.println("we create the memory buffer");
-        mem=(uint8_t*)malloc(0x10000);
+        Serial.printf("available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+        mem=(uint8_t*)calloc(0x10000,1);
         if(mem==NULL)
         {
             Serial.println("not enough memory\n");
@@ -866,7 +898,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
         }
     }
     //memset(mem,0,0xffff);
-    memset(mem,0x0,0x10000);
+    //memset(mem,0x0,0x10000);
     memset(name,0,32);
     memset(author,0,32);
     memset(published,0,32);

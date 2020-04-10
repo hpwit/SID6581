@@ -406,7 +406,7 @@ public:
     uint32_t song_duration;
     uint32_t delta_song_duration=0;
     uint32_t pause_duration=0;
-    uint32_t int_speed=93;
+    uint32_t int_speed=100;
     bool playerrunning=false;
     bool stop_song=false;
     
@@ -481,6 +481,7 @@ public:
     loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
     songstruct getSidFileInfo(int songnumber);
+    void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ) ;
     void getSongslengthfromMd5(fs::FS &fs, const char * path);
     inline void setEventCallback(void (*fptr)(sidEvent event))
     {
