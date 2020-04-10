@@ -811,16 +811,16 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
             for(int s=0;s<numberOfSongs;s++)
             {
                 //Serial.printf("dd %s %s\n",listsongs[s].filename,listsongs[s].md5);
-                stringTwo=String(listsongs[s].md5);
+                stringTwo=String(listsongs[s]->md5);
                 if(list.startsWith(stringTwo))
                 {
-                    Serial.printf("md5 info found for file %s\n",listsongs[s].filename);
+                    Serial.printf("md5 info found for file %s\n",listsongs[s]->filename);
                     memset(lom,0,320+35);
                     list.toCharArray(lom,list.length()+1);
                     //Serial.println(lom);
                     //Serial.println(list);
                     memset(parsestr,0,32*10+35);
-                    sprintf(parsestr,"%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s",listsongs[s].md5);
+                    sprintf(parsestr,"%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s",listsongs[s]->md5);
                     //Serial.printf("parse :%s\n",parsestr);
                     memset(bu,0,320);            sscanf(lom,parsestr,&bu[0],&bu[10],&bu[20],&bu[30],&bu[40],&bu[50],&bu[60],&bu[70],&bu[80],&bu[90],&bu[100],&bu[110],&bu[120],&bu[130],&bu[140],&bu[150],&bu[160],&bu[170],&bu[180],&bu[190],&bu[200],&bu[210],&bu[220],&bu[230],&bu[240],&bu[250],&bu[260],&bu[270],&bu[280],&bu[290],&bu[300],&bu[310]);
                     for(int m=0;m<32;m++)
@@ -830,7 +830,7 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
                             f=jd=k=0;
                             sscanf(&bu[m*10],"%d:%d.%d",&f,&jd,&k);
                             //Serial.printf("%s %d\n",&bu[10*m],(f*60*1000+jd*1000+k));
-                            listsongs[s].durations[m]=f*60*1000+jd*1000+k;
+                            listsongs[s]->durations[m]=f*60*1000+jd*1000+k;
                         }
                     }
                 }
@@ -878,7 +878,7 @@ songstruct  SIDTunesPlayer::getSidFileInfo(int songnumber)
 {
     if(songnumber<numberOfSongs && songnumber>=0)
     {
-        return listsongs[songnumber];
+        return *listsongs[songnumber];
     }
 }
 
@@ -1201,15 +1201,15 @@ void SIDTunesPlayer::_playSongNumber(int songnumber)
     //Serial.printf("tas %d core %d\n",SID_TASK_PRIORITY,SID_CPU_CORE);
     
     delay(200);
-    songstruct p=listsongs[getcurrentfile];
-    if(p.durations[currentsong]==0)
+    songstruct * p=listsongs[getcurrentfile];
+    if(p->durations[currentsong]==0)
     {
         song_duration=default_song_duration;
         Serial.printf("Playing with default song duration %d ms\n",song_duration);
     }
     else
     {
-        song_duration=p.durations[currentsong];
+        song_duration=p->durations[currentsong];
         Serial.printf("Playing with md5 database song duration %d ms\n",song_duration);
     }
     executeEventCallback(SID_NEW_TRACK);
@@ -1283,19 +1283,27 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
 
 void SIDTunesPlayer::addSong(fs::FS &fs,  const char * path)
 {
-    songstruct p1;
-    p1.fs=(fs::FS *)&fs;
+ 
+    if(numberOfSongs==255)
+    {
+        Serial.println("Play List full");
+        return;
+    }
+    songstruct * p1;
+    p1=(songstruct *)calloc(1,sizeof(songstruct));
+    if(p1==NULL)
+    {
+        Serial.println("no more memory to add a song");
+        return;
+    }
+    p1->fs=(fs::FS *)&fs;
     //char h[250];
-    sprintf(p1.filename,"%s",path);
-    if(getInfoFromFile(fs,path,&p1))
+    sprintf(p1->filename,"%s",path);
+    if(getInfoFromFile(fs,path,p1))
     {
         //p1.filename=h;
-        if(numberOfSongs==255)
-        {
-            Serial.println("Play List full");
-            return;
-        }
-        memset(p1.durations,0,32*4);
+        
+        memset(p1->durations,0,32*4);
         listsongs[numberOfSongs]=p1;
         numberOfSongs++;
     }
@@ -1314,7 +1322,7 @@ void SIDTunesPlayer::loopPlayer(void *param)
     {
         
         
-        songstruct p1=cpu->listsongs[cpu->currentfile];
+        songstruct p1=*(cpu->listsongs[cpu->currentfile]);
         // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
         
         if(!cpu->playSidFile(*p1.fs,p1.filename))
@@ -1425,10 +1433,10 @@ void SIDTunesPlayer::play(int duration)
 {
     stopPlayer();
     
-    songstruct p1=listsongs[currentfile];
+    songstruct *p1=listsongs[currentfile];
     // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
     
-    playSidFile(*p1.fs,p1.filename);
+    playSidFile(*p1->fs,p1->filename);
     
     
 }
@@ -1443,9 +1451,9 @@ bool SIDTunesPlayer::playNext()
     stopPlayer();
     
     currentfile=(currentfile+1)%numberOfSongs;
-    songstruct p1=listsongs[currentfile];
+    songstruct * p1=listsongs[currentfile];
     
-    if(!playSidFile(*p1.fs,p1.filename))
+    if(!playSidFile(*p1->fs,p1->filename))
     {
         return playNext();
     }
@@ -1460,10 +1468,10 @@ bool SIDTunesPlayer::playPrev()
         currentfile=numberOfSongs-1;
     else
         currentfile--;
-    songstruct p1=listsongs[currentfile];
+    songstruct * p1=listsongs[currentfile];
     //executeEventCallback(SID_NEW_FILE);
     
-    if(!playSidFile(*p1.fs,p1.filename))
+    if(!playSidFile(*p1->fs,p1->filename))
     {
         return playPrev();
     }

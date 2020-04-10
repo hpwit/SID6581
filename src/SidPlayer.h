@@ -415,7 +415,7 @@ public:
     bool frame;
     int numberOfSongs;
     int nRefreshCIAbase;
-    songstruct listsongs[255];
+    songstruct * listsongs[255];
     int volume;
     int reset;
     int speedsong[32];
@@ -426,6 +426,17 @@ public:
         currentfile=0;
         volume=15;
         getcurrentfile=0;
+        if(mem==NULL)
+        {
+            Serial.println("We create the memory buffer for C64 memory");
+            Serial.printf("available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+            mem=(uint8_t*)calloc(0x10000,1);
+            if(mem==NULL)
+            {
+                Serial.println("not enough memory\n");
+                
+            }
+        }
     }
     
     uint8_t getmem(uint16_t addr);
