@@ -43,8 +43,8 @@ void setup() {
     }
 
     //list all information of the songs
-  player->getSongslentghfromMd5(SPIFFS,"/soundlength.md5");
-  
+  player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");
+
     for(int i=0;i<player->getPlaylistSize();i++)
     {
         songstruct song=player->getSidFileInfo(i);

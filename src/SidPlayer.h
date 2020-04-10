@@ -481,7 +481,7 @@ public:
     loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
     songstruct getSidFileInfo(int songnumber);
-    void getSongslentghfromMd5(fs::FS &fs, const char * path);
+    void getSongslengthfromMd5(fs::FS &fs, const char * path);
     inline void setEventCallback(void (*fptr)(sidEvent event))
     {
         eventCallback = fptr;

@@ -783,7 +783,7 @@ bool SIDTunesPlayer::getInfoFromFile(fs::FS &fs, const char * path,songstruct * 
 }
 
 
-void SIDTunesPlayer::getSongslentghfromMd5(fs::FS &fs, const char * path)
+void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
 {
     
     char lom[320+35];

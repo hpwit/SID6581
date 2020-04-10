@@ -102,7 +102,7 @@ struct songstruct{
 ```
 By default the song duration is 3 minutes and can be changed with `setDefaultDuration(uint32_t duration)`. 
 You can retrieve the actual song durations from [https://www.hvsc.de](https://www.hvsc.de) archives. `DOCUMENTS/Songlengths.md5`.
-If you have that file you can match the actual song duration with `getSongslentghfromMd5(fs::FS &fs, const char * path)`.
+If you have that file you can match the actual song duration with `getSongslengthfromMd5(fs::FS &fs, const char * path)`.
 
 
 
@@ -154,7 +154,7 @@ void setup() {
     }
 
     //list all information of the songs
-    player->getSongslentghfromMd5(SPIFFS,"/soundlength.md5");
+    player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");
     
     for(int i=0;i<player->getPlaylistSize();i++)
     {
