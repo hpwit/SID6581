@@ -42,6 +42,7 @@
 #include "freertos/queue.h"
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
+#include <string.h>
 
 
 #ifndef SID_CPU_CORE
@@ -435,6 +436,7 @@ public:
     uint16_t pcinc();
     uint32_t getElapseTime();
     void setDefaultDuration(uint32_t duration);
+    uint32_t getCurrentTrackDuration();
     uint32_t getDefaultDuration();
     void setSpeed(uint32_t speed);
     
@@ -474,10 +476,12 @@ public:
     int getDefaultTuneInSid();
     bool  playNextSong();
     bool getPlayerStatus();
-    
+    bool getInfoFromFile(fs::FS &fs, const char * path,songstruct * songinfo);
     void setLoopMode(loopmode mode);
     loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
+    songstruct getSidFileInfo(int songnumber);
+    void getSongslentghfromMd5(fs::FS &fs, const char * path);
     inline void setEventCallback(void (*fptr)(sidEvent event))
     {
         eventCallback = fptr;
@@ -485,6 +489,7 @@ public:
 private:
      void (*eventCallback)(sidEvent event)=NULL;
     bool paused=false;
+    Sid_md5 md5;
     
 };
 

@@ -53,13 +53,8 @@ void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
 void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
-char * getFilename(); //return the filename of the current Sidfile playing
-int getPositionInPlaylist(); 
-int getPlaylistSize();
-
 void setDefaultDuration(uint32_t duration); //will sert the default duration of a track in milliseconds
 uint32_t getDefaultDuration();
-uint32_t getElapseTime(); //send you back the elapstimea song was played in milliseconds
 
 void setLoopMode(loopmode mode); //set the loop mode for playing the tracks and files
 loopmode getLoopMode(); // returns the current loop mode
@@ -77,14 +72,39 @@ Possible `loopmode` values:
 bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
 bool getPlayerStatus(); //tells you if the runner is playing or not
 
-// Specific functions to have info on the sid file
-char * getName(); //get name of the sid file
-char * getPublished(); //get publish information
-char * getAuthor(); //return the author
+// Specific functions to have info on the current sid file
+char * getFilename(); //return the filename of the current Sidfile playing
+char * getName(); //get name of the current sid file
+char * getPublished(); //get publish information of the current sid file
+char * getAuthor(); //return the author of the current sidfile
+uint32_t getCurrentTrackDuration(); //give you the duration of the current track
+uint32_t getElapseTime(); //send you back the elapstimea track was played in milliseconds
 int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
 int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
 int getDefaultTuneInSid(); //get the number of the default tunes. 
+
+//Playlist information
+int getPositionInPlaylist(); 
+int getPlaylistSize();
+songstruct getSidFileInfo(int songnumber); // retrieve song information
+
+struct songstruct{
+        fs::FS  *fs;
+        char filename[80];
+        uint8_t name[32];
+        uint8_t author[32];
+        char md5[32];
+        uint8_t published[32];
+        uint8_t subsongs,startsong;
+        uint32_t  durations[32];
+};
+
 ```
+By default the song duration is 3 minutes and can be changed with `setDefaultDuration(uint32_t duration)`. 
+You can retrieve the actual song durations from [https://www.hvsc.de](https://www.hvsc.de) archives. `DOCUMENTS/Songlengths.md5`.
+If you have that file you can match the actual song duration with `getSongslentghfromMd5(fs::FS &fs, const char * path)`.
+
+
 
 Example:
 
@@ -133,6 +153,22 @@ void setup() {
         file = root.openNextFile();
     }
 
+    //list all information of the songs
+    player->getSongslentghfromMd5(SPIFFS,"/soundlength.md5");
+    
+    for(int i=0;i<player->getPlaylistSize();i++)
+    {
+        songstruct song=player->getSidFileInfo(i);
+        Serial.printf("%s %s %s %s %s %d %d \n",song.filename,song.name,song.author,song.published,song.md5,song.subsongs,song.startsong);
+        for(int g=0;g<song.subsongs;g++)
+            {
+                Serial.printf("        song n:%d  duration:%d\n",g,song.durations[g]);
+            }
+
+
+    }
+    
+    
     player->play();
 
     Serial.println();

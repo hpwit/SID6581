@@ -106,7 +106,7 @@
 #include "soc/timer_group_reg.h"
 #include "driver/i2s.h"
 #include "freertos/queue.h"
-
+#include "Sid_md5.hpp"
 
 static TaskHandle_t xPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerTaskHandle = NULL;
@@ -160,6 +160,14 @@ struct _sid_control
 struct songstruct{
     fs::FS  *fs;
     char filename[80];
+    uint8_t name[32];
+    uint8_t author[32];
+    char md5[32];
+    uint8_t published[32];
+    uint8_t subsongs,startsong;
+    uint32_t  durations[32];
+    
+    
 };
 
 struct _sid_command {
@@ -281,6 +289,7 @@ public:
 protected:
     
     int  latch_pin;
+     
     //void stop();
     //uint8_t voice=7;
     int saveVolume[5];
