@@ -54,7 +54,7 @@ void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
 void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
-void setDefaultDuration(uint32_t duration); //will sert the default duration of a track in milliseconds
+void setDefaultDuration(uint32_t duration); //will set the default duration of a track in milliseconds
 uint32_t getDefaultDuration();
 
 void setLoopMode(loopmode mode); //set the loop mode for playing the tracks and files
@@ -1164,7 +1164,7 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 # Credits & Thanks
 
 - [Tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
-    Please check his repo where he's using this library to implement not only a full player but also a vizualizer.
+    Please check his repo where he's using this library to implement not only a full player but also a [SID vizualizer](https://github.com/tobozo/ESP32-SIDView).
 
 - [Ken Händel](https://haendel.ddns.net/~ken/#_latest_beta_version) for his advices and his tools
 
