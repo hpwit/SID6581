@@ -46,17 +46,27 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value)
         addr=(addr&0xFF)+32*based;
         //Serial.printf("%x %x %d\n",addr,value,decal);
         //Serial.printf("%d %d %ld")
-        if((addr%32)%24==0 and (addr%32)>0) //we delaonf with the sound
+        if((addr%32)%24==0 and (addr%32)>0) //we deal with the sound
         {
             //Serial.printf("sound :%x %x\n",addr,value&0xf);
             //sidReg->save24=*(uint8_t*)(d+1);
             value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
             
         }
+//        if((addr%32)%7==4)
+//        {
+//            int d=value&0xf0;
+//            if(d!=128 && d!=64 && d!=32 && d!=16 && d!=0)
+//            Serial.printf("waveform:%d %d\n",value&0xf0,addr);
+//        }
         _sid->pushRegister(addr/32,addr%32,value);
         decal=(decal*int_speed)/100;
         //Serial.printf("ff %d\n",decal);
-        delayMicroseconds(decal);
+        //vTaskDelay only takes milliseconds and the delays are in microseconds but the frame switch can be up to 19ms hence to avoid blocking the cpu
+        // we do a delayMicroseconds for the microseconds part and and vTaskDelay for the millisecond part
+        //maybe a minus to be added in oder to cope with the time to push and stuff
+        delayMicroseconds(decal%1000);
+        vTaskDelay(decal/1000);
         
         // sid.feedTheDog();
         //mem[addr] = value;
@@ -1030,7 +1040,7 @@ void SIDTunesPlayer::playNextSongInSid()
 {
     
     //Serial.printf("in net:%d\n",subsongs);
-    stopPlayer();
+    stop();
     currentsong=(currentsong+1)%subsongs;
     _playSongNumber(currentsong);
     
@@ -1054,17 +1064,41 @@ uint32_t SIDTunesPlayer::getCurrentTrackDuration()
 {
     return song_duration;
 }
-void SIDTunesPlayer::stopPlayer()
+void SIDTunesPlayer::stop()
 {
     
-    //executeEventCallback(SID_END_PLAY);
+    executeEventCallback(SID_STOP_TRACK);
     //Serial.printf("playing stop n:%d/%d\n",1,subsongs);
+    sid.soundOff();
     if(SIDTUNESSerialPlayerTaskHandle!=NULL)
     {
         
         vTaskDelete(SIDTUNESSerialPlayerTaskHandle);
         SIDTUNESSerialPlayerTaskHandle=NULL;
     }
+    //Serial.printf("playing sop n:%d/%d\n",1,subsongs);
+}
+
+void SIDTunesPlayer::stopPlayer()
+{
+    
+    executeEventCallback(SID_END_PLAY);
+    //Serial.printf("playing stop n:%d/%d\n",1,subsongs);
+    sid.soundOff();
+    if(SIDTUNESSerialPlayerTaskHandle!=NULL)
+    {
+        
+        vTaskDelete(SIDTUNESSerialPlayerTaskHandle);
+        SIDTUNESSerialPlayerTaskHandle=NULL;
+    }
+    if(SIDTUNESSerialLoopPlayerTask!=NULL)
+    {
+        
+        vTaskDelete(SIDTUNESSerialLoopPlayerTask);
+        SIDTUNESSerialLoopPlayerTask=NULL;
+    }
+    //SIDTUNESSerialLoopPlayerTask=NULL;
+    playerrunning=false;
     //Serial.printf("playing sop n:%d/%d\n",1,subsongs);
 }
 
@@ -1136,6 +1170,7 @@ bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch )
 void SIDTunesPlayer::_playSongNumber(int songnumber)
 {
     sid.soundOff();
+    sid.resetsid();
     buff=0;
     buffold=0;
     currentsong=songnumber;
@@ -1192,7 +1227,7 @@ void SIDTunesPlayer::_playSongNumber(int songnumber)
     //sid.soundOn();
     xTaskCreatePinnedToCore(
                             SIDTunesPlayer::SIDTUNESSerialPlayerTask,      /* Function that implements the task. */
-                            "NAME1",          /* Text name for the task. */
+                            "SIDTUNESSerialPlayerTask",          /* Text name for the task. */
                             4096,      /* Stack size in words, not bytes. */
                             this,    /* Parameter passed into the task. */
                             SID_CPU_TASK_PRIORITY,/* Priority at which the task is created. */
@@ -1334,15 +1369,16 @@ void SIDTunesPlayer::loopPlayer(void *param)
             SIDTUNESSerialSongPlayerTaskLock  = xTaskGetCurrentTaskHandle();
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             cpu->executeEventCallback(SID_END_TRACK);
+            SIDTUNESSerialSongPlayerTaskLock=NULL;
             if(!cpu->playNextSong())
             {
                 break;
             }
         }
+       
+        //sid.soundOff();
+        cpu->stop();
         cpu->executeEventCallback(SID_END_PLAY);
-        sid.soundOff();
-        cpu->stopPlayer();
-        
         SIDTUNESSerialLoopPlayerTask=NULL;
         cpu->playerrunning=false;
         vTaskDelete(NULL); //we delete the
@@ -1354,8 +1390,8 @@ bool  SIDTunesPlayer::playNextSong()
     switch(currentloopmode)
     {
         case MODE_SINGLE_TRACK:
-            sid.soundOff();
-            stopPlayer();
+            //sid.soundOff();
+            stop();
             return false;
             break;
             
@@ -1371,8 +1407,8 @@ bool  SIDTunesPlayer::playNextSong()
             }
             else
             {
-                sid.soundOff();
-                stopPlayer();
+                //sid.soundOff();
+                stop();
                 return false;
             }
             break;
@@ -1394,8 +1430,8 @@ bool  SIDTunesPlayer::playNextSong()
             }
             break;
         default:
-            sid.soundOff();
-            stopPlayer();
+            //sid.soundOff();
+            stop();
             return false;
             break;
     }
@@ -1403,7 +1439,7 @@ bool  SIDTunesPlayer::playNextSong()
 
 bool SIDTunesPlayer::play()
 {
-    //stopPlayer();
+    //stop();
     if(playerrunning)
     {
         Serial.println("player already running");
@@ -1411,13 +1447,13 @@ bool SIDTunesPlayer::play()
     }
     if(SIDTUNESSerialLoopPlayerTask!=NULL)
     {
-        sid.soundOff();
-        stopPlayer();
+        //sid.soundOff();
+        stop();
         vTaskDelete(SIDTUNESSerialLoopPlayerTask);
     }
     xTaskCreatePinnedToCore(
                             SIDTunesPlayer::loopPlayer,      /* Function that implements the task. */
-                            "NAME2",          /* Text name for the task. */
+                            "loopPlayer",          /* Text name for the task. */
                             4096,      /* Stack size in words, not bytes. */
                             this,    /* Parameter passed into the task. */
                             1,/* Priority at which the task is created. */
@@ -1429,26 +1465,14 @@ bool SIDTunesPlayer::play()
 
 
 
-void SIDTunesPlayer::play(int duration)
-{
-    stopPlayer();
-    
-    songstruct *p1=listsongs[currentfile];
-    // Serial.printf("currentfile %d %s\n",currentfile,p1.filename);
-    
-    playSidFile(*p1->fs,p1->filename);
-    
-    
-}
-
 bool SIDTunesPlayer::playNext()
 {
     //Serial.println("in next");
     //if(SIDTUNESSerialSongPlayerTaskLock!=NULL)
     //   xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
     
-    sid.soundOff();
-    stopPlayer();
+    //sid.soundOff();
+    stop();
     
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct * p1=listsongs[currentfile];
@@ -1462,8 +1486,8 @@ bool SIDTunesPlayer::playNext()
 
 bool SIDTunesPlayer::playPrev()
 {
-    sid.soundOff();
-    stopPlayer();
+    //sid.soundOff();
+    stop();
     if(currentfile==0)
         currentfile=numberOfSongs-1;
     else

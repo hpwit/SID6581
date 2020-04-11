@@ -53,6 +53,7 @@ void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
 void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
+void stop(); //stop the current song restart with playNext() or playPrev()
 void stopPlayer(); //stop the player to restart use play()
 void setDefaultDuration(uint32_t duration); //will set the default duration of a track in milliseconds
 uint32_t getDefaultDuration();
@@ -379,6 +380,7 @@ possible values of the event
   - `SID_PAUSE_PLAY` :pause track
   - `SID_RESUME_PLAY` : resume track
   - `SID_END_TRACK` : end of a track
+  -`SID_STOP_TRACK`: stop the current trak
 
 Example:
 

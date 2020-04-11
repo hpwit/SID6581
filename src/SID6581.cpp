@@ -47,8 +47,8 @@ SID6581::SID6581(){}
     };
     const i2s_pin_config_t pin_config = {
         .bck_io_num = sid_clock_pin,
-        .ws_io_num = NULL,
-        .data_out_num = NULL,
+        .ws_io_num = -1,//NULL,
+        .data_out_num = -1, //NULL,
         .data_in_num = I2S_PIN_NO_CHANGE
     };
     
@@ -67,7 +67,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
     sid_spi = new SPIClass(HSPI);
     if(sid_spi==NULL)
         return false;
-    sid_spi->begin(clock_pin,NULL,data_pin,NULL);
+    sid_spi->begin(clock_pin,-1,data_pin,-1);
     latch_pin=latch;
     pinMode(latch, OUTPUT);
     

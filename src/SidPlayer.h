@@ -470,6 +470,7 @@ public:
     void playPrevSongInSid();
     void playNextSongInSid();
     void stopPlayer();
+    void stop();
     void addSong(fs::FS &fs,  const char * path);
     bool play();
     void play(int duration);

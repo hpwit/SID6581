@@ -184,7 +184,8 @@ enum sidEvent {
     SID_END_PLAY,
     SID_PAUSE_PLAY,
     SID_RESUME_PLAY,
-    SID_END_TRACK
+    SID_END_TRACK,
+    SID_STOP_TRACK
 };
 
 
