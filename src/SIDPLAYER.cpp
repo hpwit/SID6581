@@ -908,8 +908,11 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
             return false;
         }
     }
-    //memset(mem,0,0xffff);
-    //memset(mem,0x0,0x10000);
+    else
+    {
+ 
+        memset(mem,0x0,0x10000);
+    }
     memset(name,0,32);
     memset(author,0,32);
     memset(published,0,32);
