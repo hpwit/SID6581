@@ -774,6 +774,7 @@ unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path)
         Serial.println("memory buffer ok");
     }
     l = file.read( sidvalues, sizet*4);//sizeof(SIDVALUES));
+    file.close();
     return sizet;
 }
 

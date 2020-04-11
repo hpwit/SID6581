@@ -847,6 +847,7 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
             }
         }
     }
+    md5File.close();
     Serial.println("Matching done.");
     //free(lom);
     //free(bu);
@@ -1029,6 +1030,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     //executeEventCallback(SID_START_PLAY);
     currentsong=startsong -1;
     executeEventCallback(SID_NEW_FILE);
+    file.close();
     _playSongNumber(startsong -1);
     
     //xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
