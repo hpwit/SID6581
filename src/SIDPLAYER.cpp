@@ -1253,7 +1253,8 @@ void SIDTunesPlayer::_playSongNumber(int songnumber)
         Serial.printf("Playing with md5 database song duration %d ms\n",song_duration);
     }
     executeEventCallback(SID_NEW_TRACK);
-    xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
+    if(SIDTUNESSerialPlayerTaskLock!=NULL)
+        xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
     
     
 }
@@ -1314,8 +1315,8 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
             }
             
         }
-        
-        xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
+        if(SIDTUNESSerialSongPlayerTaskLock!=NULL)
+            xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
     }
 }
 
@@ -1371,6 +1372,7 @@ void SIDTunesPlayer::loopPlayer(void *param)
         }
         while(1)
         {
+            Serial.println("we do enter the while");
             SIDTUNESSerialSongPlayerTaskLock  = xTaskGetCurrentTaskHandle();
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             cpu->executeEventCallback(SID_END_TRACK);
