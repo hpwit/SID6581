@@ -42,7 +42,7 @@
 #define MASK_CSWRRE 0b111
 #define SID_WAVEFORM_TRIANGLE (1<<4)
 #define SID_WAVEFORM_SAWTOOTH (1<<5)
-#define SID_WAVEFORM_SQUARE (1<<6)
+#define SID_WAVEFORM_PULSE (1<<6)
 #define SID_WAVEFORM_NOISE (1<<7)
 #define SID_WAVEFORM_SILENCE 0
 #define SID_GATE 0
@@ -690,7 +690,7 @@ public:
         sid.setDecay(voice,2);
         sid.setRelease(voice,10);
         sid.setPulse(voice,1000);
-        sid.setWaveForm(voice,SID_WAVEFORM_SQUARE);
+        sid.setWaveForm(voice,SID_WAVEFORM_PULSE);
         sid.setGate(voice,1);
         i=0;
     }
