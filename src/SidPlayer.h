@@ -25,16 +25,12 @@
 #include <stdio.h>
 
 
-
-
 #include <stdio.h>
-//#include "stdio.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
-//#include <termios.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include "FS.h"
@@ -53,6 +49,7 @@
     #define SID_CPU_TASK_PRIORITY 3
 #endif
 
+
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
@@ -60,6 +57,7 @@ static TaskHandle_t SIDTUNESSerialSongPlayerTaskLock= NULL;
 static TaskHandle_t SIDTUNESSerialLoopPlayerTask= NULL;
 static int _sid_cpu_core=SID_CPU_CORE;
 static int _sid_cpu_task_priority=SID_CPU_TASK_PRIORITY;
+
 
 enum loopmode {
     MODE_SINGLE_TRACK, // don't loop (default, will play next until end of sid and/or track)
@@ -69,16 +67,17 @@ enum loopmode {
     MODE_LOOP_PLAYLIST_SINGLE_SID //loop all tracks available in one playlist playing all the subtunes
 };
 
+
 struct serial_command {
     uint8_t data;
     uint8_t address;
     uint16_t duration;
 };
 
+
 enum flag_enum{
 flag_N= 128, flag_V= 64, flag_B= 16, flag_D= 8, flag_I= 4, flag_Z= 2, flag_C= 1
 };
-
 
 
 enum mode_enum {
@@ -97,6 +96,8 @@ enum mode_enum {
     mode_rel,
     mode_xxx
 };
+
+
 enum inst_enum{
     inst_adc,
     inst_and,
@@ -110,12 +111,14 @@ enum inst_enum{
 
 
 typedef struct instruction instruction;
+
 struct instruction{
     enum inst_enum inst;
     enum mode_enum mode;
 };
-static volatile instruction opcodes[256]=
-{
+
+
+static volatile instruction opcodes[256] = {
     {inst_brk, mode_imp},                            // 0x00
     {inst_ora, mode_indx},                            // 0x01
     {inst_xxx, mode_xxx},                            // 0x02
@@ -196,7 +199,7 @@ static volatile instruction opcodes[256]=
     {inst_eor, mode_abs},                            // 0x4d
     {inst_lsr, mode_abs},                            // 0x4e
     {inst_xxx, mode_xxx},                            // 0x4f
-    
+
     {inst_bvc, mode_rel},                            // 0x50
     {inst_eor, mode_indy},                            // 0x51
     {inst_xxx, mode_xxx},                            // 0x52
@@ -213,7 +216,7 @@ static volatile instruction opcodes[256]=
     {inst_eor, mode_absx},                            // 0x5d
     {inst_lsr, mode_absx},                            // 0x5e
     {inst_xxx, mode_xxx},                            // 0x5f
-    
+
     {inst_rts, mode_imp},                            // 0x60
     {inst_adc, mode_indx},                            // 0x61
     {inst_xxx, mode_xxx},                            // 0x62
@@ -230,7 +233,7 @@ static volatile instruction opcodes[256]=
     {inst_adc, mode_abs},                            // 0x6d
     {inst_ror, mode_abs},                            // 0x6e
     {inst_xxx, mode_xxx},                            // 0x6f
-    
+
     {inst_bvs, mode_rel},                            // 0x70
     {inst_adc, mode_indy},                            // 0x71
     {inst_xxx, mode_xxx},                            // 0x72
@@ -247,7 +250,7 @@ static volatile instruction opcodes[256]=
     {inst_adc, mode_absx},                            // 0x7d
     {inst_ror, mode_absx},                            // 0x7e
     {inst_xxx, mode_xxx},                            // 0x7f
-    
+
     {inst_xxx, mode_imm},                            // 0x80
     {inst_sta, mode_indx},                            // 0x81
     {inst_xxx, mode_xxx},                            // 0x82
@@ -264,7 +267,7 @@ static volatile instruction opcodes[256]=
     {inst_sta, mode_abs},                            // 0x8d
     {inst_stx, mode_abs},                            // 0x8e
     {inst_xxx, mode_xxx},                            // 0x8f
-    
+
     {inst_bcc, mode_rel},                            // 0x90
     {inst_sta, mode_indy},                            // 0x91
     {inst_xxx, mode_xxx},                            // 0x92
@@ -281,7 +284,7 @@ static volatile instruction opcodes[256]=
     {inst_sta, mode_absx},                            // 0x9d
     {inst_xxx, mode_absx},                            // 0x9e
     {inst_xxx, mode_xxx},                            // 0x9f
-    
+
     {inst_ldy, mode_imm},                            // 0xa0
     {inst_lda, mode_indx},                            // 0xa1
     {inst_ldx, mode_imm},                            // 0xa2
@@ -298,7 +301,7 @@ static volatile instruction opcodes[256]=
     {inst_lda, mode_abs},                            // 0xad
     {inst_ldx, mode_abs},                            // 0xae
     {inst_xxx, mode_xxx},                            // 0xaf
-    
+
     {inst_bcs, mode_rel},                            // 0xb0
     {inst_lda, mode_indy},                            // 0xb1
     {inst_xxx, mode_xxx},                            // 0xb2
@@ -315,7 +318,7 @@ static volatile instruction opcodes[256]=
     {inst_lda, mode_absx},                            // 0xbd
     {inst_ldx, mode_absy},                            // 0xbe
     {inst_xxx, mode_xxx},                            // 0xbf
-    
+
     {inst_cpy, mode_imm},                            // 0xc0
     {inst_cmp, mode_indx},                            // 0xc1
     {inst_xxx, mode_xxx},                            // 0xc2
@@ -332,7 +335,7 @@ static volatile instruction opcodes[256]=
     {inst_cmp, mode_abs},                            // 0xcd
     {inst_dec, mode_abs},                            // 0xce
     {inst_xxx, mode_xxx},                            // 0xcf
-    
+
     {inst_bne, mode_rel},                            // 0xd0
     {inst_cmp, mode_indy},                            // 0xd1
     {inst_xxx, mode_xxx},                            // 0xd2
@@ -349,7 +352,7 @@ static volatile instruction opcodes[256]=
     {inst_cmp, mode_absx},                            // 0xdd
     {inst_dec, mode_absx},                            // 0xde
     {inst_xxx, mode_xxx},                            // 0xdf
-    
+
     {inst_cpx, mode_imm},                            // 0xe0
     {inst_sbc, mode_indx},                            // 0xe1
     {inst_xxx, mode_xxx},                            // 0xe2
@@ -366,7 +369,7 @@ static volatile instruction opcodes[256]=
     {inst_sbc, mode_abs},                            // 0xed
     {inst_inc, mode_abs},                            // 0xee
     {inst_xxx, mode_xxx},                            // 0xef
-    
+
     {inst_beq, mode_rel},                            // 0xf0
     {inst_sbc, mode_indy},                            // 0xf1
     {inst_xxx, mode_xxx},                            // 0xf2
@@ -385,8 +388,9 @@ static volatile instruction opcodes[256]=
     {inst_xxx, mode_xxx}
 };
 
+
 class SIDTunesPlayer{
-public:
+  public:
     loopmode currentloopmode=MODE_SINGLE_TRACK;
     uint16_t cycles,wval,pc;
     long int buff,buffold,waitframe,wait,waitframeold,totalinframe;
@@ -409,7 +413,7 @@ public:
     uint32_t int_speed=100;
     bool playerrunning=false;
     bool stop_song=false;
-    
+
     char currentfilename[50];
     uint8_t a,x,y,p,s,bval;
     bool frame;
@@ -420,25 +424,22 @@ public:
     int reset;
     int speedsong[32];
     uint16_t plmo;
-    SIDTunesPlayer(){
+    SIDTunesPlayer() {
         _sid=&sid;
         numberOfSongs=0;
         currentfile=0;
         volume=15;
         getcurrentfile=0;
-        if(mem==NULL)
-        {
-            Serial.println("We create the memory buffer for C64 memory");
-            Serial.printf("available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+        if(mem==NULL) {
+            log_d("We create the memory buffer for C64 memory");
+            log_d("available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
             mem=(uint8_t*)calloc(0x10000,1);
-            if(mem==NULL)
-            {
-                Serial.println("not enough memory\n");
-                
+            if(mem==NULL) {
+                log_e("not enough memory\n");
             }
         }
     }
-    
+
     uint8_t getmem(uint16_t addr);
     bool begin(int clock_pin,int data_pin, int latch );
     bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
@@ -450,7 +451,7 @@ public:
     uint32_t getCurrentTrackDuration();
     uint32_t getDefaultDuration();
     void setSpeed(uint32_t speed);
-    
+
     void cpuReset();
     void cpuResetTo(uint16_t npc, uint16_t na);
     uint8_t getaddr(mode_enum mode);
@@ -466,7 +467,7 @@ public:
     bool playSidFile(fs::FS &fs, const char * path);
     static void SIDTUNESSerialPlayerTask(void * parameters);
     static void loopPlayer(void *param);
-     void _playSongNumber(int songnumber);
+    void _playSongNumber(int songnumber);
     void playPrevSongInSid();
     void playNextSongInSid();
     void stopPlayer();
@@ -496,15 +497,13 @@ public:
     songstruct getSidFileInfo(int songnumber);
     void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ) ;
     void getSongslengthfromMd5(fs::FS &fs, const char * path);
-    inline void setEventCallback(void (*fptr)(sidEvent event))
-    {
+    inline void setEventCallback(void (*fptr)(sidEvent event)) {
         eventCallback = fptr;
     }
-private:
+  private:
      void (*eventCallback)(sidEvent event)=NULL;
     bool paused=false;
     Sid_md5 md5;
-    
 };
 
 //static MOS6501 sidFilePlayer;
