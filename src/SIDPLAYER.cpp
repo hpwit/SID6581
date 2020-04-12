@@ -1315,7 +1315,7 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
             }
             
         }
-         cpu->soundOff();
+         sid.soundOff();
         cpu->executeEventCallback(SID_END_TRACK);
        
         if(SIDTUNESSerialSongPlayerTaskLock!=NULL)
