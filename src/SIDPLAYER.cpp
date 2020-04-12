@@ -46,14 +46,14 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value)
         addr=(addr&0xFF)+32*based;
         //Serial.printf("%x %x %d\n",addr,value,decal);
         //Serial.printf("%d %d %ld")
-        if((addr%32)%24==0 and (addr%32)>0) //we deal with the sound
-        {
-            //Serial.printf("sound :%x %x\n",addr,value&0xf);
-            //sidReg->save24=*(uint8_t*)(d+1);
-            value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
-            
-        }
-//        if((addr%32)%7==4)
+//        if((addr%32)%24==0 and (addr%32)>0) //we deal with the sound
+//        {
+//            //Serial.printf("sound :%x %x\n",addr,value&0xf);
+//            //sidReg->save24=*(uint8_t*)(d+1);
+//            value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
+//
+//        }
+////        if((addr%32)%7==4)
 //        {
 //            int d=value&0xf0;
 //            if(d!=128 && d!=64 && d!=32 && d!=16 && d!=0)
@@ -758,6 +758,7 @@ bool SIDTunesPlayer::getInfoFromFile(fs::FS &fs, const char * path,songstruct * 
     {
         Serial.printf("File type:%s not handle yet\n",stype);
         //getcurrentfile=currentfile;
+        
         file.close();
         return false;
     }
@@ -943,6 +944,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     {
         Serial.printf("File type:%s not handle yet\n",sidtype);
         getcurrentfile=currentfile;
+        file.cloes();
         return false;
     }
     
