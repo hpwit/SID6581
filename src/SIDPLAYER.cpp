@@ -1315,7 +1315,9 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
             }
             
         }
+         cpu->soundOff();
         cpu->executeEventCallback(SID_END_TRACK);
+       
         if(SIDTUNESSerialSongPlayerTaskLock!=NULL)
             xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
     }
