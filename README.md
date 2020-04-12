@@ -46,9 +46,10 @@ begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 void addSong(fs::FS &fs,  const char * path); //add a song to the playlist
 void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ); //Add all the song of a directory (can be recursive)
-void play(); //play in loop the playlist
-void playNext(); //play next song of the playlist
-void playPrev(); //play prev song of the playlist
+bool play(); //play in loop the playlist
+bool playNext(); //play next song of the playlist
+bool playPrev(); //play prev song of the playlist
+bool playSongAtPosition(int position); //play song at a specific position of the playlist.
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void pausePlay(); //pause/play the player
@@ -136,7 +137,7 @@ void setup() {
     
     player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory 
     //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
-    player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");
+    player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5"); //will match the track length
     
     //list all information of the songs
     for(int i=0;i<player->getPlaylistSize();i++)

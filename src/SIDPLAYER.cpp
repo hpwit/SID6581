@@ -1315,6 +1315,7 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
             }
             
         }
+        cpu->executeEventCallback(SID_END_TRACK);
         if(SIDTUNESSerialSongPlayerTaskLock!=NULL)
             xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
     }
@@ -1372,10 +1373,13 @@ void SIDTunesPlayer::loopPlayer(void *param)
         }
         while(1)
         {
-            Serial.println("we do enter the while");
+            //Serial.println("we do enter the while");
+            log_v("we do enter the while");
             SIDTUNESSerialSongPlayerTaskLock  = xTaskGetCurrentTaskHandle();
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-            cpu->executeEventCallback(SID_END_TRACK);
+            log_v("we do exit the take");
+             //Serial.println("we do exit the take");
+            
             SIDTUNESSerialSongPlayerTaskLock=NULL;
             if(!cpu->playNextSong())
             {
@@ -1388,7 +1392,7 @@ void SIDTunesPlayer::loopPlayer(void *param)
         cpu->executeEventCallback(SID_END_PLAY);
         SIDTUNESSerialLoopPlayerTask=NULL;
         cpu->playerrunning=false;
-        vTaskDelete(NULL); //we delete the
+        vTaskDelete(NULL); //we delete the task
     }
 }
 
@@ -1470,7 +1474,22 @@ bool SIDTunesPlayer::play()
     return true;
 }
 
-
+bool SIDTunesPlayer::playSongAtPosition(int position)
+{
+    
+    if(position>=0 && position<numberOfSongs)
+        {
+            stop();
+            currentfile=position;
+            songstruct * p1=listsongs[currentfile];
+            
+            if(!playSidFile(*p1->fs,p1->filename))
+            {
+                return playNext();
+            }
+    }
+    return true;
+}
 
 bool SIDTunesPlayer::playNext()
 {

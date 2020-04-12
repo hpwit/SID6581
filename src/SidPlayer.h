@@ -490,6 +490,7 @@ public:
     bool getPlayerStatus();
     bool getInfoFromFile(fs::FS &fs, const char * path,songstruct * songinfo);
     void setLoopMode(loopmode mode);
+    bool playSongAtPosition(int position);
     loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
     songstruct getSidFileInfo(int songnumber);
