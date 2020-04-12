@@ -944,7 +944,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     {
         Serial.printf("File type:%s not handle yet\n",sidtype);
         getcurrentfile=currentfile;
-        file.cloes();
+        file.close();
         return false;
     }
     
