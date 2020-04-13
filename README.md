@@ -1,12 +1,12 @@
-SID 6581 library
+# SID 6581 library
 ===========
 
 This library is to control up to 5 SID 6581 chips from the 1980s era using an esp32.
 The program allows you to :
 * Directly push the register to the  SID chip. Hence you can program like in the good old times :)
-* Play old (or new) sid tunes
+* Play old (or new) sid tunes [video here](https://youtu.be/_N8GZVB5zfM)
 * Play notes over up to 15 voices (3 voices per SID chip)
-* Design and play different instruments
+* Design and play different instruments [video here with MIDI and 6 voices](https://youtu.be/iHB7V7PAqJQ)
 * Assign up to one instrument per voice
 The sound is played is the background so your mcu can do something else at the same time.
 
@@ -39,7 +39,7 @@ You have to ways of playing sid tunes:
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
-NB1: the sid tunes do not have an end hence they will play by default for 3minutes. To stop a song you need to use stopPlayer()
+NB1: the sid tunes do not have an end hence they will play by default for 3 minutes. To stop a song you need to use stopPlayer()
  
 ```C
 begin(int clock_pin,int data_pin, int latch);
