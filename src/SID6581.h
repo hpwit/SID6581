@@ -238,7 +238,7 @@ class SID6581 {
     void setLP(int chip,int lp);
 
     void pushToVoice(int voice,uint8_t address,uint8_t data);
-    void pushRegister(int chip,int address,int data);
+    void pushRegister(int chip,int address,uint8_t data);
     void resetsid();
     void feedTheDog();
 

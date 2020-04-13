@@ -597,6 +597,7 @@ void SID6581::soundOn() {
 
 
 void SID6581::soundOff() {
+    
     for(int i=0;i<5;i++) {
         saveVolume[i]=getSidVolume(i);
         sidSetVolume(i,0);
@@ -770,7 +771,7 @@ void SID6581::resetsid() {
 }
 
 
-void SID6581::pushRegister(int chip,int address,int data) {
+void SID6581::pushRegister(int chip,int address,uint8_t data) {
     // log_v("chip %d %x %x\n",chip,address,data);
     sidregisters[chip*32+address]=data;
     _sid_register_to_send sid_data;
