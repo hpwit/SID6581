@@ -41,19 +41,19 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value) {
         addr=(addr&0xFF)+32*based;
         //log_v("%x %x %d\n",addr,value,decal);
         //log_v("%d %d %ld")
-        //        if((addr%32)%24==0 and (addr%32)>0) //we deal with the sound
-        //        {
-        //            //log_v("sound :%x %x\n",addr,value&0xf);
-        //            //sidReg->save24=*(uint8_t*)(d+1);
-        //            value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
-        //
-        //        }
-        ////        if((addr%32)%7==4)
-        //        {
-        //            int d=value&0xf0;
-        //            if(d!=128 && d!=64 && d!=32 && d!=16 && d!=0)
-        //            log_v("waveform:%d %d\n",value&0xf0,addr);
-        //        }
+                if((addr%32)%24==0 and (addr%32)>0) //we deal with the sound
+                {
+                    //log_v("sound :%x %x\n",addr,value&0xf);
+                    //sidReg->save24=*(uint8_t*)(d+1);
+                    value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
+        
+                }
+        //        if((addr%32)%7==4)
+//                {
+//                    int d=value&0xf0;
+//                    if(d!=128 && d!=64 && d!=32 && d!=16 && d!=0)
+//                    log_v("waveform:%d %d\n",value&0xf0,addr);
+//                }
         sid.pushRegister(addr/32,addr%32,value);
         decal=(decal*int_speed)/100;
         //log_v("ff %d\n",decal);
@@ -1160,10 +1160,11 @@ void SIDTunesPlayer::_playSongNumber(int songnumber) {
         log_i("Playing with md5 database song duration %d ms\n",song_duration);
     }
     delta_song_duration=0;
-    executeEventCallback(SID_NEW_TRACK);
+    
     
     if(SIDTUNESSerialPlayerTaskLock!=NULL)
         xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
+    executeEventCallback(SID_NEW_TRACK);
 }
 
 
@@ -1174,7 +1175,7 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         SIDTunesPlayer * cpu= (SIDTunesPlayer *)parameters;
         cpu->delta_song_duration=0;
-        
+ 
         //cpu->delta_song_duration=0;
         cpu->stop_song=false;
         uint32_t start_time=millis();
@@ -1337,7 +1338,7 @@ bool SIDTunesPlayer::play() {
         stop();
         vTaskDelete(SIDTUNESSerialLoopPlayerTask);
     }
-    xTaskCreatePinnedToCore( SIDTunesPlayer::loopPlayer, "loopPlayer", 4096, this, 1, & SIDTUNESSerialLoopPlayerTask,0);
+    xTaskCreatePinnedToCore( SIDTunesPlayer::loopPlayer, "loopPlayer", 4096, this, 1, & SIDTUNESSerialLoopPlayerTask,1);
     delay(200);
     playerrunning=true;
     return true;

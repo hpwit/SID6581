@@ -403,7 +403,6 @@ class SIDTunesPlayer{
     uint8_t speed;
     uint16_t load_addr;
     uint8_t *mem=NULL;
-    SID6581 * _sid;
     uint8_t sidtype[5];
     uint8_t published[32];
     uint8_t author[32];
@@ -429,7 +428,7 @@ class SIDTunesPlayer{
     int speedsong[32];
     uint16_t plmo;
     SIDTunesPlayer() {
-        _sid=&sid;
+        
         numberOfSongs=0;
         currentfile=0;
         volume=15;
