@@ -861,6 +861,8 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path) {
         mem=(uint8_t*)calloc(0x10000,1);
         if(mem==NULL) {
             log_e("not enough memory\n");
+            is_error=true;
+            error_type=NOT_ENOUGH_MEMORY;
             return false;
         }
     } else {
@@ -1246,6 +1248,11 @@ void SIDTunesPlayer::loopPlayer(void *param) {
         songstruct p1=*(cpu->listsongs[cpu->currentfile]);
         // log_v("currentfile %d %s\n",currentfile,p1.filename);
         if(!cpu->playSidFile(*p1.fs,p1.filename)) {
+            if(cpu->is_error)
+            {
+                cpu->is_error=false;
+                return;
+            }
             cpu->playNext();
         }
         while(1) {
@@ -1339,6 +1346,11 @@ bool SIDTunesPlayer::playSongAtPosition(int position) {
         currentfile=position;
         songstruct * p1=listsongs[currentfile];
         if(!playSidFile(*p1->fs,p1->filename)) {
+            if(is_error)
+            {
+                is_error=false;
+                return false;
+            }
             return playNext();
         }
     }
@@ -1355,6 +1367,11 @@ bool SIDTunesPlayer::playNext() {
     currentfile=(currentfile+1)%numberOfSongs;
     songstruct * p1=listsongs[currentfile];
     if(!playSidFile(*p1->fs,p1->filename)) {
+        if(is_error)
+        {
+            is_error =false;
+            return false;
+        }
         return playNext();
     }
     return true;
@@ -1371,6 +1388,11 @@ bool SIDTunesPlayer::playPrev() {
     songstruct * p1=listsongs[currentfile];
     //executeEventCallback(SID_NEW_FILE);
     if(!playSidFile(*p1->fs,p1->filename)) {
+        if(is_error)
+        {
+            is_error =false;
+            return false;
+        }
         return playPrev();
     }
     return true;

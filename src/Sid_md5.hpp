@@ -168,7 +168,7 @@ class Sid_md5{
                 uint32_t temp = d;
                 d = c;
                 c = b;
-                log_v("rotateLeft(%x + %x + %x + %x, %d)\n", a, f, k[i], w[g], r[i]);
+                //log_v("rotateLeft(%x + %x + %x + %x, %d)\n", a, f, k[i], w[g], r[i]);
                 b = b + LEFTROTATE((a + f + k[i] + w[g]), r[i]);
                 a = temp;
 

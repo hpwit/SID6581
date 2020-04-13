@@ -50,6 +50,8 @@
 #endif
 
 
+
+
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
@@ -413,6 +415,8 @@ class SIDTunesPlayer{
     uint32_t int_speed=100;
     bool playerrunning=false;
     bool stop_song=false;
+    bool is_error=false;
+    sid_error error_type;
 
     char currentfilename[50];
     uint8_t a,x,y,p,s,bval;

@@ -175,6 +175,11 @@ struct _sid_command {
     uint16_t duration;
 };
 
+enum sid_error{
+    NOT_ENOUGH_MEMORY,
+    
+};
+
 
 enum sidEvent {
     SID_NEW_TRACK,

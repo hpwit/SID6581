@@ -23,7 +23,7 @@ void setup() {
     //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
 
     //list all information of the songs
-  player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5");
+  player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5"); //this could take a bit of time so just be patient :)
 
     for(int i=0;i<player->getPlaylistSize();i++)
     {
