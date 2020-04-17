@@ -40,20 +40,26 @@ void myCallback(  sidEvent event ) {
    break;
    case SID_START_PLAY:
      Serial.printf( "Start play: %s\n",player->getFilename() );
-     break;
-    case SID_END_PLAY:
+   break;
+   case SID_END_PLAY:
      Serial.printf( "stopping play: %s\n",player->getFilename() );
    break;
-       case SID_PAUSE_PLAY:
+   case SID_PAUSE_PLAY:
      Serial.printf( "pauqsing play: %s\n",player->getFilename() );
    break;
-          case SID_RESUME_PLAY:
+   case SID_RESUME_PLAY:
      Serial.printf( "resume play: %s\n",player->getFilename() );
    break;
-
-   case SID_END_SONG:
-     Serial.println("End of track");
+   case SID_NEW_FILE:
+     Serial.println("New File");
    break;
+   case SID_END_TRACK:
+     Serial.println("End track");
+   break;
+   case SID_STOP_TRACK:
+     Serial.println("Stop track");
+   break;
+
   }
 }
 
