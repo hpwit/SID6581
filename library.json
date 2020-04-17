@@ -1,7 +1,7 @@
 {
   "name": "SID6581",
-  "keywords": "SID CHIP, 6581",
-  "description": "ID Player for esp32. Play SID tunes, create instruments play keyboard. control up to 5 SID Chips",
+  "keywords": "SID, SID6581, SID6580, 6581, 8580, c64, Commodore, Chiptunes, MIDI",
+  "description": "SID 6581/8580 Chiptune Player / MIDI slave for ESP32",
   "repository":
   {
     "type": "git",
@@ -9,12 +9,12 @@
   },
   "version": "1.1.0",
   "frameworks": "arduino",
-  "platforms": "atmelavr, atmelsam, freescalekinetis, nordicnrf51, nxplpc, ststm32, teensy, espressif8266, espressif32, nordicnrf52",
+  "platforms": "espressif32",
   "authors" :
   [
      {
        "name":"Yves BAZIN",
-       "email":"bazin.yves@gmail.com"
+       "email":"hpwit@noreply.github.com"
      }
   ]
 }

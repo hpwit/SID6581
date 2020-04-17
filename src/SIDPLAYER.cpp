@@ -1,9 +1,32 @@
-//
-//  mos6501b.cpp
-//
-//
-//  Created by Yves BAZIN on 25/03/2020.
-//
+/*\
+ *
+ *
+
+    MIT License
+
+    Copyright (c) 2020 Yves BAZIN
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+ *
+ *
+\*/
 
 #include "SidPlayer.h"
 #include "SID6581.h"
@@ -45,8 +68,8 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value) {
                 {
                     //log_v("sound :%x %x\n",addr,value&0xf);
                     //sidReg->save24=*(uint8_t*)(d+1);
-                    value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
-        
+                    value= (value& 0xf0) + ( ((value& 0x0f)*volume)/15 );
+
                 }
         //        if((addr%32)%7==4)
 //                {
@@ -166,6 +189,9 @@ uint8_t SIDTunesPlayer::getaddr(mode_enum mode) {
         case mode_acc:
             cycles += 2;
             return a;
+        default:
+          return 0;
+
     }
     return 0;
 }
@@ -209,6 +235,17 @@ void SIDTunesPlayer::setaddr(mode_enum mode,uint8_t val) {
         case mode_acc:
             a = val;
             return;
+
+        case mode_imm:
+        case mode_absy:
+        case mode_zpy:
+        case mode_ind:
+        case mode_indx:
+        case mode_indy:
+        case mode_rel:
+        case mode_xxx:
+        default:
+          return;
     }
 }
 
@@ -278,6 +315,14 @@ void SIDTunesPlayer::putaddr(mode_enum mode,uint8_t val) {
             cycles += 2;
             a = val;
             return;
+
+        case mode_imm:
+        case mode_ind:
+        case mode_rel:
+        case mode_xxx:
+        default:
+          return;
+
     }
     //console.log("putaddr: attempted unhandled mode");
 }
@@ -510,6 +555,8 @@ uint16_t SIDTunesPlayer::cpuParse() {
                     pc |= 256 * getmem((wval + 1) & 0xffff);
                     cycles += 2;
                 break;
+                default:
+                break; // wat ?
             }
             break;
         case inst_jsr:
@@ -847,10 +894,11 @@ void SIDTunesPlayer::addSongsFromFolder( fs::FS &fs, const char* foldername, con
 }
 
 
-songstruct  SIDTunesPlayer::getSidFileInfo(int songnumber) {
+songstruct SIDTunesPlayer::getSidFileInfo(int songnumber) {
     if(songnumber<numberOfSongs && songnumber>=0) {
         return *listsongs[songnumber];
     }
+    return *listsongs[0];
 }
 
 bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path) {
@@ -958,7 +1006,7 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path) {
         nRefreshCIAbase=19950;
 
     file.seek(data_offset);
-    load_addr;
+    //load_addr;
     uint8_t d1,d2;
     file.read(&d1,1);
     file.read(&d2,1);
@@ -1060,10 +1108,10 @@ void SIDTunesPlayer::pausePlay() {
 
 
 bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin) {
-    sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
     volume=15;
     numberOfSongs=0;
     currentfile=0;
+    return sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
 }
 
 
@@ -1098,10 +1146,10 @@ uint32_t SIDTunesPlayer::getElapseTime() {
 
 
 bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch ) {
-    sid.begin(clock_pin,data_pin,latch);
     volume=15;
     numberOfSongs=0;
     currentfile=0;
+    return sid.begin(clock_pin,data_pin,latch);;
 }
 
 
@@ -1113,7 +1161,7 @@ void SIDTunesPlayer::_playSongNumber(int songnumber) {
     currentsong=songnumber;
     if(SIDTUNESSerialPlayerTaskHandle!=NULL) {
         vTaskDelete(SIDTUNESSerialPlayerTaskHandle);
-        SIDTUNESSerialPlayerTaskHandle==NULL;
+        SIDTUNESSerialPlayerTaskHandle=NULL;
     }
     if(songnumber<0 || songnumber>=subsongs) {
         log_e("Wrong song number");
@@ -1160,8 +1208,8 @@ void SIDTunesPlayer::_playSongNumber(int songnumber) {
         log_i("Playing with md5 database song duration %d ms\n",song_duration);
     }
     delta_song_duration=0;
-    
-    
+
+
     if(SIDTUNESSerialPlayerTaskLock!=NULL)
         xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
     executeEventCallback(SID_NEW_TRACK);
@@ -1175,7 +1223,7 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         SIDTunesPlayer * cpu= (SIDTunesPlayer *)parameters;
         cpu->delta_song_duration=0;
- 
+
         //cpu->delta_song_duration=0;
         cpu->stop_song=false;
         uint32_t start_time=millis();

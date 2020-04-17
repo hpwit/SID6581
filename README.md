@@ -24,7 +24,7 @@ begin(int clock_pin,int data_pin, int latch);
 
 // if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-// the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581 
+// the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581
 // !!! NB: this pin number has to be >=16
 
 ```
@@ -33,14 +33,14 @@ begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 You have to ways of playing sid tunes:
 
   1) Playing .sid files (PSID for the moment) the player is still under development so if you have issues do not hesistate to link the file which you have encountered issues with
-  2) Playing registers dump 
+  2) Playing registers dump
 
 ## 1 - To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
 NB1: the sid tunes do not have an end hence they will play by default for 3 minutes. To stop a song you need to use stopPlayer()
- 
+
 ```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
@@ -70,7 +70,7 @@ Possible `loopmode` values:
   - `MODE_LOOP_SID` : loop all songs in on sid file
   - `MODE_LOOP_PLAYLIST_SINGLE_TRACK` : loop all tracks available in one playlist playing the default tunes
   - `MODE_LOOP_PLAYLIST_SINGLE_SID` : loop all tracks available in one playlist playing all the subtunes
-    
+
 ```C
 bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
 bool getPlayerStatus(); //tells you if the runner is playing or not
@@ -82,12 +82,12 @@ char * getPublished(); //get publish information of the current sid file
 char * getAuthor(); //return the author of the current sidfile
 uint32_t getCurrentTrackDuration(); //give you the duration of the current track
 uint32_t getElapseTime(); //send you back the elapstimea track was played in milliseconds
-int getNumberOfTunesInSid(); //get the number of tunes in a sidfile 
+int getNumberOfTunesInSid(); //get the number of tunes in a sidfile
 int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
-int getDefaultTuneInSid(); //get the number of the default tunes. 
+int getDefaultTuneInSid(); //get the number of the default tunes.
 
 //Playlist information
-int getPositionInPlaylist(); 
+int getPositionInPlaylist();
 int getPlaylistSize();
 songstruct getSidFileInfo(int songnumber); // retrieve song information
 
@@ -103,7 +103,7 @@ struct songstruct{
 };
 
 ```
-By default the song duration is 3 minutes and can be changed with `setDefaultDuration(uint32_t duration)`. 
+By default the song duration is 3 minutes and can be changed with `setDefaultDuration(uint32_t duration)`.
 You can retrieve the actual song durations from [https://www.hvsc.de](https://www.hvsc.de) archives. `DOCUMENTS/Songlengths.md5`.
 If you have that file you can match the actual song duration with `getSongslengthfromMd5(fs::FS &fs, const char * path)`.
 
@@ -133,12 +133,12 @@ void setup() {
     }
     //the following line will go through all the files in the SPIFFS
     //Do not forget to do "Tools-> ESP32 Scketch data upload"
-    
-    
-    player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory 
+
+
+    player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory
     //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
     player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5"); //will match the track length
-    
+
     //list all information of the songs
     for(int i=0;i<player->getPlaylistSize();i++)
     {
@@ -151,8 +151,8 @@ void setup() {
 
 
     }
-    
-    
+
+
     player->play();
 
     Serial.println();
@@ -192,7 +192,7 @@ void loop() {
     player->SetMaxVolume(7);
     delay(6000);
     Serial.println("next song");
-    player->playNext(); //sid.playPrev(); if you want to go backwards 
+    player->playNext(); //sid.playPrev(); if you want to go backwards
     delay(10000);
     //player->stopPlayer(); //to stop the plater completely
     //delay(10000);
@@ -222,7 +222,7 @@ void pausePlay(); //pause/play the player
 void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stopPlayer(); //stop the player to restart use play()
 char * getFilename(); //return the filename of the current Sidfile playing
-int getPositionInPlaylist(); 
+int getPositionInPlaylist();
 int getPlaylistSize();
 void executeEventCallback(sidEvent event);
 inline void setEventCallback(void (*fptr)(sidEvent event))
@@ -297,7 +297,7 @@ void loop() {
     player->SetMaxVolume(7);
     delay(6000);
     Serial.println("next song");
-    player->playNext(); //sid.playPrev(); if you want to go backwards 
+    player->playNext(); //sid.playPrev(); if you want to go backwards
     delay(10000);
     //player->stopPlayer(); //to stop the plater completely
     //delay(10000);
@@ -305,7 +305,7 @@ void loop() {
 }
 ```
 
-PS: to transform the .sid into register commands 
+PS: to transform the .sid into register commands
 
 1) I use the fantastic program of Ken Händel
 
@@ -355,7 +355,7 @@ Usage:
 Example:
 
 ```
-./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15         
+./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15
 ```
 
 See the zibehurling-01.csv file in the `Examples` folder
@@ -375,7 +375,7 @@ inline void setEventCallback(void (*fptr)(sidEvent event))
 possible values of the event
 
   - `SID_NEW_TRACK` : playing new song
-  - `SID_NEW_FILE` : playing a new file 
+  - `SID_NEW_FILE` : playing a new file
   - `SID_START_PLAY` : start the player
   - `SID_END_PLAY` : end the player
   - `SID_PAUSE_PLAY` :pause track
@@ -397,19 +397,19 @@ SIDRegisterPlayer * player;
 
 void myCallback(  sidEvent event ) {
     switch( event ) {
-        case SID_NEW_TRACK: 
+        case SID_NEW_TRACK:
             Serial.printf( "New track: %s\n",player->getFilename() );
         break;
-        case SID_START_PLAY: 
+        case SID_START_PLAY:
             Serial.printf( "Start play: %s\n",player->getFilename() );
         break;
-        case SID_END_PLAY: 
+        case SID_END_PLAY:
             Serial.printf( "stopping play: %s\n",player->getFilename() );
         break;
-        case SID_PAUSE_PLAY: 
+        case SID_PAUSE_PLAY:
             Serial.printf( "pausing play: %s\n",player->getFilename() );
         break;
-        case SID_RESUME_PLAY: 
+        case SID_RESUME_PLAY:
             Serial.printf( "resume play: %s\n",player->getFilename() );
         break;
         case SID_END_SONG:
@@ -464,7 +464,7 @@ void loop() {
     player->pausePlay();
     delay(3000);
     Serial.println("next song");
-    player->playNext(); //sid.playPrev(); if you want to go backwards 
+    player->playNext(); //sid.playPrev(); if you want to go backwards
 }
 ```
 
@@ -489,7 +489,7 @@ void setFrequency(int voice, uint16_t frequency); //this function set the 16 bit
 // Fout = (Fn * Fclk/16777216) Hz
 // Where Fn is the 16-bit number in the Frequency registers and Fclk is the system clock applied to the 02 input (pin 6). For a standard 1.0 Mhz clock, the frequency is given by:
 // Fout = (Fn * 0.0596) Hz
-void setFrequencyHz(int voice,double frequencyHz); //Use this function to set up the frequency in Hertz ex:setFrquencyHz(0,554.37) == setFrequency(0,9301) 
+void setFrequencyHz(int voice,double frequencyHz); //Use this function to set up the frequency in Hertz ex:setFrquencyHz(0,554.37) == setFrequency(0,9301)
 void setPulse(int voice, uint16_t pulse);
 void setEnv(int voice, uint8_t att,uint8_t decay,uint8_t sutain, uint8_t release);
 void setAttack(int voice, uint8_t att);
@@ -587,7 +587,7 @@ Possible values:
   - `SID_FC_HI`
   - `SID_RES_FILT`
   - `SID_MOD_VOL`
-  
+
 ⚠️ `sid.pushToVoice(0,SID_FREG_HI,255)` == `sid.pushRegister(0,SID_FREQ_HI_0,255)`
 
 
@@ -608,7 +608,7 @@ Example
 void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.setGate(0,1);//if not set you will not hear anything
     sid.setAttack(0,1);
     sid.setSustain(0,15);
@@ -622,7 +622,7 @@ void loop() {
     sid.setWaveForm(0,SID_WAVEFORM_TRIANGLE);
     for(int i=0;i<255;i++) {
         sid.setFrequency(0,i+(255-i)*256);
-        delay(10);  
+        delay(10);
     }
     sid.setWaveForm(0,SID_WAVEFORM_PULSE);
     for(int i=0;i<5000;i++) {
@@ -659,7 +659,7 @@ Possible waveform values are:
   - `SID_WAVEFORM_PULSE`
   - `SID_WAVEFORM_NOISE`
   - `SID_WAVEFORM_SILENCE`
-            
+
 ```C
 int getTest(int voice);
 int getSync(int voice);
@@ -731,7 +731,7 @@ The following commands will allow you to create instruments and simplify the cre
 
 ```C
 // all the function of the KeyBoardPlayer are static so always preceded by SIDKeyBoardPlayer::
-SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices); 
+SIDKeyBoardPlayer::KeyBoardPlayer(int number_of_voices);
 ```
 ## Play a note
 
@@ -757,13 +757,13 @@ void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(3);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
 }
 
 void loop() {
     SIDKeyBoardPlayer::playNoteHz(2,440,2000); //will play a A4 for 2 seconds
     while(SIDKeyBoardPlayer::isVoiceBusy(2)); //as the note are played in the background you need to wait a bit
-    delay(1000); 
+    delay(1000);
 }
 ```
 You can play several voices at the same time
@@ -779,24 +779,24 @@ void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
 }
 
 void loop() {
-    SIDKeyBoardPlayer::playNoteHz(2,440,6000); 
-    delay(1000); 
+    SIDKeyBoardPlayer::playNoteHz(2,440,6000);
+    delay(1000);
     SIDKeyBoardPlayer::playNoteHz(0,880,2000);
-    delay(500); 
+    delay(500);
     SIDKeyBoardPlayer::playNoteHz(1,1760,2000);
-    delay(500); 
-    SIDKeyBoardPlayer::playNoteHz(3,220,2000); //we will play on voice 0 of the second chip 
+    delay(500);
+    SIDKeyBoardPlayer::playNoteHz(3,220,2000); //we will play on voice 0 of the second chip
     while(SIDKeyBoardPlayer::areAllVoiceBusy());
     delay(2000);
 }
 ```
 
-⚠️ If the duration is equal to 0, then the sound will not stop until you call the function stopNote. 
+⚠️ If the duration is equal to 0, then the sound will not stop until you call the function stopNote.
 
 ```C
 #include "SID6581.h"
@@ -809,13 +809,13 @@ void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
 }
 
 void loop() {
-    SIDKeyBoardPlayer::playNoteHz(2,440,0); 
-    delay(1000); 
+    SIDKeyBoardPlayer::playNoteHz(2,440,0);
+    delay(1000);
     SIDKeyBoardPlayer::stopNote(2);
     delay(500);
 }
@@ -831,7 +831,7 @@ The library gives you the possibility to change instruments. There are 5 in 'sto
 changeAllInstruments<instrument>();
 ```
 Possible values:
-  
+
   - `sid_piano`
   - `sid_piano2`
   - `sid_piano3`
@@ -840,13 +840,13 @@ Possible values:
 
 
 Example:
- 
-```C 
+
+```C
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
- 
+
 void playtunes() {
     for(int i=0;i<3;i++) {
         SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1500);
@@ -854,17 +854,17 @@ void playtunes() {
         delay(100);
     }
 }
- 
+
 void setup() {
     // initialize serial:
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
-     
+
  }
- 
+
 void loop() {
     SIDKeyBoardPlayer::changeAllInstruments<sid_piano>();
     playtunes();
@@ -917,7 +917,7 @@ void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
 }
 
@@ -933,8 +933,8 @@ void loop() {
 
 ## To create an instrument
 the library allows to create your own instruments, each instrument is a class
- 
-```C 
+
+```C
 class new_instrument : public sid_instrument {
   public:
     new_instrument(){
@@ -953,10 +953,10 @@ class new_instrument : public sid_instrument {
 ```
 
  To use the intrument:
- 
+
  - `SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();`
  - `SIDKeyBoardPlayer::changeInstrumentOnVoice<new_instrument>(int voice);`
- 
+
 
 1)  Simple instrument
 
@@ -965,7 +965,7 @@ class new_instrument : public sid_instrument {
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
- 
+
 void playtunes() {
     for(int i=0;i<3;i++) {
       SIDKeyBoardPlayer::playNoteHz(0,220*(i+1),1500);
@@ -987,13 +987,13 @@ class new_instrument : public sid_instrument {
         sid.setGate(voice,1);
     }
 };
- 
+
 void setup() {
     // initialize serial:
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
     SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
 }
@@ -1047,7 +1047,7 @@ void setup() {
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
     SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
 }
@@ -1059,7 +1059,7 @@ void loop() {
 ```
 
  Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
- 
+
  ```C
 #include "SID6581.h"
 #define SID_CLOCK 25
@@ -1076,9 +1076,9 @@ void playtunes() {
 
 class new_instrument:public sid_instrument{
   public:
-    int i;         
-        
-         
+    int i;
+
+
     virtual void start_sample(int voice,int note) {
         sid.setAttack(voice,0);
         sid.setSustain(voice,5);
@@ -1090,7 +1090,7 @@ class new_instrument:public sid_instrument{
         sid.setGate(voice,1);
         i=0;
     }
-         
+
     virtual void next_instruction(int voice,int note) {
         sid.setPulse(voice, 3000+500*cos(2*3.14*i/10)); //we make the pulse vary each time
         vTaskDelay(30);
@@ -1100,33 +1100,33 @@ class new_instrument:public sid_instrument{
         next_instruction(voice,note); //we continue the wobbling
     }
 };
- 
+
 void setup() {
     // initialize serial:
     Serial.begin(115200);
     sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
     SIDKeyBoardPlayer::KeyBoardPlayer(6);
-    sid.sidSetVolume(0,15); 
+    sid.sidSetVolume(0,15);
     sid.sidSetVolume(1,15); //if you have two chips
     SIDKeyBoardPlayer::changeAllInstruments<new_instrument>();
 }
- 
+
 void loop() {
     playtunes();
     delay(1000);
 }
 ```
- 
+
  3) to go further, if you have sample from a sid as a set of register calls you can do this:
- 
+
  ```C
 class sid_piano : public sid_instrument {
   public:
-  
+
     int i;
     int flo,fhi,plo,phi;
     uint16_t *df2;
-    
+
     sid_piano() {
         df2=sample1;
     }
@@ -1144,7 +1144,7 @@ class sid_piano : public sid_instrument {
           case 1:
               fhi=df2[i*3+1];
               //i am modifyinhg the final note with rule if you do not modify this it will be always the same sound
-              sid.setFrequency(voice,((fhi*256+flo)*note/7977)); 
+              sid.setFrequency(voice,((fhi*256+flo)*note/7977));
           break;
           default:
               if(df2[i*3]<7)
@@ -1158,7 +1158,7 @@ class sid_piano : public sid_instrument {
 
 # MIDI
 
-See the `Examples` folder for a simple midi implementation. 
+See the `Examples` folder for a simple midi implementation.
 
 To plug the Midi to the esp32 please look around internet it will depend on what is available around you. I use a 4N25 optocoupler but you could find a lot of different implementations.
 

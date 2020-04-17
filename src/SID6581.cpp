@@ -1,24 +1,32 @@
-//MIT License
-//
-//Copyright (c) 2020 Yves BAZIN
-//
-//Permission is hereby granted, free of charge, to any person obtaining a copy
-//of this software and associated documentation files (the "Software"), to deal
-//in the Software without restriction, including without limitation the rights
-//to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-//copies of the Software, and to permit persons to whom the Software is
-//furnished to do so, subject to the following conditions:
-//
-//The above copyright notice and this permission notice shall be included in all
-//copies or substantial portions of the Software.
-//
-//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-//SOFTWARE.
+/*\
+ *
+ *
+
+    MIT License
+
+    Copyright (c) 2020 Yves BAZIN
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+ *
+ *
+\*/
 
 #include "SID6581.h"
 #include "FS.h"
@@ -55,7 +63,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin) {
     i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
 
     i2s_set_pin(i2s_num, &pin_config);
-    begin(clock_pin,data_pin,latch );
+    return begin(clock_pin,data_pin,latch );
 }
 
 
@@ -76,6 +84,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch ) {
 
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
+    return true;
 }
 
 
@@ -85,18 +94,18 @@ void SIDRegisterPlayer::SetMaxVolume( uint8_t vol) {
 
 
 bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin) {
-    sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
     volume=15;
     numberOfSongs=0;
     currentSong=0;
+    return sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
 }
 
 
 bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch ) {
-    sid.begin(clock_pin,data_pin,latch);
     volume=15;
     numberOfSongs=0;
     currentSong=0;
+    return sid.begin(clock_pin,data_pin,latch);
 }
 
 
@@ -284,7 +293,7 @@ void SIDRegisterPlayer::playSIDTunesTask(void *pvParameters) {
         if(((*(uint8_t*)d)%32)%24==0 and ((*(uint8_t*)d)%32) >0) { //we delaonf with the sound
            //sidReg->save24=*(uint8_t*)(d+1);
             uint8_t value=*(uint8_t*)(d+1);
-            value=value& 0xf0 +( ((value& 0x0f)*sidReg->volume)/15)  ;
+            value= (value & 0xf0) +( ((value& 0x0f)*sidReg->volume)/15 );
             *(uint8_t*)(d+1)=value;
         }
 
@@ -597,7 +606,7 @@ void SID6581::soundOn() {
 
 
 void SID6581::soundOff() {
-    
+
     for(int i=0;i<5;i++) {
         saveVolume[i]=getSidVolume(i);
         sidSetVolume(i,0);
@@ -638,7 +647,7 @@ int SID6581::getResonance(int chip) {
 
 
 void SID6581::setFilter1(int chip,int filt1) {
-    sid_control[chip].filt1;
+    //sid_control[chip].filt1;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT1 )) + (filt1 & SID_FILT1);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -651,7 +660,7 @@ int SID6581::getFilter1(int chip) {
 
 
 void SID6581::setFilter2(int chip,int filt2) {
-    sid_control[chip].filt2;
+    //sid_control[chip].filt2;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT2 )) + (filt2 & SID_FILT2);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -664,7 +673,7 @@ int SID6581::getFilter2(int chip) {
 
 
 void SID6581::setFilter3(int chip,int filt3) {
-    sid_control[chip].filt3;
+    //sid_control[chip].filt3;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT3 )) + (filt3 & SID_FILT3);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -677,7 +686,7 @@ int SID6581::getFilter3(int chip) {
 
 
 void SID6581::setFilterEX(int chip,int filtex) {
-    sid_control[chip].filtex;
+    //sid_control[chip].filtex;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILTEX )) + (filtex & SID_FILTEX);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -707,7 +716,7 @@ unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path) {
     unsigned int l = file.readBytesUntil('\n', buffer, sizeof(buffer));
     buffer[l] = 0;
 
-    sscanf((const char *)buffer,"%lu",&sizet);
+    sscanf((const char *)buffer,"%u",&sizet);
     log_d("%d instructions\n",sizet);
     sidvalues=(uint8_t *)ps_malloc(sizet*4);
     if(sidvalues==NULL) {
