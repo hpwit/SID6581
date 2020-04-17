@@ -1,6 +1,6 @@
 //
 //  traduct.c
-//  
+//
 //
 //  Created by Yves BAZIN on 04/03/2020.
 //
@@ -24,14 +24,14 @@ char** str_split(char* a_str, const char * a_delim)
     //delim = a_delim;
 
     count=20;
-    
+
     result = malloc(sizeof(char*) * count);
-    
+
     if (result)
     {
         size_t idx  = 0;
         char* token = strtok(a_str, a_delim);
-        
+
         while (token)
         {
             //assert(idx < count);
@@ -41,7 +41,7 @@ char** str_split(char* a_str, const char * a_delim)
         //assert(idx == count - 1);
         *(result + idx) = 0;
     }
-    
+
     return result;
 }
 
@@ -58,7 +58,7 @@ int main(int argc,char* argv[])
     size_t len = 0;
     ssize_t read;
     char delim[] = "\", \"";
-    
+
     //printf("Program Name Is: %s",argv[0]);
     if(argc==1)
         printf("\nNo Extra Command Line Argument Passed Other Than Program Name");
@@ -68,9 +68,9 @@ int main(int argc,char* argv[])
         //printf("\n----Following Are The Command Line Arguments Passed----");
         //for(counter=0;counter<argc;counter++)
           //  printf("\nargv[%d]: %s\n",counter,argv[counter]);
-        
+
         fptr = fopen(argv[1],"r");
-        
+
         if(fptr == NULL)
         {
             printf("Error!\n");
@@ -80,7 +80,7 @@ int main(int argc,char* argv[])
             read = getline(&line, &len, fptr);
             while ((read = getline(&line, &len, fptr)) != -1) {
                 counter++;
-                
+
             }
             printf("%d\n",counter);
            // return 0;
@@ -90,14 +90,14 @@ int main(int argc,char* argv[])
             while ((read = getline(&line, &len, fptr)) != -1) {
                 //printf("Retrieved line of length %zu:\n", read);
                // printf("%s", line);
-                
-                
+
+
                 char** tokens;
-                
-               
-                
+
+
+
                 tokens = str_split(line, "\", \"");
-                
+
                 if (tokens)
                 {
                     //counter++;
@@ -125,15 +125,15 @@ int main(int argc,char* argv[])
                     printf("%c%c%c%c",ad+based*32,value,decal & 0xFF,(decal &0xFF00)>>8);
                     free(tokens);
                 }
-                
+
             }
-            
+
             fclose(fptr);
         }
     }
-    
-    
-    
+
+
+
 
     return 0;
 }
