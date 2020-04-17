@@ -63,7 +63,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin) {
     i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
 
     i2s_set_pin(i2s_num, &pin_config);
-    begin(clock_pin,data_pin,latch );
+    return begin(clock_pin,data_pin,latch );
 }
 
 
@@ -84,6 +84,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch ) {
 
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
+    return true'
 }
 
 
