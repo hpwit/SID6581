@@ -84,7 +84,7 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch ) {
 
     // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
     resetsid();
-    return true'
+    return true;
 }
 
 
