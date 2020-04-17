@@ -94,18 +94,18 @@ void SIDRegisterPlayer::SetMaxVolume( uint8_t vol) {
 
 
 bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin) {
-    sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
     volume=15;
     numberOfSongs=0;
     currentSong=0;
+    return sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
 }
 
 
 bool SIDRegisterPlayer::begin(int clock_pin,int data_pin, int latch ) {
-    sid.begin(clock_pin,data_pin,latch);
     volume=15;
     numberOfSongs=0;
     currentSong=0;
+    return sid.begin(clock_pin,data_pin,latch);
 }
 
 
@@ -293,7 +293,7 @@ void SIDRegisterPlayer::playSIDTunesTask(void *pvParameters) {
         if(((*(uint8_t*)d)%32)%24==0 and ((*(uint8_t*)d)%32) >0) { //we delaonf with the sound
            //sidReg->save24=*(uint8_t*)(d+1);
             uint8_t value=*(uint8_t*)(d+1);
-            value=value& 0xf0 +( ((value& 0x0f)*sidReg->volume)/15)  ;
+            value= (value & 0xf0) +( ((value& 0x0f)*sidReg->volume)/15 );
             *(uint8_t*)(d+1)=value;
         }
 
@@ -647,7 +647,7 @@ int SID6581::getResonance(int chip) {
 
 
 void SID6581::setFilter1(int chip,int filt1) {
-    sid_control[chip].filt1;
+    //sid_control[chip].filt1;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT1 )) + (filt1 & SID_FILT1);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -660,7 +660,7 @@ int SID6581::getFilter1(int chip) {
 
 
 void SID6581::setFilter2(int chip,int filt2) {
-    sid_control[chip].filt2;
+    //sid_control[chip].filt2;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT2 )) + (filt2 & SID_FILT2);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -673,7 +673,7 @@ int SID6581::getFilter2(int chip) {
 
 
 void SID6581::setFilter3(int chip,int filt3) {
-    sid_control[chip].filt3;
+    //sid_control[chip].filt3;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILT3 )) + (filt3 & SID_FILT3);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -686,7 +686,7 @@ int SID6581::getFilter3(int chip) {
 
 
 void SID6581::setFilterEX(int chip,int filtex) {
-    sid_control[chip].filtex;
+    //sid_control[chip].filtex;
     sid_control[chip].res_filt=(sid_control[chip].res_filt & (0xff ^ SID_FILTEX )) + (filtex & SID_FILTEX);
     pushRegister(chip,0x17,sid_control[chip].res_filt);
 }
@@ -716,7 +716,7 @@ unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path) {
     unsigned int l = file.readBytesUntil('\n', buffer, sizeof(buffer));
     buffer[l] = 0;
 
-    sscanf((const char *)buffer,"%lu",&sizet);
+    sscanf((const char *)buffer,"%u",&sizet);
     log_d("%d instructions\n",sizet);
     sidvalues=(uint8_t *)ps_malloc(sizet*4);
     if(sidvalues==NULL) {

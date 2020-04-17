@@ -28,7 +28,6 @@
  *
 \*/
 
-
 #ifndef mos6501b_h
 #define mos6501b_h
 
