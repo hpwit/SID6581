@@ -1,9 +1,32 @@
-//
-//  mos6501b.cpp
-//
-//
-//  Created by Yves BAZIN on 25/03/2020.
-//
+/*\
+ *
+ *
+
+    MIT License
+
+    Copyright (c) 2020 Yves BAZIN
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+ *
+ *
+\*/
 
 #include "SidPlayer.h"
 #include "SID6581.h"
@@ -46,7 +69,7 @@ void SIDTunesPlayer::setmem(uint16_t addr,uint8_t value) {
                     //log_v("sound :%x %x\n",addr,value&0xf);
                     //sidReg->save24=*(uint8_t*)(d+1);
                     value=value& 0xf0 +( ((value& 0x0f)*volume)/15)  ;
-        
+
                 }
         //        if((addr%32)%7==4)
 //                {
@@ -1160,8 +1183,8 @@ void SIDTunesPlayer::_playSongNumber(int songnumber) {
         log_i("Playing with md5 database song duration %d ms\n",song_duration);
     }
     delta_song_duration=0;
-    
-    
+
+
     if(SIDTUNESSerialPlayerTaskLock!=NULL)
         xTaskNotifyGive(SIDTUNESSerialPlayerTaskLock);
     executeEventCallback(SID_NEW_TRACK);
@@ -1175,7 +1198,7 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         SIDTunesPlayer * cpu= (SIDTunesPlayer *)parameters;
         cpu->delta_song_duration=0;
- 
+
         //cpu->delta_song_duration=0;
         cpu->stop_song=false;
         uint32_t start_time=millis();
