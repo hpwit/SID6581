@@ -954,7 +954,7 @@ class SIDKeyBoardPlayer {
     static bool allTaskReady() {
         vTaskDelay(1);
         for(int i=0;i<keyboardnbofvoices;i++) {
-            if( _sid_taskready_busy[i]=false)
+            if( _sid_taskready_busy[i]==false)
                 return true;
         }
         return false;
