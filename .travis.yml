@@ -62,7 +62,7 @@ script:
   - build_sketch "${TRAVIS_BUILD_DIR}/examples/SIDMIDI/SIDMIDI.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
   - build_sketch "${TRAVIS_BUILD_DIR}/examples/SIDPlayerControl/SIDPlayerControl.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
   - build_sketch "${TRAVIS_BUILD_DIR}/examples/SidTunesFromSPIFF/SidTunesFromSPIFF.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
-  - build_sketch "${TRAVIS_BUILD_DIR}/examples/examples/newSIDplayer/newSIDplayer.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
+  - build_sketch "${TRAVIS_BUILD_DIR}/examples/newSIDplayer/newSIDplayer.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
   - build_sketch "${TRAVIS_BUILD_DIR}/examples/sid_serial/sid_serial.ino" "esp32:esp32:m5stack-core-esp32:FlashFreq=80,UploadSpeed=921600" "false" "oldest" "newest"
   #- if [ "$TRAVIS_BRANCH" != "master" ]; then echo "This commit was made against the $TRAVIS_BRANCH, skipping examples compilation"; exit 0; fi
   #- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then echo "This is a pull request, skipping examples compilation"; exit 0; fi
