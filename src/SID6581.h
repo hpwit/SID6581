@@ -126,8 +126,8 @@ static QueueHandle_t _sid_voicesQueues[15];
 static uint16_t _sid_play_notes[96];
 static TaskHandle_t _sid_xHandletab[15];
 static uint8_t keyboardnbofvoices;
-volatile static bool _sid_voices_busy[15];
-volatile static bool _sid_taskready_busy[15];
+static   bool _sid_voices_busy[15];
+static   bool _sid_taskready_busy[15];
 static int _sid_sustain_decay_durations [16]={6,24,48,72,114,168,204,240,300,750,1500,2400,3000,9000,15000,24000};
 //to save the
 
@@ -396,7 +396,7 @@ class sid_instrument{
 };
 
 
-static sid_instrument *current_instruments[9];
+static sid_instrument *current_instruments[15];
 
 
 template<int voice>
@@ -837,40 +837,58 @@ class SIDKeyBoardPlayer {
     static void KeyBoardPlayer(int nbofvoices) {
         sid.resetsid();
         createnot();
-        keyboardnbofvoices=(nbofvoices%15)+1;
+        keyboardnbofvoices=(nbofvoices%16);
         for(int i=0;i<nbofvoices;i++) {
             _sid_taskready_busy[i]=false;
         }
         for(int i=0;i<nbofvoices;i++) {
-            _sid_voicesQueues[i]= xQueueCreate( 100, sizeof( _sid_command ) );
+            _sid_voicesQueues[i]= xQueueCreate( 10, sizeof( _sid_command ) );
             _sid_voices_busy[i]=false;
         }
         if(nbofvoices>=1) {
-            xTaskCreate( VoiceTask<0>::vTaskCode, "NAME1",  2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[0] );
+            xTaskCreate( VoiceTask<0>::vTaskCode, "VoiceTask1",  2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[0] );
         }
         if(nbofvoices>=2) {
-            xTaskCreate( VoiceTask<1>::vTaskCode, "NAME2", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[1] );
+            xTaskCreate( VoiceTask<1>::vTaskCode, "VoiceTask2", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[1] );
         }
         if(nbofvoices>=3) {
-            xTaskCreate( VoiceTask<2>::vTaskCode, "NAME3", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[2] );
+            xTaskCreate( VoiceTask<2>::vTaskCode, "VoiceTask3", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[2] );
         }
         if(nbofvoices>=4) {
-            xTaskCreate( VoiceTask<3>::vTaskCode, "NAME4", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[3] );
+            xTaskCreate( VoiceTask<3>::vTaskCode, "VoiceTask4", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[3] );
         }
         if(nbofvoices>=5) {
-            xTaskCreate( VoiceTask<4>::vTaskCode, "NAME5", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[4] );
+            xTaskCreate( VoiceTask<4>::vTaskCode, "VoiceTask5", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[4] );
         }
         if(nbofvoices>=6) {
-            xTaskCreate( VoiceTask<5>::vTaskCode, "NAME6", 2048,( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[5] );
+            xTaskCreate( VoiceTask<5>::vTaskCode, "VoiceTask6", 2048,( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[5] );
         }
         if(nbofvoices>=7) {
-            xTaskCreate( VoiceTask<6>::vTaskCode, "NAME7", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[6] );
+            xTaskCreate( VoiceTask<6>::vTaskCode, "VoiceTask7", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[6] );
         }
         if(nbofvoices>=8) {
-            xTaskCreate( VoiceTask<7>::vTaskCode, "NAME8", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[7] );
+            xTaskCreate( VoiceTask<7>::vTaskCode, "VoiceTask8", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[7] );
         }
-        if(nbofvoices==9) {
-            xTaskCreate( VoiceTask<8>::vTaskCode, "NAME9", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[8] );
+        if(nbofvoices>=9) {
+            xTaskCreate( VoiceTask<8>::vTaskCode, "VoiceTask9", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[8] );
+        }
+        if(nbofvoices>=10) {
+            xTaskCreate( VoiceTask<9>::vTaskCode, "VoiceTask10", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[9] );
+        }
+        if(nbofvoices>=11) {
+            xTaskCreate( VoiceTask<10>::vTaskCode, "VoiceTask11", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[10] );
+        }
+        if(nbofvoices>=12) {
+            xTaskCreate( VoiceTask<11>::vTaskCode, "VoiceTask12", 2048,( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[11] );
+        }
+        if(nbofvoices>=13) {
+            xTaskCreate( VoiceTask<12>::vTaskCode, "VoiceTask13", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[12] );
+        }
+        if(nbofvoices>=14) {
+            xTaskCreate( VoiceTask<13>::vTaskCode, "VoiceTask14", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[13] );
+        }
+        if(nbofvoices==15) {
+            xTaskCreate( VoiceTask<14>::vTaskCode, "VoiceTask15", 2048, ( void * ) 1, tskIDLE_PRIORITY, & _sid_xHandletab[14] );
         }
         changeAllInstruments<sid_piano4>();
         while(allTaskReady());
