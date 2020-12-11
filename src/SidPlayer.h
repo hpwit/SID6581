@@ -53,6 +53,9 @@
 #ifndef SID_CPU_CORE
     #define SID_CPU_CORE 0
 #endif
+#ifndef SID_PLAYER_CORE
+    #define SID_PLAYER_CORE 1
+#endif
 
 #ifndef SID_CPU_TASK_PRIORITY
     #define SID_CPU_TASK_PRIORITY 3
@@ -75,7 +78,8 @@ enum loopmode {
     MODE_SINGLE_SID,// play all songs available in one sid once
     MODE_LOOP_SID, //loop all songs in on sid file
     MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
-    MODE_LOOP_PLAYLIST_SINGLE_SID //loop all tracks available in one playlist playing all the subtunes
+    MODE_LOOP_PLAYLIST_SINGLE_SID, //loop all tracks available in one playlist playing all the subtunes
+    MODE_LOOP_PLAYLIST_RANDOM // loop random in current track list
 };
 
 
@@ -400,7 +404,7 @@ static volatile instruction opcodes[256] = {
 };
 
 
-class SIDTunesPlayer{
+class SIDTunesPlayer {
   public:
     loopmode currentloopmode=MODE_SINGLE_TRACK;
     uint16_t cycles,wval,pc;
@@ -408,7 +412,8 @@ class SIDTunesPlayer{
     uint8_t data_offset;
     uint16_t init_addr,play_addr;
     uint8_t subsongs;
-    uint8_t startsong,currentsong,currentfile,getcurrentfile;
+    uint8_t startsong;
+    uint16_t currentsong, currentfile, getcurrentfile;
     uint8_t speed;
     uint16_t load_addr;
     uint8_t *mem=NULL;
@@ -430,15 +435,29 @@ class SIDTunesPlayer{
     uint8_t a,x,y,p,s,bval;
     bool frame;
     int numberOfSongs;
-    int nRefreshCIAbase;
-    songstruct * listsongs[255];
+    int ignoredSongs;
+    int nRefreshCIAbase; // what is it used for ??
+    //songstruct * listsongs[255];
+    songstruct **listsongs;
+    size_t maxSongs = 0;
     int volume;
     int reset;
     int speedsong[32];
     uint16_t plmo;
     SIDTunesPlayer() {
+        // listsongs
+        if( psramInit() ) {
+          maxSongs = MAX_LISTSONGS_PSRAM;
+          listsongs = (songstruct**)ps_calloc( maxSongs, sizeof( songstruct* ) );
+        } else {
+          maxSongs = MAX_LISTSONGS_NOPSRAM;
+          listsongs = (songstruct**)calloc( maxSongs, sizeof( songstruct* ) );
+        }
+
+        log_w("Max songs in playlist: %d", maxSongs);
 
         numberOfSongs=0;
+        ignoredSongs=0;
         currentfile=0;
         volume=15;
         getcurrentfile=0;
@@ -479,12 +498,12 @@ class SIDTunesPlayer{
     bool playSidFile(fs::FS &fs, const char * path);
     static void SIDTUNESSerialPlayerTask(void * parameters);
     static void loopPlayer(void *param);
-    void _playSongNumber(int songnumber);
+    void playSongNumber(int songnumber);
     void playPrevSongInSid();
     void playNextSongInSid();
     void stopPlayer();
     void stop();
-    void addSong(fs::FS &fs,  const char * path);
+    int addSong(fs::FS &fs,  const char * path);
     bool play();
     void play(int duration);
     bool playNext();
@@ -507,8 +526,9 @@ class SIDTunesPlayer{
     loopmode getLoopMode();
     void executeEventCallback(sidEvent event);
     songstruct getSidFileInfo(int songnumber);
-    void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ) ;
+    int addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ) ;
     void getSongslengthfromMd5(fs::FS &fs, const char * path);
+    bool isSIDPlayable(fs::File &file );
     inline void setEventCallback(void (*fptr)(sidEvent event)) {
         eventCallback = fptr;
     }

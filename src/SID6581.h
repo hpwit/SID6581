@@ -116,11 +116,17 @@
 #include "freertos/queue.h"
 #include "Sid_md5.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static TaskHandle_t xPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerTaskHandle = NULL;
 static TaskHandle_t SIDPlayerLoopTaskHandle = NULL;
 static TaskHandle_t PausePlayTaskLocker = NULL;
 static TaskHandle_t xPushToRegisterHandle = NULL;
+
 static QueueHandle_t _sid_queue;
 static QueueHandle_t _sid_voicesQueues[15];
 static uint16_t _sid_play_notes[96];
@@ -165,7 +171,7 @@ struct _sid_control {
 };
 
 
-struct songstruct{
+struct songstruct {
     fs::FS  *fs;
     char filename[80];
     uint8_t name[32];
@@ -175,6 +181,23 @@ struct songstruct{
     uint8_t subsongs,startsong;
     uint32_t  durations[32];
 };
+
+
+static void songdebug( songstruct* song ) {
+  Serial.printf("Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d, duration: %s\n",
+    song->filename,
+    (const char*)song->name,
+    (const char*)song->author,
+    song->md5,
+    (const char*)song->published,
+    song->subsongs,
+    song->startsong,
+    (const char*)song->durations
+  );
+}
+
+#define MAX_LISTSONGS_PSRAM 230
+#define MAX_LISTSONGS_NOPSRAM 255
 
 
 struct _sid_command {
@@ -200,6 +223,8 @@ enum sidEvent {
     SID_STOP_TRACK
 };
 
+
+static uint8_t sidregisters[15*32];
 
 class SID6581 {
   public:
@@ -279,7 +304,7 @@ class SID6581 {
     int getRegister(int chip,int addr);
 
     _sid_voice voices[15];
-    uint8_t sidregisters[15*32];
+
     void clearcsw(int chip);
     //void resetsid();
     void push();
@@ -295,7 +320,7 @@ class SID6581 {
   protected:
 
     int  latch_pin;
-     Sid_md5 md5;
+    Sid_md5 md5;
     //void stop();
     //uint8_t voice=7;
     int saveVolume[5];
@@ -321,7 +346,7 @@ class SID6581 {
 };
 
 
-static   SID6581 sid;
+static SID6581 sid;
 
 
 
@@ -362,7 +387,8 @@ class SIDRegisterPlayer {
     void stop();
     static void playSIDTunesTask(void *pvParameters);
     static void playSIDTunesLoopTask(void *pvParameters);
-    songstruct listsongs[255];
+    //songstruct listsongs[255];
+    songstruct *listsongs;
     uint8_t save24;
     uint8_t volume;
     uint8_t * sidvalues;
