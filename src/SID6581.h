@@ -31,6 +31,14 @@
 #ifndef SID6581_h
 #define SID6581_h
 
+#ifdef BOARD_HAS_PSRAM
+  #define sid_malloc ps_malloc
+  #define sid_calloc ps_calloc
+#else
+  #define sid_malloc malloc
+  #define sid_calloc calloc
+#endif
+
 #define CS 2
 #define WRITE 1
 #define CS_1 1
@@ -172,31 +180,49 @@ struct _sid_control {
 
 
 struct songstruct {
-    fs::FS  *fs;
-    char filename[80];
-    uint8_t name[32];
-    uint8_t author[32];
-    char md5[32];
-    uint8_t published[32];
-    uint8_t subsongs,startsong;
-    uint32_t  durations[32];
+    fs::FS   *fs;
+    char     filename[255];
+    uint8_t  name[32];
+    uint8_t  author[32];
+    char     md5[32];
+    uint8_t  published[32];
+    uint8_t  subsongs,startsong;
+    uint32_t *durations;//[64];
 };
 
 
 static void songdebug( songstruct* song ) {
-  Serial.printf("Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d, duration: %s\n",
+  Serial.printf("Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d ",
     song->filename,
     (const char*)song->name,
     (const char*)song->author,
     song->md5,
     (const char*)song->published,
     song->subsongs,
-    song->startsong,
-    (const char*)song->durations
+    song->startsong
   );
+  if( song->subsongs>0 ) {
+    if( song->durations != nullptr ) {
+      size_t found = 0;
+      for( int i=0; i<song->subsongs; i++ ) {
+        if( song->durations[i]>0 ) {
+          Serial.printf("%zu ms ", song->durations[i]);
+          found++;
+        }
+      }
+      if( found == 0 ) {
+        Serial.print("[unpopulated durations]");
+      }
+    } else {
+      Serial.print("[Error: SID has no durations]");
+    }
+  } else {
+    Serial.print("[Error: SID has NO subsongs]");
+  }
+  Serial.println();
 }
 
-#define MAX_LISTSONGS_PSRAM 230
+#define MAX_LISTSONGS_PSRAM 4096
 #define MAX_LISTSONGS_NOPSRAM 255
 
 

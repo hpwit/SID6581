@@ -784,9 +784,9 @@ bool SIDTunesPlayer::isSIDPlayable(fs::File &file )
   uint16_t timerMode[32];
   uint16_t preferred_SID_model[3];
   uint16_t SID_address[2];
-  uint16_t loadAddress;
-  uint16_t initAddress;
-  uint16_t playAddress;
+  __attribute__((unused)) uint16_t loadAddress;
+  __attribute__((unused)) uint16_t initAddress;
+  __attribute__((unused)) uint16_t playAddress;
   uint8_t  subTune_amount;
   uint16_t SIDAmount;
   songstruct *p1;
@@ -795,7 +795,8 @@ bool SIDTunesPlayer::isSIDPlayable(fs::File &file )
   uint8_t* fileData = (uint8_t*)malloc(len+1);
 
   if( fileData == NULL ) {
-    Serial.printf("PrintSidInfo could not malloc %d bytes\n", len+1+sizeof(songstruct) );
+    Serial.printf("PrintSidInfo could not malloc %d bytes (%d free)\n", len+1+sizeof(songstruct), ESP.getFreeHeap() );
+    return false;
   }
 
   file.seek(0);
@@ -863,20 +864,23 @@ bool SIDTunesPlayer::isSIDPlayable(fs::File &file )
 
   free(fileData);
 
+  bool debugTimerMode = false;
 
-  if ( timerMode[0] > 1 ) {
-    Serial.println("[timerMode]:");
-    for( i=0;i<4;i++ ) {
-      Serial.print(" | " );
-      for( int j=0;j<8;j++ ) {
-        Serial.printf("0x%02X ", timerMode[i*8+j] );
+  if( debugTimerMode ) {
+    if ( timerMode[0] > 1 ) {
+      Serial.println("[timerMode]:");
+      for( i=0;i<4;i++ ) {
+        Serial.print(" | " );
+        for( int j=0;j<8;j++ ) {
+          Serial.printf("0x%02X ", timerMode[i*8+j] );
+        }
+        Serial.println();
       }
-      Serial.println();
     }
   }
 
   if( preferred_SID_model[0]!= 6581 || preferred_SID_model[1]!= 6581 || preferred_SID_model[2]!= 6581 ) {
-    Serial.printf("Preferred SID Model:  0: %d  1: %d  2: %d\n",
+    log_e("Unsupported SID Model:  0: %d  1: %d  2: %d",
       preferred_SID_model[0],
       preferred_SID_model[1],
       preferred_SID_model[2]
@@ -884,18 +888,23 @@ bool SIDTunesPlayer::isSIDPlayable(fs::File &file )
     return false;
   }
 
-  Serial.printf("SID Addresses: Load: %X Init: %X Play: %X\n",
+  log_v("SID Addresses: Load: %X Init: %X Play: %X",
     loadAddress,
     initAddress,
     playAddress
   );
 
-  if( subTune_amount > 1 ) {
-    Serial.printf("Sub tunes: %d\n", subTune_amount );
+  int max_subTune_amount = 1;
+
+  if( subTune_amount > max_subTune_amount ) {
+    log_e("Too many (more than %d) subtunes: %d", max_subTune_amount, subTune_amount );
     return false;
   }
+
+  int max_sid_amount = 1;
+
   if( SIDAmount > 1 ) {
-    Serial.printf("Sid amount: %d\n", SIDAmount );
+    log_e("Too many (more than %d) Sid songs: %d", max_sid_amount, SIDAmount );
     return false;
   }
   return true;
@@ -942,11 +951,42 @@ bool SIDTunesPlayer::getInfoFromFile(fs::FS &fs, const char * path, songstruct *
   file.seek(0x56);
   file.read(songinfo->published,32);
 
+  uint8_t val;
+  uint16_t preferred_SID_model[3];
+  file.seek(0x77);
+  val = file.read();
+  preferred_SID_model[0] = ( val & 0x30 ) >= 0x20 ? 8580 : 6581;
+  preferred_SID_model[1] = ( val & 0xC0 ) >= 0x80 ? 8580 : 6581;
+  file.seek(0x76);
+  val = file.read();
+  preferred_SID_model[2] = ( val & 3 ) >= 3 ? 8580 : 6581;
+
+  bool playable = true; // isSIDPlayable( file );
+
   sprintf( songinfo->md5,"%s", md5.calcMd5( file ) );
 
-  bool playable = isSIDPlayable( file );
+  int max_subTune_amount = 1;
+  if( songinfo->subsongs > max_subTune_amount ) {
+    playable = false;
+  }
+  if( preferred_SID_model[0]!= 6581 || preferred_SID_model[1]!= 6581 || preferred_SID_model[2]!= 6581 ) {
+    log_e("Unsupported SID Model:  0: %d  1: %d  2: %d",
+      preferred_SID_model[0],
+      preferred_SID_model[1],
+      preferred_SID_model[2]
+    );
+    playable = false;
+  }
 
   file.close();
+
+  if( MD5Parser != NULL ) {
+
+    if( songinfo->durations != nullptr ) free( songinfo->durations );
+    songinfo->durations = (uint32_t*)sid_calloc( songinfo->subsongs, sizeof(uint32_t) );
+
+    MD5Parser->getDurationsFromSIDPath( songinfo );
+  }
 
   return playable;
 }
@@ -994,25 +1034,31 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
     if( list[0]!=';' && list[0]!='[' ) { // probably a md5 ?
       for(int s=0;s<numberOfSongs;s++) {
         //log_v("dd %s %s\n",listsongs[s].filename,listsongs[s].md5);
-        //if( listsongs[s]->durations[0] != 0 ) continue; // already found
+        if( listsongs[s]->durations[0] != 0 ) continue; // already found
         stringTwo = String( listsongs[s]->md5 );
 
-        if(list.startsWith( stringTwo )) {
+        if( list.startsWith( stringTwo ) ) {
           log_i("md5 info found for file %s\n",listsongs[s]->filename);
-          memset(lom,0,320+35);
-          list.toCharArray(lom,list.length()+1);
+          memset( lom, 0, 320+35 );
+          list.toCharArray( lom, list.length()+1 );
           //log_v("%s", lom);
           //log_v("%s", list);
-          memset(parsestr,0,32*10+35);
-          sprintf(parsestr,"%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s",listsongs[s]->md5);
+          memset( parsestr, 0, 32*10+35 );
+          sprintf( parsestr, "%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s", listsongs[s]->md5 );
           //log_v("parse :%s\n",parsestr);
-          memset(bu,0,320);            sscanf(lom,parsestr,&bu[0],&bu[10],&bu[20],&bu[30],&bu[40],&bu[50],&bu[60],&bu[70],&bu[80],&bu[90],&bu[100],&bu[110],&bu[120],&bu[130],&bu[140],&bu[150],&bu[160],&bu[170],&bu[180],&bu[190],&bu[200],&bu[210],&bu[220],&bu[230],&bu[240],&bu[250],&bu[260],&bu[270],&bu[280],&bu[290],&bu[300],&bu[310]);
-          for(int m=0;m<32;m++) {
-            if(bu[m*10]!=0) {
-              f=jd=k=0;
-              sscanf(&bu[m*10],"%d:%d.%d",&f,&jd,&k);
-              Serial.printf("[Track #%d:%d] (%16s) %s / %d ms\n", s, m, (const char*)listsongs[s]->name, &bu[10*m], (f*60*1000+jd*1000+k) );
-              listsongs[s]->durations[m]=f*60*1000+jd*1000+k;
+          memset( bu, 0, 320 );
+          sscanf( lom, parsestr,
+            &bu[  0], &bu[ 10], &bu[ 20], &bu[ 30], &bu[ 40], &bu[ 50], &bu[ 60], &bu[ 70], &bu[ 80], &bu[ 90],
+            &bu[100], &bu[110], &bu[120], &bu[130], &bu[140], &bu[150], &bu[160], &bu[170], &bu[180], &bu[190],
+            &bu[200], &bu[210], &bu[220], &bu[230], &bu[240], &bu[250], &bu[260], &bu[270], &bu[280], &bu[290],
+            &bu[300], &bu[310]
+          );
+          for( int m=0; m<32; m++ ) {
+            if( bu[m*10] != 0 ) {
+              f = jd = k = 0;
+              sscanf( &bu[m*10], "%d:%d.%d", &f, &jd, &k );
+              listsongs[s]->durations[m] = f*60*1000+jd*1000+k;
+              Serial.printf("[Track #%d:%d] (%16s) %s / %d ms\n", s, m, (const char*)listsongs[s]->name, &bu[10*m], listsongs[s]->durations[m] );
               if( m == 0 ) totalProcessed++;
             }
           }
@@ -1074,9 +1120,9 @@ songstruct SIDTunesPlayer::getSidFileInfo(int songnumber)
 }
 
 
-bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
+bool SIDTunesPlayer::playSidFile( songstruct *song )
 {
-  log_i("playing file:%s\n",path);
+  log_i("playing file:%s\n", song->filename );
   if(mem == NULL) {
     log_i("we create the memory buffer, available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
     mem = (uint8_t*)calloc( 0x10000, 1 );
@@ -1093,22 +1139,17 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
   memset( name, 0, 32 );
   memset( author, 0, 32 );
   memset( published, 0, 32 );
-  memset( currentfilename, 0, 50 );
+  memset( currentfilename, 0, sizeof(currentfilename) );
   memset( sidtype, 0, 5 );
 
-  if( &fs==NULL || path==NULL) {
-    log_e("Invalid filesystem or path");
+  if(!song->fs->exists( song->filename )) {
+    log_e("File %s does not exist", song->filename );
     getcurrentfile = currentfile;
     return false;
   }
-  if(!fs.exists(path)) {
-    log_e("File %s does not exist",path);
-    getcurrentfile = currentfile;
-    return false;
-  }
-  File file=fs.open(path);
+  File file=song->fs->open( song->filename );
   if(!file) {
-    log_e("Unable to open file %s",path);
+    log_e("Unable to open file %s", song->filename );
     getcurrentfile = currentfile;
     return false;
   }
@@ -1169,11 +1210,18 @@ bool SIDTunesPlayer::playSidFile(fs::FS &fs, const char * path)
     fm = file.read();
     speedsong[31-i]= (fm & (byte)pow(2,7-i%8))?1:0;
   }
-  sprintf(currentfilename,"%s",path);
+  sprintf(currentfilename,"%s", song->filename );
   getcurrentfile = currentfile;
   //executeEventCallback(SID_START_PLAY);
   currentsong=startsong -1;
   file.close();
+
+  if( MD5Parser != NULL ) {
+    if( song->durations != nullptr ) free( song->durations );
+    song->durations = (uint32_t*)sid_calloc( song->subsongs, sizeof(uint32_t) );
+    MD5Parser->getDurationsFromSIDPath( song );
+  }
+
   executeEventCallback(SID_NEW_FILE);
   playSongNumber( currentsong );
   //xTaskNotifyGive(SIDTUNESSerialSongPlayerTaskLock);
@@ -1269,6 +1317,14 @@ bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch,int sid_clock_p
   return sid.begin(clock_pin,data_pin,latch,sid_clock_pin);
 }
 
+bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch )
+{
+  volume=15;
+  numberOfSongs=0;
+  currentfile=0;
+  return sid.begin(clock_pin,data_pin,latch);;
+}
+
 bool SIDTunesPlayer::getPlayerStatus()
 {
   return playerrunning;
@@ -1298,15 +1354,6 @@ uint32_t SIDTunesPlayer::getElapseTime()
 {
   return delta_song_duration;
 }
-
-bool SIDTunesPlayer::begin(int clock_pin,int data_pin, int latch )
-{
-  volume=15;
-  numberOfSongs=0;
-  currentfile=0;
-    return sid.begin(clock_pin,data_pin,latch);;
-}
-
 
 void SIDTunesPlayer::playSongNumber(int songnumber)
 {
@@ -1352,13 +1399,13 @@ void SIDTunesPlayer::playSongNumber(int songnumber)
   xTaskCreatePinnedToCore( SIDTunesPlayer::SIDTUNESSerialPlayerTask, "SIDTUNESSerialPlayerTask",  4096,  this, SID_CPU_TASK_PRIORITY, &SIDTUNESSerialPlayerTaskHandle, SID_CPU_CORE);
   //log_v("tas %d core %d\n",SID_TASK_PRIORITY,SID_CPU_CORE);
   delay(200);
-  //songstruct * p=listsongs[getcurrentfile];
+
   if(listsongs[getcurrentfile]->durations[currentsong]==0) {
     song_duration = default_song_duration;
-    log_i("Playing with default song duration %d ms\n",song_duration);
+    log_w("Playing with default song duration %d ms\n",song_duration);
   } else {
     song_duration = listsongs[getcurrentfile]->durations[currentsong];
-    log_i("Playing with md5 database song duration %d ms\n",song_duration);
+    log_d("Playing track %d with md5 database song duration %d ms", currentsong, song_duration);
   }
   delta_song_duration=0;
 
@@ -1425,35 +1472,29 @@ void  SIDTunesPlayer::SIDTUNESSerialPlayerTask(void * parameters)
 int SIDTunesPlayer::addSong(fs::FS &fs,  const char * path)
 {
   if(numberOfSongs >= maxSongs) {
-    log_e("Playlist full");
+    log_e("Playlist full (%d heap free)", ESP.getFreeHeap() );
     return -1;
   }
-  songstruct * p1;
+  songstruct * song;
+  song = (songstruct*)sid_calloc( 1, sizeof(songstruct)+1 );
 
-  if( psramInit() ) {
-    p1=(songstruct *)ps_calloc(1,sizeof(songstruct));
-  } else {
-    p1=(songstruct *)calloc(1,sizeof(songstruct));
-  }
-
-  if(p1==NULL) {
+  if(song==NULL) {
     log_e("Not enough memory to add %s file", path);
     maxSongs = numberOfSongs;
     return -1;
   }
-  p1->fs=(fs::FS *)&fs;
-  //char h[250];
-  sprintf(p1->filename,"%s",path);
-  if( getInfoFromFile( fs, path, p1 ) ) {
-    //p1.filename=h;
-    memset( p1->durations, 0, 32*4 );
-    listsongs[numberOfSongs] = p1;
+
+  song->fs=(fs::FS *)&fs;
+  sprintf( song->filename,"%s", path );
+
+  if( getInfoFromFile( fs, path, song ) ) {
+    listsongs[numberOfSongs] = song;
     numberOfSongs++;
-    Serial.printf("[addSong# %04d] md5( %16s ) = %s\n", numberOfSongs, (const char*)p1->name, (const char*)p1->md5 );
+    Serial.printf("[addSong# %04d] md5( %16s ) = %s, heap free=%6d\n", numberOfSongs, (const char*)song->name, (const char*)song->md5, ESP.getFreeHeap() );
     log_d("Added file %s to playlist", path);
     return 1;
   } else {
-    free( p1 ); // don't waste precious bytes on unplayable song
+    free( song ); // don't waste precious bytes on unplayable song
     ignoredSongs++;
     log_e("Ignoring unhandled file %s", path);
     return 0;
@@ -1465,9 +1506,9 @@ void SIDTunesPlayer::loopPlayer(void *param)
 {
   SIDTunesPlayer * cpu= (SIDTunesPlayer *)param;
 
-  songstruct p1=*(cpu->listsongs[cpu->currentfile]);
+  songstruct p1= *(cpu->listsongs[cpu->currentfile]);
   // log_v("currentfile %d %s\n",currentfile,p1.filename);
-  if(!cpu->playSidFile(*p1.fs,p1.filename)) {
+  if(!cpu->playSidFile( &p1 )) {
     if(cpu->is_error) {
       cpu->is_error=false;
       return;
@@ -1505,6 +1546,7 @@ bool  SIDTunesPlayer::playNextSong()
 {
   switch(currentloopmode) {
     case MODE_SINGLE_TRACK: stop(); return false;
+    case MODE_LOOP_PLAYLIST_RANDOM: currentfile=rand()%numberOfSongs; playNext(); return true;
     case MODE_LOOP_PLAYLIST_SINGLE_TRACK: playNext(); return true;
     case MODE_SINGLE_SID:
       if(currentsong+1<subsongs) {
@@ -1525,7 +1567,6 @@ bool  SIDTunesPlayer::playNextSong()
         return true;
       }
     break;
-    case MODE_LOOP_PLAYLIST_RANDOM: currentfile=rand()%numberOfSongs; playNext(); return true;
     default: stop(); return false;
   }
 }
@@ -1555,7 +1596,7 @@ bool SIDTunesPlayer::playSongAtPosition(int position)
     stop();
     currentfile=position;
     songstruct * p1=listsongs[currentfile];
-    if(!playSidFile(*p1->fs,p1->filename)) {
+    if(!playSidFile( p1 )) {
       if(is_error) {
         is_error=false;
         return false;
@@ -1576,7 +1617,7 @@ bool SIDTunesPlayer::playNext()
   stop();
   currentfile=(currentfile+1)%numberOfSongs;
   songstruct * p1=listsongs[currentfile];
-  if(!playSidFile(*p1->fs,p1->filename)) {
+  if(!playSidFile( p1 )) {
     if(is_error) {
       is_error =false;
       return false;
@@ -1596,7 +1637,7 @@ bool SIDTunesPlayer::playPrev()
       currentfile--;
   songstruct * p1=listsongs[currentfile];
   //executeEventCallback(SID_NEW_FILE);
-  if(!playSidFile(*p1->fs,p1->filename)) {
+  if(!playSidFile( p1 )) {
     if(is_error) {
       is_error =false;
       return false;

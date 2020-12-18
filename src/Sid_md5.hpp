@@ -43,13 +43,12 @@
 
 class Sid_md5 {
 
-  char md5result[33];
-
   public:
 
-    char* calcMd5(fs::File &file)
+    static char* calcMd5(fs::File &file)
     {
 
+      static char md5result[33];
       mbedtls_md5_context _ctx;
 
       uint8_t i;

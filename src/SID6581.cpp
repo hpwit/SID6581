@@ -807,6 +807,8 @@ unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path)
   sscanf((const char *)buffer,"%u",&sizet);
   log_d("%d instructions",sizet);
 
+  //if( sidvalues != nullptr ) free( sidvalues );
+
   if( psramInit() ) {
     sidvalues=(uint8_t *)ps_malloc(sizet*4);
   } else {

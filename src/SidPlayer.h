@@ -44,6 +44,7 @@
 #include <stdbool.h>
 #include "FS.h"
 #include "SID6581.h"
+#include "SID_MD5_Indexer.h"
 #include "freertos/queue.h"
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
@@ -60,9 +61,6 @@
 #ifndef SID_CPU_TASK_PRIORITY
     #define SID_CPU_TASK_PRIORITY 3
 #endif
-
-
-
 
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
@@ -431,45 +429,112 @@ class SIDTunesPlayer {
     bool is_error=false;
     sid_error error_type;
 
-    char currentfilename[50];
+    char currentfilename[256];
     uint8_t a,x,y,p,s,bval;
     bool frame;
     int numberOfSongs;
     int ignoredSongs;
     int nRefreshCIAbase; // what is it used for ??
     //songstruct * listsongs[255];
-    songstruct **listsongs;
+    char songstructCachePath[256] = {0};
+    songstruct **listsongs = nullptr;
     size_t maxSongs = 0;
     int volume;
     int reset;
     int speedsong[32];
     uint16_t plmo;
-    SIDTunesPlayer() {
-        // listsongs
-        if( psramInit() ) {
-          maxSongs = MAX_LISTSONGS_PSRAM;
-          listsongs = (songstruct**)ps_calloc( maxSongs, sizeof( songstruct* ) );
-        } else {
-          maxSongs = MAX_LISTSONGS_NOPSRAM;
-          listsongs = (songstruct**)calloc( maxSongs, sizeof( songstruct* ) );
-        }
 
-        log_w("Max songs in playlist: %d", maxSongs);
-
-        numberOfSongs=0;
-        ignoredSongs=0;
-        currentfile=0;
-        volume=15;
-        getcurrentfile=0;
-        if(mem==NULL) {
-            log_d("We create the memory buffer for C64 memory");
-            log_d("available mem:%d %d\n",ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
-            mem=(uint8_t*)calloc(0x10000,1);
-            if(mem==NULL) {
-                log_e("not enough memory\n");
-            }
-        }
+    ~SIDTunesPlayer() {
+      freeListsongsMem();
+      if( mem!=NULL ) free( mem );
+      if( MD5Parser != NULL ) delete( MD5Parser );
+      //TODO: free/delete more stuff
     }
+
+    SIDTunesPlayer( size_t max_songs = 0 ) {
+      if( max_songs == 0 ) {
+        if( psramInit() ) max_songs = MAX_LISTSONGS_PSRAM;
+        else              max_songs = MAX_LISTSONGS_NOPSRAM;
+      }
+      if( !setMaxSongs( max_songs ) ) {
+        log_e("Failed setting maxSongs to %d, the app will probably crash, try a lower value", max_songs);
+      } else {
+        log_w("Max songs in playlist: %d", maxSongs);
+      }
+      volume=15;
+      if(mem==NULL) {
+        log_d("We create the memory buffer for C64 memory");
+        log_d("Available heap:%d bytes (largest free block=%d bytes)\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+        mem=(uint8_t*)calloc(0x10000,1);
+        if(mem==NULL) {
+          log_e("Failed to allocate %d bytes for SID memory, the app WILL crash", 0x10000 );
+        }
+      }
+    }
+
+    void kill() {
+      if( SIDTUNESSerialPlayerTaskHandle   != NULL ) vTaskDelete( SIDTUNESSerialPlayerTaskHandle );
+      if( SIDTUNESSerialPlayerTaskLock     != NULL ) vTaskDelete( SIDTUNESSerialPlayerTaskLock );
+      if( SIDTUNESSerialSongPlayerTaskLock != NULL ) vTaskDelete( SIDTUNESSerialSongPlayerTaskLock );
+      if( SIDTUNESSerialLoopPlayerTask     != NULL ) vTaskDelete( SIDTUNESSerialLoopPlayerTask );
+    }
+
+    bool setMaxSongs( size_t amount ) {
+      freeListsongsMem();
+      maxSongs = amount;
+      initListsongsMem();
+      return listsongs != nullptr;
+    }
+
+    void freeListsongsMem() {
+      if( listsongs!=nullptr ) {
+        log_w("heap before free: %d", ESP.getFreeHeap() );
+        for (int i=0; i<maxSongs; i++) {
+          if( listsongs[i]!=nullptr  ) {
+            free(listsongs[i]);
+          }
+        }
+        free(listsongs);
+        listsongs = nullptr;
+        log_w("heap after free: %d", ESP.getFreeHeap() );
+      }
+      numberOfSongs=0;
+      ignoredSongs=0;
+      currentfile=0;
+      getcurrentfile=0;
+    }
+
+    void initListsongsMem() {
+      if( maxSongs == 0 ) {
+        log_e("Can't init empty playlist!!");
+        return;
+      }
+      log_w("heap before alloc: %d", ESP.getFreeHeap() );
+      if( psramInit() ) {
+        listsongs = (songstruct**)ps_calloc( maxSongs, sizeof( songstruct* ) );
+      } else {
+        listsongs = (songstruct**)calloc( maxSongs, sizeof( songstruct* ) );
+      }
+      log_w("heap after alloc: %d", ESP.getFreeHeap() );
+    }
+
+    bool setSongstructCachePath( fs::FS &fs, const char* path ) {
+      if( !fs.exists( path ) ) return false;
+      memset( songstructCachePath, 0, sizeof(songstructCachePath) );
+      size_t bytes_span = sizeof(songstructCachePath)<=strlen(path)+1 ? sizeof(songstructCachePath) : strlen(path)+1;
+      memcpy( songstructCachePath, path, bytes_span );
+      log_w("Cache file path set to %s", songstructCachePath );
+      return true;
+    }
+
+
+    MD5FileParser *MD5Parser = NULL;
+
+    void setMD5Parser( MD5FileConfig *cfg )
+    {
+      MD5Parser = new MD5FileParser( cfg );
+    }
+
 
     uint8_t getmem(uint16_t addr);
     bool begin(int clock_pin,int data_pin, int latch );
@@ -495,7 +560,7 @@ class SIDTunesPlayer {
     uint16_t cpuParse();
     uint16_t cpuJSR(uint16_t npc, uint8_t na);
     void getNextFrame(uint16_t npc, uint8_t na);
-    bool playSidFile(fs::FS &fs, const char * path);
+    bool playSidFile( songstruct *song );
     static void SIDTUNESSerialPlayerTask(void * parameters);
     static void loopPlayer(void *param);
     void playSongNumber(int songnumber);
@@ -520,7 +585,7 @@ class SIDTunesPlayer {
     int getDefaultTuneInSid();
     bool  playNextSong();
     bool getPlayerStatus();
-    bool getInfoFromFile(fs::FS &fs, const char * path,songstruct * songinfo);
+    bool getInfoFromFile(fs::FS &fs, const char * path, songstruct * songinfo);
     void setLoopMode(loopmode mode);
     bool playSongAtPosition(int position);
     loopmode getLoopMode();
