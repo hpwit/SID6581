@@ -48,9 +48,10 @@ static String gnu_basename( String path ) {
 struct MD5FileConfig
 {
   fs::FS *fs;
+  const char* sidfolder;   // /sid"
   const char* md5filepath; // /md5/Songlengths.full.md5
   const char* md5idxpath;  // /md5/Songlengths.full.md5.idx
-  const char* sidfolder;   // /sid"
+  const char* md5url;      // https://www.prg.dtu.dk/HVSC/C64Music/DOCUMENTS/Songlengths.md5
 };
 
 
@@ -71,29 +72,47 @@ struct BufferedIndex
   char*  outBuffer = nullptr;
   FileIndex *IndexItem = nullptr;
 
-  void open( fs::FS *_fs, const char *name, bool readonly=true )
+  bool open( fs::FS *_fs, const char *name, bool readonly=true )
   {
     fs = _fs;
     if( readonly ) {
       indexFile = fs->open( name );
-      if(! indexFile ) log_e("Unable to access file %s", name );
-      else log_w("Opened %s as readonly", name );
+      if(! indexFile ) {
+        log_e("Unable to access file %s", name );
+        return false;
+      }
+      log_d("Opened %s as readonly", name );
     } else {
       indexFile = fs->open( name, FILE_WRITE );
-      if(! indexFile ) log_e("Unable to create file %s", name );
-      else log_w("Opened %s as r/w", name );
+      if(! indexFile ) {
+        log_e("Unable to create file %s", name );
+        return false;
+      }
+      log_d("Opened %s as r/w", name );
     }
     if( outBuffer == nullptr ) {
-      log_w("Allocating buffer");
+      log_d("Allocating buffer");
       outBuffer = (char*)sid_calloc( outBufferSize, sizeof(char) );
+      if( outBuffer == NULL ) {
+        log_e("Failed to allocate %d bytes", outBufferSize );
+        return false;
+      }
     }
     if( IndexItem == nullptr ) {
-      log_w("Allocating item");
+      log_d("Allocating item");
       IndexItem = (FileIndex*)sid_calloc( 1, sizeof( IndexItem )+1 );
+      if( IndexItem == NULL ) {
+        log_e("Failed to allocate %d bytes", sizeof( IndexItem )+1 );
+        return false;
+      }
       IndexItem->path = (char*)sid_calloc( 1, 256 );
+      if( IndexItem->path == NULL ) {
+        log_e("Failed to allocate %d bytes", 256 );
+        return false;
+      }
     }
-    log_w("BufferedIndexWriter ready!");
     bufferPos = 0;
+    return true;
   }
 
   void close()
@@ -126,9 +145,10 @@ struct BufferedIndex
     if( bufferPos + objsize > outBufferSize ) {
       writeIndexBuffer();
     }
-    memcpy( outBuffer+bufferPos,                                &IndexItem->offset, sizeof(size_t) );
+    memcpy( outBuffer+bufferPos,                                &IndexItem->offset,  sizeof(size_t) );
     memcpy( outBuffer+bufferPos+sizeof(size_t),                 &IndexItem->pathlen, sizeof(uint8_t) );
-    memcpy( outBuffer+bufferPos+sizeof(size_t)+sizeof(uint8_t), IndexItem->path, IndexItem->pathlen );
+    memcpy( outBuffer+bufferPos+sizeof(size_t)+sizeof(uint8_t), IndexItem->path,     IndexItem->pathlen );
+
     bufferPos += sizeof(size_t)+sizeof(uint8_t)+IndexItem->pathlen;
     debugItem();
   }
@@ -143,13 +163,19 @@ struct BufferedIndex
 
   void debugItem()
   {
-    size_t objsize = sizeof( FileIndex ) + strlen( IndexItem->path ) + 1;
-    Serial.printf("[Heap:%6d][Buff pos:%d][Offset: %d][objsize:%3d][pathlen:%03d] %s\n", ESP.getFreeHeap(), bufferPos, IndexItem->offset, objsize, IndexItem->pathlen, IndexItem->path );
+    log_d("[Heap:%6d][Buff pos:%d][Offset: %d][objsize:%3d][pathlen:%03d] %s",
+      ESP.getFreeHeap(),
+      bufferPos,
+      IndexItem->offset,
+      sizeof( FileIndex ) + strlen( IndexItem->path ) + 1,
+      IndexItem->pathlen,
+      IndexItem->path
+    );
   }
 
   int64_t find( fs::FS *_fs, const char* haystack, const char* needle )
   {
-    open( _fs, haystack );
+    if( !open( _fs, haystack ) ) return -1;
     while( indexFile.available() ) {
       indexFile.readBytes( (char*)&IndexItem->offset, sizeof( size_t ) );
       IndexItem->pathlen = indexFile.read();
@@ -163,12 +189,12 @@ struct BufferedIndex
     return -1;
   }
 
-  void build( fs::FS *_fs, const char* md5Path, const char* idxpath )
+  bool build( fs::FS *_fs, const char* md5Path, const char* idxpath )
   {
     fs::File md5File = _fs->open( md5Path );
     if( ! md5File ) {
       log_e("Could not open md5 file");
-      return;
+      return false;
     }
 
     size_t md5Size = md5File.size();
@@ -180,7 +206,7 @@ struct BufferedIndex
     char bufferstr[256] = {0};
     size_t foldersCount = 0;
 
-    open( _fs, idxpath, false ); // create index file
+    if( !open( _fs, idxpath, false ) ) return false; // create index file
 
     while( md5File.available() ) {
       size_t offset = md5File.position();
@@ -206,6 +232,7 @@ struct BufferedIndex
     md5File.close();
     close();
     Serial.printf("Total folders: %d\n", foldersCount );
+    return true;
   }
 
 };
@@ -218,13 +245,19 @@ struct MD5FileParser
   MD5FileConfig *cfg;
   BufferedIndex MD5Index;
 
-  MD5FileParser( MD5FileConfig *config ) : cfg( config) { }
+  MD5FileParser( MD5FileConfig *config ) : cfg( config) {
+    if( ! cfg->fs->exists( cfg->md5idxpath ) ) {
+      Serial.printf("Indexing MD5 file %s, this is a one-time operation\n", cfg->md5idxpath );
+      if( ! MD5Index.build( cfg->fs, cfg->md5filepath, cfg->md5idxpath ) ) {
+        log_e("Fatal error, aborting");
+      }
+    }
+  }
 
   void getDurationsFromSIDPath( songstruct *song ) {
 
     if( ! cfg->fs->exists( cfg->md5idxpath ) ) {
-      Serial.printf("Indexing MD5 file %s, this is a one-time operation\n", cfg->md5idxpath );
-      MD5Index.build( cfg->fs, cfg->md5filepath, cfg->md5idxpath );
+      log_e("Fatal error, aborting");
     }
 
     auto start_seek = millis();
@@ -269,7 +302,7 @@ struct MD5FileParser
         }
       }
       if( found ) {
-        Serial.printf("Found hash for file %s ( %s => %s ) : %s\n", track, MD5FilePath, MD5FolderPath, md5line.c_str() );
+        log_d("Found hash for file %s ( %s => %s ) : %s", track, MD5FilePath, MD5FolderPath, md5line.c_str() );
         if( song->durations != nullptr ) free( song->durations );
         song->durations = (uint32_t*)sid_calloc( song->subsongs, sizeof(uint32_t) );
         int subsongs = getDurationsFromMd5String( md5line, song );
@@ -286,7 +319,7 @@ struct MD5FileParser
     } else {
       log_w("Offset not found for %s", MD5FolderPath );
     }
-    Serial.printf("Seeking md5 hash info took %d millis\n", int( millis()-start_seek ) );
+    log_d("Seeking md5 hash info took %d millis", int( millis()-start_seek ) );
   }
 
 
