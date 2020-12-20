@@ -792,7 +792,7 @@ bool SIDTunesPlayer::isSIDPlayable(fs::File &file )
   songstruct *p1;
 
   size_t len = file.size();
-  uint8_t* fileData = (uint8_t*)malloc(len+1);
+  uint8_t* fileData = (uint8_t*)sid_malloc(len+1);
 
   if( fileData == NULL ) {
     Serial.printf("PrintSidInfo could not malloc %d bytes (%d free)\n", len+1+sizeof(songstruct), ESP.getFreeHeap() );

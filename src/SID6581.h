@@ -251,6 +251,7 @@ enum sidEvent {
 
 
 static uint8_t sidregisters[15*32];
+static SPIClass *sid_spi = NULL;
 
 class SID6581 {
   public:
@@ -367,7 +368,6 @@ class SID6581 {
     uint8_t * sidvalues;
     unsigned int readFile2(fs::FS &fs, const char * path);*/
     uint8_t adcswrre,dataspi,chipcontrol;
-    SPIClass * sid_spi = NULL;
     const int sid_spiClk = 20000000;
 };
 

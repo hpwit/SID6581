@@ -465,7 +465,7 @@ class SIDTunesPlayer {
       if(mem==NULL) {
         log_d("We create the memory buffer for C64 memory");
         log_d("Available heap:%d bytes (largest free block=%d bytes)\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
-        mem=(uint8_t*)calloc(0x10000,1);
+        mem=(uint8_t*)sid_calloc(0x10000,1);
         if(mem==NULL) {
           log_e("Failed to allocate %d bytes for SID memory, the app WILL crash", 0x10000 );
         }
@@ -510,11 +510,7 @@ class SIDTunesPlayer {
         return;
       }
       log_w("heap before alloc: %d", ESP.getFreeHeap() );
-      if( psramInit() ) {
-        listsongs = (songstruct**)ps_calloc( maxSongs, sizeof( songstruct* ) );
-      } else {
-        listsongs = (songstruct**)calloc( maxSongs, sizeof( songstruct* ) );
-      }
+      listsongs = (songstruct**)sid_calloc( maxSongs, sizeof( songstruct* ) );
       log_w("heap after alloc: %d", ESP.getFreeHeap() );
     }
 

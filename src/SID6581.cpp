@@ -40,32 +40,42 @@
 SID6581::SID6581(){}
 
 
+static bool i2s_begun = false;
+static bool spi_begun = false;
+
+
 bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin)
 {
-  const i2s_port_t i2s_num = ( i2s_port_t)0;
-  const i2s_config_t i2s_config =
+  if( !i2s_begun )
   {
-    .mode =(i2s_mode_t) (I2S_MODE_MASTER | I2S_MODE_TX),
-    .sample_rate = 31250,
-    .bits_per_sample = (i2s_bits_per_sample_t)16,
-    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-    .communication_format = (i2s_comm_format_t) (I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
-    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL3, // 0 = default interrupt priority
-    .dma_buf_count = 8,
-    .dma_buf_len = 64,
-    .use_apll = false
-  };
-  const i2s_pin_config_t pin_config =
-  {
-    .bck_io_num = sid_clock_pin,
-    .ws_io_num = -1,//NULL,
-    .data_out_num = -1, //NULL,
-    .data_in_num = I2S_PIN_NO_CHANGE
-  };
+    const i2s_port_t i2s_num = ( i2s_port_t)0;
+    const i2s_config_t i2s_config =
+    {
+      .mode =(i2s_mode_t) (I2S_MODE_MASTER | I2S_MODE_TX),
+      .sample_rate = 31250,
+      .bits_per_sample = (i2s_bits_per_sample_t)16,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+      .communication_format = (i2s_comm_format_t) (I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL3, // 0 = default interrupt priority
+      .dma_buf_count = 8,
+      .dma_buf_len = 64,
+      .use_apll = false
+    };
+    const i2s_pin_config_t pin_config =
+    {
+      .bck_io_num = sid_clock_pin,
+      .ws_io_num = -1,//NULL,
+      .data_out_num = -1, //NULL,
+      .data_in_num = I2S_PIN_NO_CHANGE
+    };
 
-  i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
+    i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
 
-  i2s_set_pin(i2s_num, &pin_config);
+    i2s_set_pin(i2s_num, &pin_config);
+
+    i2s_begun = true;
+  }
+
   return begin(clock_pin,data_pin,latch );
 }
 
@@ -75,17 +85,25 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch )
   /*
     We set up the spi bus which connects to the 74HC595
     */
-  sid_spi = new SPIClass(HSPI);
-  if(sid_spi==NULL)
-      return false;
-  sid_spi->begin(clock_pin,-1,data_pin,-1);
-  latch_pin=latch;
-  pinMode(latch, OUTPUT);
 
-  log_i("SID Initialized");
-  _sid_queue = xQueueCreate( SID_QUEUE_SIZE, sizeof( _sid_register_to_send ) );
-  xTaskCreate(SID6581::_pushRegister, "_pushRegister", 2048, this,3, &xPushToRegisterHandle);
+  if( !spi_begun )
+  {
+    sid_spi = new SPIClass(HSPI);
+    if(sid_spi==NULL)
+        return false;
+    sid_spi->begin(clock_pin,-1,data_pin,-1);
+    latch_pin=latch;
+    pinMode(latch, OUTPUT);
 
+    log_i("SID Initialized");
+    spi_begun = true;
+  }
+
+  if( xPushToRegisterHandle == NULL )
+  {
+    _sid_queue = xQueueCreate( SID_QUEUE_SIZE, sizeof( _sid_register_to_send ) );
+    xTaskCreate(SID6581::_pushRegister, "_pushRegister", 2048, this, 3, &xPushToRegisterHandle);
+  }
   // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
   resetsid();
   return true;
@@ -809,11 +827,8 @@ unsigned int SIDRegisterPlayer::readFile2(fs::FS &fs, const char * path)
 
   //if( sidvalues != nullptr ) free( sidvalues );
 
-  if( psramInit() ) {
-    sidvalues=(uint8_t *)ps_malloc(sizet*4);
-  } else {
-    sidvalues=(uint8_t *)malloc(sizet*4);
-  }
+  sidvalues=(uint8_t *)sid_malloc(sizet*4);
+
   if(sidvalues==NULL) {
     log_e("Could not create memory buffer for %s", path);
     return 0;
