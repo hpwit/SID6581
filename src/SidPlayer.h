@@ -452,6 +452,9 @@ class SIDTunesPlayer {
     }
 
     SIDTunesPlayer( size_t max_songs = 0 ) {
+      #ifdef BOARD_HAS_PSRAM
+        psramInit();
+      #endif
       if( max_songs == 0 ) {
         if( psramInit() ) max_songs = MAX_LISTSONGS_PSRAM;
         else              max_songs = MAX_LISTSONGS_NOPSRAM;

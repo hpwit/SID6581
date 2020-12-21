@@ -401,7 +401,7 @@ class SIDRegisterPlayer {
     }
 
   private:
-    char return_filename[250];
+    char return_filename[255];
     uint8_t voice=7;
     const int _maxnumber=255;
     void playNextInt();

@@ -37,7 +37,11 @@
 
 
 
-SID6581::SID6581(){}
+SID6581::SID6581(){
+  #ifdef BOARD_HAS_PSRAM
+    psramInit();
+  #endif
+}
 
 
 static bool i2s_begun = false;
@@ -139,7 +143,7 @@ void SIDRegisterPlayer::addSong(fs::FS &fs,  const char * path)
   songstruct p1;
   p1.fs=(fs::FS *)&fs;
   //char h[250];
-  sprintf(p1.filename,"%s",path);
+  snprintf(p1.filename, 255, "%s",path);
   //p1.filename=h;
   listsongs[numberOfSongs]=p1;
   numberOfSongs++;
@@ -289,10 +293,10 @@ int SIDRegisterPlayer::getPlaylistSize()
 
 char * SIDRegisterPlayer::getFilename()
 {
-  memset(return_filename,0,250);
+  memset(return_filename,0,255);
   songstruct p;
   p=listsongs[numberToPlay];
-  sprintf(return_filename,"%s",p.filename);
+  snprintf(return_filename, 255, "%s",p.filename);
   //log_v(filename);
   return  return_filename;
 }

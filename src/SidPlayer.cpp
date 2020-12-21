@@ -963,7 +963,7 @@ bool SIDTunesPlayer::getInfoFromFile(fs::FS &fs, const char * path, songstruct *
 
   bool playable = true; // isSIDPlayable( file );
 
-  sprintf( songinfo->md5,"%s", md5.calcMd5( file ) );
+  snprintf( songinfo->md5, 33, "%s", md5.calcMd5( file ) );
 
   int max_subTune_amount = 1;
   if( songinfo->subsongs > max_subTune_amount ) {
@@ -1044,7 +1044,7 @@ void SIDTunesPlayer::getSongslengthfromMd5(fs::FS &fs, const char * path)
           //log_v("%s", lom);
           //log_v("%s", list);
           memset( parsestr, 0, 32*10+35 );
-          sprintf( parsestr, "%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s", listsongs[s]->md5 );
+          snprintf( parsestr, 32*10+35, "%s=%%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s %%s", listsongs[s]->md5 );
           //log_v("parse :%s\n",parsestr);
           memset( bu, 0, 320 );
           sscanf( lom, parsestr,
@@ -1210,7 +1210,7 @@ bool SIDTunesPlayer::playSidFile( songstruct *song )
     fm = file.read();
     speedsong[31-i]= (fm & (byte)pow(2,7-i%8))?1:0;
   }
-  sprintf(currentfilename,"%s", song->filename );
+  snprintf(currentfilename, 256, "%s", song->filename );
   getcurrentfile = currentfile;
   //executeEventCallback(SID_START_PLAY);
   currentsong=startsong -1;
@@ -1485,7 +1485,7 @@ int SIDTunesPlayer::addSong(fs::FS &fs,  const char * path)
   }
 
   song->fs=(fs::FS *)&fs;
-  sprintf( song->filename,"%s", path );
+  snprintf( song->filename, 256, "%s", path );
 
   if( getInfoFromFile( fs, path, song ) ) {
     listsongs[numberOfSongs] = song;

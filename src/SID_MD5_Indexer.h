@@ -135,7 +135,7 @@ struct BufferedIndex
   {
     IndexItem->offset = offset;
     IndexItem->pathlen = strlen( folderName ) + 1;
-    sprintf( IndexItem->path, "%s", folderName );
+    snprintf( IndexItem->path, 256, "%s", folderName );
     write();
   }
 
@@ -201,29 +201,37 @@ struct BufferedIndex
     String buffer;
     buffer.reserve(512);
 
-    char folderName[256] = {0};
-    char tmpName[256] = {0};
-    char bufferstr[256] = {0};
+    size_t bfrsize = 256;
+
+    char *folderName = (char*)sid_calloc( bfrsize, sizeof( char ) );
+    char *tmpName    = (char*)sid_calloc( bfrsize, sizeof( char ) );
+    char *bufferstr  = (char*)sid_calloc( bfrsize, sizeof( char ) );
+
+    if( folderName == NULL || tmpName == NULL || bufferstr == NULL ) {
+      log_e("Unable to alloc %d bytes form MD5Indexer, aborting", bfrsize*3 );
+      return false;
+    }
+
     size_t foldersCount = 0;
 
-    if( !open( _fs, idxpath, false ) ) return false; // create index file
+    if( !open( _fs, idxpath, false ) ) return false; // can't create index file
 
     while( md5File.available() ) {
       size_t offset = md5File.position();
       buffer = md5File.readStringUntil('\n');
       if( buffer.length() <2 ) break; // EOF
       if( buffer.c_str()[0] != ';' ) continue; // md5 string
-      memset( bufferstr, 0, sizeof( bufferstr ) );
-      sprintf( bufferstr, "%s", buffer.c_str() );
+      memset( bufferstr, 0, bfrsize );
+      snprintf( bufferstr, bfrsize, "%s", buffer.c_str() );
       size_t buflen = strlen( bufferstr );
       memmove( bufferstr, bufferstr+2, buflen ); // remove leading "; "
       String basename = gnu_basename( bufferstr ); // extract filename
       size_t flen = (buflen-2)-basename.length(); // get foldername length
-      memset( tmpName, 0, sizeof( tmpName ) );
+      memset( tmpName, 0, bfrsize );
       memcpy( tmpName, bufferstr, flen );
       if( strcmp( tmpName, folderName )!=0 ) {
         memset( folderName, 0, strlen( folderName) );
-        sprintf( folderName, "%s", tmpName );
+        snprintf( folderName, bfrsize, "%s", tmpName );
         //Serial.printf("[Offset: %d] %s\n", offset, folderName );
         foldersCount++;
         addItem( offset, folderName );
@@ -231,6 +239,11 @@ struct BufferedIndex
     }
     md5File.close();
     close();
+
+    free( folderName );
+    free( tmpName    );
+    free( bufferstr  );
+
     Serial.printf("Total folders: %d\n", foldersCount );
     return true;
   }
