@@ -31,575 +31,524 @@
 #ifndef mos6501b_h
 #define mos6501b_h
 
-#include <stdio.h>
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdbool.h>
 #include "FS.h"
 #include "SID6581.h"
 #include "SID_MD5_Indexer.h"
-#include "freertos/queue.h"
-#include "soc/timer_group_struct.h"
-#include "soc/timer_group_reg.h"
-#include <string.h>
-
 
 #ifndef SID_CPU_CORE
-    #define SID_CPU_CORE 0
+  #define SID_CPU_CORE 0
 #endif
 #ifndef SID_PLAYER_CORE
-    #define SID_PLAYER_CORE 1
+  #define SID_PLAYER_CORE 1
 #endif
 
 #ifndef SID_CPU_TASK_PRIORITY
-    #define SID_CPU_TASK_PRIORITY 3
+  #define SID_CPU_TASK_PRIORITY 3
 #endif
+
 
 static QueueHandle_t  _sidtunes_voicesQueues;
 static TaskHandle_t SIDTUNESSerialPlayerTaskHandle = NULL;
-static TaskHandle_t SIDTUNESSerialPlayerTaskLock= NULL;
-static TaskHandle_t SIDTUNESSerialSongPlayerTaskLock= NULL;
-static TaskHandle_t SIDTUNESSerialLoopPlayerTask= NULL;
-static int _sid_cpu_core=SID_CPU_CORE;
-static int _sid_cpu_task_priority=SID_CPU_TASK_PRIORITY;
+static TaskHandle_t SIDTUNESSerialPlayerTaskLock = NULL;
+static TaskHandle_t SIDTUNESSerialSongPlayerTaskLock = NULL;
+static TaskHandle_t SIDTUNESSerialLoopPlayerTask = NULL;
+static int _sid_cpu_core = SID_CPU_CORE;
+static int _sid_cpu_task_priority = SID_CPU_TASK_PRIORITY;
 
 
-enum loopmode {
-    MODE_SINGLE_TRACK, // don't loop (default, will play next until end of sid and/or track)
-    MODE_SINGLE_SID,// play all songs available in one sid once
-    MODE_LOOP_SID, //loop all songs in on sid file
-    MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
-    MODE_LOOP_PLAYLIST_SINGLE_SID, //loop all tracks available in one playlist playing all the subtunes
-    MODE_LOOP_PLAYLIST_RANDOM // loop random in current track list
+enum loopmode
+{
+  MODE_SINGLE_TRACK, // don't loop (default, will play next until end of sid and/or track)
+  MODE_SINGLE_SID,// play all songs available in one sid once
+  MODE_LOOP_SID, //loop all songs in on sid file
+  MODE_LOOP_PLAYLIST_SINGLE_TRACK, // loop all tracks available in one playlist playing the default tunes
+  MODE_LOOP_PLAYLIST_SINGLE_SID, //loop all tracks available in one playlist playing all the subtunes
+  MODE_LOOP_PLAYLIST_RANDOM // loop random in current track list
 };
 
 
-struct serial_command {
-    uint8_t data;
-    uint8_t address;
-    uint16_t duration;
+struct serial_command
+{
+  uint8_t data;
+  uint8_t address;
+  uint16_t duration;
 };
 
 
-enum flag_enum{
-flag_N= 128, flag_V= 64, flag_B= 16, flag_D= 8, flag_I= 4, flag_Z= 2, flag_C= 1
+enum flag_enum
+{
+  flag_N = 128, flag_V = 64, flag_B = 16, flag_D = 8, flag_I = 4, flag_Z = 2, flag_C = 1
 };
 
 
-enum mode_enum {
-    mode_imp,
-    mode_imm,
-    mode_abs,
-    mode_absx,
-    mode_absy,
-    mode_zp,
-    mode_zpx,
-    mode_zpy,
-    mode_ind,
-    mode_indx,
-    mode_indy,
-    mode_acc,
-    mode_rel,
-    mode_xxx
+enum mode_enum
+{
+  mode_imp,
+  mode_imm,
+  mode_abs,
+  mode_absx,
+  mode_absy,
+  mode_zp,
+  mode_zpx,
+  mode_zpy,
+  mode_ind,
+  mode_indx,
+  mode_indy,
+  mode_acc,
+  mode_rel,
+  mode_xxx
 };
 
 
-enum inst_enum{
-    inst_adc,
-    inst_and,
-    inst_asl,
-    inst_bcc, inst_bcs, inst_beq, inst_bit, inst_bmi, inst_bne, inst_bpl, inst_brk, inst_bvc, inst_bvs, inst_clc,
-    inst_cld, inst_cli, inst_clv, inst_cmp, inst_cpx, inst_cpy, inst_dec, inst_dex, inst_dey, inst_eor, inst_inc, inst_inx, inst_iny, inst_jmp,
-    inst_jsr, inst_lda, inst_ldx, inst_ldy, inst_lsr, inst_nop, inst_ora, inst_pha, inst_php, inst_pla, inst_plp, inst_rol, inst_ror, inst_rti,
-    inst_rts, inst_sbc, inst_sec, inst_sed, inst_sei, inst_sta, inst_stx, inst_sty, inst_tax, inst_tay, inst_tsx, inst_txa, inst_txs, inst_tya,
-    inst_xxx
+enum inst_enum
+{
+  inst_adc,
+  inst_and,
+  inst_asl,
+  inst_bcc, inst_bcs, inst_beq, inst_bit, inst_bmi, inst_bne, inst_bpl, inst_brk, inst_bvc, inst_bvs, inst_clc,
+  inst_cld, inst_cli, inst_clv, inst_cmp, inst_cpx, inst_cpy, inst_dec, inst_dex, inst_dey, inst_eor, inst_inc, inst_inx, inst_iny, inst_jmp,
+  inst_jsr, inst_lda, inst_ldx, inst_ldy, inst_lsr, inst_nop, inst_ora, inst_pha, inst_php, inst_pla, inst_plp, inst_rol, inst_ror, inst_rti,
+  inst_rts, inst_sbc, inst_sec, inst_sed, inst_sei, inst_sta, inst_stx, inst_sty, inst_tax, inst_tay, inst_tsx, inst_txa, inst_txs, inst_tya,
+  inst_xxx
 };
 
 
 typedef struct instruction instruction;
 
-struct instruction{
-    enum inst_enum inst;
-    enum mode_enum mode;
+struct instruction
+{
+  enum inst_enum inst;
+  enum mode_enum mode;
 };
 
 
-static volatile instruction opcodes[256] = {
-    {inst_brk, mode_imp},                            // 0x00
-    {inst_ora, mode_indx},                            // 0x01
-    {inst_xxx, mode_xxx},                            // 0x02
-    {inst_xxx, mode_xxx},                            // 0x03
-    {inst_xxx, mode_zp},                            // 0x04
-    {inst_ora, mode_zp},                            // 0x05
-    {inst_asl, mode_zp},                            // 0x06
-    {inst_xxx, mode_xxx},                            // 0x07
-    {inst_php, mode_imp},                            // 0x08
-    {inst_ora, mode_imm},                            // 0x09
-    {inst_asl, mode_acc},                            // 0x0a
-    {inst_xxx, mode_xxx},                            // 0x0b
-    {inst_xxx, mode_abs},                            // 0x0c
-    {inst_ora, mode_abs},                            // 0x0d
-    {inst_asl, mode_abs},                            // 0x0e
-    {inst_xxx, mode_xxx},                            // 0x0f
-    {inst_bpl, mode_rel},                            // 0x10
-    {inst_ora, mode_indy},                            // 0x11
-    {inst_xxx, mode_xxx},                            // 0x12
-    {inst_xxx, mode_xxx},                            // 0x13
-    {inst_xxx, mode_xxx},                            // 0x14
-    {inst_ora, mode_zpx},                            // 0x15
-    {inst_asl, mode_zpx},                            // 0x16
-    {inst_xxx, mode_xxx},                            // 0x17
-    {inst_clc, mode_imp},                            // 0x18
-    {inst_ora, mode_absy},                            // 0x19
-    {inst_xxx, mode_xxx},                            // 0x1a
-    {inst_xxx, mode_xxx},                            // 0x1b
-    {inst_xxx, mode_xxx},                            // 0x1c
-    {inst_ora, mode_absx},                            // 0x1d
-    {inst_asl, mode_absx},                            // 0x1e
-    {inst_xxx, mode_xxx},                            // 0x1f
-    {inst_jsr, mode_abs},                            // 0x20
-    {inst_and, mode_indx},                            // 0x21
-    {inst_xxx, mode_xxx},                            // 0x22
-    {inst_xxx, mode_xxx},                            // 0x23
-    {inst_bit, mode_zp},                            // 0x24
-    {inst_and, mode_zp},                            // 0x25
-    {inst_rol, mode_zp},                            // 0x26
-    {inst_xxx, mode_xxx},                            // 0x27
-    {inst_plp, mode_imp},                            // 0x28
-    {inst_and, mode_imm},                            // 0x29
-    {inst_rol, mode_acc},                            // 0x2a
-    {inst_xxx, mode_xxx},                            // 0x2b
-    {inst_bit, mode_abs},                            // 0x2c
-    {inst_and, mode_abs},                            // 0x2d
-    {inst_rol, mode_abs},                            // 0x2e
-    {inst_xxx, mode_xxx},                            // 0x2f
-    {inst_bmi, mode_rel},                            // 0x30
-    {inst_and, mode_indy},                            // 0x31
-    {inst_xxx, mode_xxx},                            // 0x32
-    {inst_xxx, mode_xxx},                            // 0x33
-    {inst_xxx, mode_xxx},                            // 0x34
-    {inst_and, mode_zpx},                            // 0x35
-    {inst_rol, mode_zpx},                            // 0x36
-    {inst_xxx, mode_xxx},                            // 0x37
-    {inst_sec, mode_imp},                            // 0x38
-    {inst_and, mode_absy},                            // 0x39
-    {inst_xxx, mode_xxx},                            // 0x3a
-    {inst_xxx, mode_xxx},                            // 0x3b
-    {inst_xxx, mode_xxx},                            // 0x3c
-    {inst_and, mode_absx},                            // 0x3d
-    {inst_rol, mode_absx},                            // 0x3e
-    {inst_xxx, mode_xxx},                            // 0x3f
-    {inst_rti, mode_imp},                            // 0x40
-    {inst_eor, mode_indx},                            // 0x41
-    {inst_xxx, mode_xxx},                            // 0x42
-    {inst_xxx, mode_xxx},                            // 0x43
-    {inst_xxx, mode_zp},                            // 0x44
-    {inst_eor, mode_zp},                            // 0x45
-    {inst_lsr, mode_zp},                            // 0x46
-    {inst_xxx, mode_xxx},                            // 0x47
-    {inst_pha, mode_imp},                            // 0x48
-    {inst_eor, mode_imm},                            // 0x49
-    {inst_lsr, mode_acc},                            // 0x4a
-    {inst_xxx, mode_xxx},                            // 0x4b
-    {inst_jmp, mode_abs},                            // 0x4c
-    {inst_eor, mode_abs},                            // 0x4d
-    {inst_lsr, mode_abs},                            // 0x4e
-    {inst_xxx, mode_xxx},                            // 0x4f
+static volatile instruction opcodes[256] =
+{
+  {inst_brk, mode_imp},                            // 0x00
+  {inst_ora, mode_indx},                           // 0x01
+  {inst_xxx, mode_xxx},                            // 0x02
+  {inst_xxx, mode_xxx},                            // 0x03
+  {inst_xxx, mode_zp},                             // 0x04
+  {inst_ora, mode_zp},                             // 0x05
+  {inst_asl, mode_zp},                             // 0x06
+  {inst_xxx, mode_xxx},                            // 0x07
+  {inst_php, mode_imp},                            // 0x08
+  {inst_ora, mode_imm},                            // 0x09
+  {inst_asl, mode_acc},                            // 0x0a
+  {inst_xxx, mode_xxx},                            // 0x0b
+  {inst_xxx, mode_abs},                            // 0x0c
+  {inst_ora, mode_abs},                            // 0x0d
+  {inst_asl, mode_abs},                            // 0x0e
+  {inst_xxx, mode_xxx},                            // 0x0f
+  {inst_bpl, mode_rel},                            // 0x10
+  {inst_ora, mode_indy},                           // 0x11
+  {inst_xxx, mode_xxx},                            // 0x12
+  {inst_xxx, mode_xxx},                            // 0x13
+  {inst_xxx, mode_xxx},                            // 0x14
+  {inst_ora, mode_zpx},                            // 0x15
+  {inst_asl, mode_zpx},                            // 0x16
+  {inst_xxx, mode_xxx},                            // 0x17
+  {inst_clc, mode_imp},                            // 0x18
+  {inst_ora, mode_absy},                           // 0x19
+  {inst_xxx, mode_xxx},                            // 0x1a
+  {inst_xxx, mode_xxx},                            // 0x1b
+  {inst_xxx, mode_xxx},                            // 0x1c
+  {inst_ora, mode_absx},                           // 0x1d
+  {inst_asl, mode_absx},                           // 0x1e
+  {inst_xxx, mode_xxx},                            // 0x1f
+  {inst_jsr, mode_abs},                            // 0x20
+  {inst_and, mode_indx},                           // 0x21
+  {inst_xxx, mode_xxx},                            // 0x22
+  {inst_xxx, mode_xxx},                            // 0x23
+  {inst_bit, mode_zp},                             // 0x24
+  {inst_and, mode_zp},                             // 0x25
+  {inst_rol, mode_zp},                             // 0x26
+  {inst_xxx, mode_xxx},                            // 0x27
+  {inst_plp, mode_imp},                            // 0x28
+  {inst_and, mode_imm},                            // 0x29
+  {inst_rol, mode_acc},                            // 0x2a
+  {inst_xxx, mode_xxx},                            // 0x2b
+  {inst_bit, mode_abs},                            // 0x2c
+  {inst_and, mode_abs},                            // 0x2d
+  {inst_rol, mode_abs},                            // 0x2e
+  {inst_xxx, mode_xxx},                            // 0x2f
+  {inst_bmi, mode_rel},                            // 0x30
+  {inst_and, mode_indy},                           // 0x31
+  {inst_xxx, mode_xxx},                            // 0x32
+  {inst_xxx, mode_xxx},                            // 0x33
+  {inst_xxx, mode_xxx},                            // 0x34
+  {inst_and, mode_zpx},                            // 0x35
+  {inst_rol, mode_zpx},                            // 0x36
+  {inst_xxx, mode_xxx},                            // 0x37
+  {inst_sec, mode_imp},                            // 0x38
+  {inst_and, mode_absy},                           // 0x39
+  {inst_xxx, mode_xxx},                            // 0x3a
+  {inst_xxx, mode_xxx},                            // 0x3b
+  {inst_xxx, mode_xxx},                            // 0x3c
+  {inst_and, mode_absx},                           // 0x3d
+  {inst_rol, mode_absx},                           // 0x3e
+  {inst_xxx, mode_xxx},                            // 0x3f
+  {inst_rti, mode_imp},                            // 0x40
+  {inst_eor, mode_indx},                           // 0x41
+  {inst_xxx, mode_xxx},                            // 0x42
+  {inst_xxx, mode_xxx},                            // 0x43
+  {inst_xxx, mode_zp},                             // 0x44
+  {inst_eor, mode_zp},                             // 0x45
+  {inst_lsr, mode_zp},                             // 0x46
+  {inst_xxx, mode_xxx},                            // 0x47
+  {inst_pha, mode_imp},                            // 0x48
+  {inst_eor, mode_imm},                            // 0x49
+  {inst_lsr, mode_acc},                            // 0x4a
+  {inst_xxx, mode_xxx},                            // 0x4b
+  {inst_jmp, mode_abs},                            // 0x4c
+  {inst_eor, mode_abs},                            // 0x4d
+  {inst_lsr, mode_abs},                            // 0x4e
+  {inst_xxx, mode_xxx},                            // 0x4f
 
-    {inst_bvc, mode_rel},                            // 0x50
-    {inst_eor, mode_indy},                            // 0x51
-    {inst_xxx, mode_xxx},                            // 0x52
-    {inst_xxx, mode_xxx},                            // 0x53
-    {inst_xxx, mode_xxx},                            // 0x54
-    {inst_eor, mode_zpx},                            // 0x55
-    {inst_lsr, mode_zpx},                            // 0x56
-    {inst_xxx, mode_xxx},                            // 0x57
-    {inst_cli, mode_imp},                            // 0x58
-    {inst_eor, mode_absy},                            // 0x59
-    {inst_xxx, mode_xxx},                            // 0x5a
-    {inst_xxx, mode_xxx},                            // 0x5b
-    {inst_xxx, mode_xxx},                            // 0x5c
-    {inst_eor, mode_absx},                            // 0x5d
-    {inst_lsr, mode_absx},                            // 0x5e
-    {inst_xxx, mode_xxx},                            // 0x5f
+  {inst_bvc, mode_rel},                            // 0x50
+  {inst_eor, mode_indy},                           // 0x51
+  {inst_xxx, mode_xxx},                            // 0x52
+  {inst_xxx, mode_xxx},                            // 0x53
+  {inst_xxx, mode_xxx},                            // 0x54
+  {inst_eor, mode_zpx},                            // 0x55
+  {inst_lsr, mode_zpx},                            // 0x56
+  {inst_xxx, mode_xxx},                            // 0x57
+  {inst_cli, mode_imp},                            // 0x58
+  {inst_eor, mode_absy},                           // 0x59
+  {inst_xxx, mode_xxx},                            // 0x5a
+  {inst_xxx, mode_xxx},                            // 0x5b
+  {inst_xxx, mode_xxx},                            // 0x5c
+  {inst_eor, mode_absx},                           // 0x5d
+  {inst_lsr, mode_absx},                           // 0x5e
+  {inst_xxx, mode_xxx},                            // 0x5f
 
-    {inst_rts, mode_imp},                            // 0x60
-    {inst_adc, mode_indx},                            // 0x61
-    {inst_xxx, mode_xxx},                            // 0x62
-    {inst_xxx, mode_xxx},                            // 0x63
-    {inst_xxx, mode_zp},                            // 0x64
-    {inst_adc, mode_zp},                            // 0x65
-    {inst_ror, mode_zp},                            // 0x66
-    {inst_xxx, mode_xxx},                            // 0x67
-    {inst_pla, mode_imp},                            // 0x68
-    {inst_adc, mode_imm},                            // 0x69
-    {inst_ror, mode_acc},                            // 0x6a
-    {inst_xxx, mode_xxx},                            // 0x6b
-    {inst_jmp, mode_ind},                            // 0x6c
-    {inst_adc, mode_abs},                            // 0x6d
-    {inst_ror, mode_abs},                            // 0x6e
-    {inst_xxx, mode_xxx},                            // 0x6f
+  {inst_rts, mode_imp},                            // 0x60
+  {inst_adc, mode_indx},                           // 0x61
+  {inst_xxx, mode_xxx},                            // 0x62
+  {inst_xxx, mode_xxx},                            // 0x63
+  {inst_xxx, mode_zp},                             // 0x64
+  {inst_adc, mode_zp},                             // 0x65
+  {inst_ror, mode_zp},                             // 0x66
+  {inst_xxx, mode_xxx},                            // 0x67
+  {inst_pla, mode_imp},                            // 0x68
+  {inst_adc, mode_imm},                            // 0x69
+  {inst_ror, mode_acc},                            // 0x6a
+  {inst_xxx, mode_xxx},                            // 0x6b
+  {inst_jmp, mode_ind},                            // 0x6c
+  {inst_adc, mode_abs},                            // 0x6d
+  {inst_ror, mode_abs},                            // 0x6e
+  {inst_xxx, mode_xxx},                            // 0x6f
 
-    {inst_bvs, mode_rel},                            // 0x70
-    {inst_adc, mode_indy},                            // 0x71
-    {inst_xxx, mode_xxx},                            // 0x72
-    {inst_xxx, mode_xxx},                            // 0x73
-    {inst_xxx, mode_xxx},                            // 0x74
-    {inst_adc, mode_zpx},                            // 0x75
-    {inst_ror, mode_zpx},                            // 0x76
-    {inst_xxx, mode_xxx},                            // 0x77
-    {inst_sei, mode_imp},                            // 0x78
-    {inst_adc, mode_absy},                            // 0x79
-    {inst_xxx, mode_xxx},                            // 0x7a
-    {inst_xxx, mode_xxx},                            // 0x7b
-    {inst_xxx, mode_xxx},                            // 0x7c
-    {inst_adc, mode_absx},                            // 0x7d
-    {inst_ror, mode_absx},                            // 0x7e
-    {inst_xxx, mode_xxx},                            // 0x7f
+  {inst_bvs, mode_rel},                            // 0x70
+  {inst_adc, mode_indy},                           // 0x71
+  {inst_xxx, mode_xxx},                            // 0x72
+  {inst_xxx, mode_xxx},                            // 0x73
+  {inst_xxx, mode_xxx},                            // 0x74
+  {inst_adc, mode_zpx},                            // 0x75
+  {inst_ror, mode_zpx},                            // 0x76
+  {inst_xxx, mode_xxx},                            // 0x77
+  {inst_sei, mode_imp},                            // 0x78
+  {inst_adc, mode_absy},                           // 0x79
+  {inst_xxx, mode_xxx},                            // 0x7a
+  {inst_xxx, mode_xxx},                            // 0x7b
+  {inst_xxx, mode_xxx},                            // 0x7c
+  {inst_adc, mode_absx},                           // 0x7d
+  {inst_ror, mode_absx},                           // 0x7e
+  {inst_xxx, mode_xxx},                            // 0x7f
 
-    {inst_xxx, mode_imm},                            // 0x80
-    {inst_sta, mode_indx},                            // 0x81
-    {inst_xxx, mode_xxx},                            // 0x82
-    {inst_xxx, mode_xxx},                            // 0x83
-    {inst_sty, mode_zp},                            // 0x84
-    {inst_sta, mode_zp},                            // 0x85
-    {inst_stx, mode_zp},                            // 0x86
-    {inst_xxx, mode_xxx},                            // 0x87
-    {inst_dey, mode_imp},                            // 0x88
-    {inst_xxx, mode_imm},                            // 0x89
-    {inst_txa, mode_acc},                            // 0x8a
-    {inst_xxx, mode_xxx},                            // 0x8b
-    {inst_sty, mode_abs},                            // 0x8c
-    {inst_sta, mode_abs},                            // 0x8d
-    {inst_stx, mode_abs},                            // 0x8e
-    {inst_xxx, mode_xxx},                            // 0x8f
+  {inst_xxx, mode_imm},                            // 0x80
+  {inst_sta, mode_indx},                           // 0x81
+  {inst_xxx, mode_xxx},                            // 0x82
+  {inst_xxx, mode_xxx},                            // 0x83
+  {inst_sty, mode_zp},                             // 0x84
+  {inst_sta, mode_zp},                             // 0x85
+  {inst_stx, mode_zp},                             // 0x86
+  {inst_xxx, mode_xxx},                            // 0x87
+  {inst_dey, mode_imp},                            // 0x88
+  {inst_xxx, mode_imm},                            // 0x89
+  {inst_txa, mode_acc},                            // 0x8a
+  {inst_xxx, mode_xxx},                            // 0x8b
+  {inst_sty, mode_abs},                            // 0x8c
+  {inst_sta, mode_abs},                            // 0x8d
+  {inst_stx, mode_abs},                            // 0x8e
+  {inst_xxx, mode_xxx},                            // 0x8f
 
-    {inst_bcc, mode_rel},                            // 0x90
-    {inst_sta, mode_indy},                            // 0x91
-    {inst_xxx, mode_xxx},                            // 0x92
-    {inst_xxx, mode_xxx},                            // 0x93
-    {inst_sty, mode_zpx},                            // 0x94
-    {inst_sta, mode_zpx},                            // 0x95
-    {inst_stx, mode_zpy},                            // 0x96
-    {inst_xxx, mode_xxx},                            // 0x97
-    {inst_tya, mode_imp},                            // 0x98
-    {inst_sta, mode_absy},                            // 0x99
-    {inst_txs, mode_acc},                            // 0x9a
-    {inst_xxx, mode_xxx},                            // 0x9b
-    {inst_xxx, mode_xxx},                            // 0x9c
-    {inst_sta, mode_absx},                            // 0x9d
-    {inst_xxx, mode_absx},                            // 0x9e
-    {inst_xxx, mode_xxx},                            // 0x9f
+  {inst_bcc, mode_rel},                            // 0x90
+  {inst_sta, mode_indy},                           // 0x91
+  {inst_xxx, mode_xxx},                            // 0x92
+  {inst_xxx, mode_xxx},                            // 0x93
+  {inst_sty, mode_zpx},                            // 0x94
+  {inst_sta, mode_zpx},                            // 0x95
+  {inst_stx, mode_zpy},                            // 0x96
+  {inst_xxx, mode_xxx},                            // 0x97
+  {inst_tya, mode_imp},                            // 0x98
+  {inst_sta, mode_absy},                           // 0x99
+  {inst_txs, mode_acc},                            // 0x9a
+  {inst_xxx, mode_xxx},                            // 0x9b
+  {inst_xxx, mode_xxx},                            // 0x9c
+  {inst_sta, mode_absx},                           // 0x9d
+  {inst_xxx, mode_absx},                           // 0x9e
+  {inst_xxx, mode_xxx},                            // 0x9f
 
-    {inst_ldy, mode_imm},                            // 0xa0
-    {inst_lda, mode_indx},                            // 0xa1
-    {inst_ldx, mode_imm},                            // 0xa2
-    {inst_xxx, mode_xxx},                            // 0xa3
-    {inst_ldy, mode_zp},                            // 0xa4
-    {inst_lda, mode_zp},                            // 0xa5
-    {inst_ldx, mode_zp},                            // 0xa6
-    {inst_xxx, mode_xxx},                            // 0xa7
-    {inst_tay, mode_imp},                            // 0xa8
-    {inst_lda, mode_imm},                            // 0xa9
-    {inst_tax, mode_acc},                            // 0xaa
-    {inst_xxx, mode_xxx},                            // 0xab
-    {inst_ldy, mode_abs},                            // 0xac
-    {inst_lda, mode_abs},                            // 0xad
-    {inst_ldx, mode_abs},                            // 0xae
-    {inst_xxx, mode_xxx},                            // 0xaf
+  {inst_ldy, mode_imm},                            // 0xa0
+  {inst_lda, mode_indx},                           // 0xa1
+  {inst_ldx, mode_imm},                            // 0xa2
+  {inst_xxx, mode_xxx},                            // 0xa3
+  {inst_ldy, mode_zp},                             // 0xa4
+  {inst_lda, mode_zp},                             // 0xa5
+  {inst_ldx, mode_zp},                             // 0xa6
+  {inst_xxx, mode_xxx},                            // 0xa7
+  {inst_tay, mode_imp},                            // 0xa8
+  {inst_lda, mode_imm},                            // 0xa9
+  {inst_tax, mode_acc},                            // 0xaa
+  {inst_xxx, mode_xxx},                            // 0xab
+  {inst_ldy, mode_abs},                            // 0xac
+  {inst_lda, mode_abs},                            // 0xad
+  {inst_ldx, mode_abs},                            // 0xae
+  {inst_xxx, mode_xxx},                            // 0xaf
 
-    {inst_bcs, mode_rel},                            // 0xb0
-    {inst_lda, mode_indy},                            // 0xb1
-    {inst_xxx, mode_xxx},                            // 0xb2
-    {inst_xxx, mode_xxx},                            // 0xb3
-    {inst_ldy, mode_zpx},                            // 0xb4
-    {inst_lda, mode_zpx},                            // 0xb5
-    {inst_ldx, mode_zpy},                            // 0xb6
-    {inst_xxx, mode_xxx},                            // 0xb7
-    {inst_clv, mode_imp},                            // 0xb8
-    {inst_lda, mode_absy},                            // 0xb9
-    {inst_tsx, mode_acc},                            // 0xba
-    {inst_xxx, mode_xxx},                            // 0xbb
-    {inst_ldy, mode_absx},                            // 0xbc
-    {inst_lda, mode_absx},                            // 0xbd
-    {inst_ldx, mode_absy},                            // 0xbe
-    {inst_xxx, mode_xxx},                            // 0xbf
+  {inst_bcs, mode_rel},                            // 0xb0
+  {inst_lda, mode_indy},                           // 0xb1
+  {inst_xxx, mode_xxx},                            // 0xb2
+  {inst_xxx, mode_xxx},                            // 0xb3
+  {inst_ldy, mode_zpx},                            // 0xb4
+  {inst_lda, mode_zpx},                            // 0xb5
+  {inst_ldx, mode_zpy},                            // 0xb6
+  {inst_xxx, mode_xxx},                            // 0xb7
+  {inst_clv, mode_imp},                            // 0xb8
+  {inst_lda, mode_absy},                           // 0xb9
+  {inst_tsx, mode_acc},                            // 0xba
+  {inst_xxx, mode_xxx},                            // 0xbb
+  {inst_ldy, mode_absx},                           // 0xbc
+  {inst_lda, mode_absx},                           // 0xbd
+  {inst_ldx, mode_absy},                           // 0xbe
+  {inst_xxx, mode_xxx},                            // 0xbf
 
-    {inst_cpy, mode_imm},                            // 0xc0
-    {inst_cmp, mode_indx},                            // 0xc1
-    {inst_xxx, mode_xxx},                            // 0xc2
-    {inst_xxx, mode_xxx},                            // 0xc3
-    {inst_cpy, mode_zp},                            // 0xc4
-    {inst_cmp, mode_zp},                            // 0xc5
-    {inst_dec, mode_zp},                            // 0xc6
-    {inst_xxx, mode_xxx},                            // 0xc7
-    {inst_iny, mode_imp},                            // 0xc8
-    {inst_cmp, mode_imm},                            // 0xc9
-    {inst_dex, mode_acc},                            // 0xca
-    {inst_xxx, mode_xxx},                            // 0xcb
-    {inst_cpy, mode_abs},                            // 0xcc
-    {inst_cmp, mode_abs},                            // 0xcd
-    {inst_dec, mode_abs},                            // 0xce
-    {inst_xxx, mode_xxx},                            // 0xcf
+  {inst_cpy, mode_imm},                            // 0xc0
+  {inst_cmp, mode_indx},                           // 0xc1
+  {inst_xxx, mode_xxx},                            // 0xc2
+  {inst_xxx, mode_xxx},                            // 0xc3
+  {inst_cpy, mode_zp},                             // 0xc4
+  {inst_cmp, mode_zp},                             // 0xc5
+  {inst_dec, mode_zp},                             // 0xc6
+  {inst_xxx, mode_xxx},                            // 0xc7
+  {inst_iny, mode_imp},                            // 0xc8
+  {inst_cmp, mode_imm},                            // 0xc9
+  {inst_dex, mode_acc},                            // 0xca
+  {inst_xxx, mode_xxx},                            // 0xcb
+  {inst_cpy, mode_abs},                            // 0xcc
+  {inst_cmp, mode_abs},                            // 0xcd
+  {inst_dec, mode_abs},                            // 0xce
+  {inst_xxx, mode_xxx},                            // 0xcf
 
-    {inst_bne, mode_rel},                            // 0xd0
-    {inst_cmp, mode_indy},                            // 0xd1
-    {inst_xxx, mode_xxx},                            // 0xd2
-    {inst_xxx, mode_xxx},                            // 0xd3
-    {inst_xxx, mode_zpx},                            // 0xd4
-    {inst_cmp, mode_zpx},                            // 0xd5
-    {inst_dec, mode_zpx},                            // 0xd6
-    {inst_xxx, mode_xxx},                            // 0xd7
-    {inst_cld, mode_imp},                            // 0xd8
-    {inst_cmp, mode_absy},                            // 0xd9
-    {inst_xxx, mode_acc},                            // 0xda
-    {inst_xxx, mode_xxx},                            // 0xdb
-    {inst_xxx, mode_xxx},                            // 0xdc
-    {inst_cmp, mode_absx},                            // 0xdd
-    {inst_dec, mode_absx},                            // 0xde
-    {inst_xxx, mode_xxx},                            // 0xdf
+  {inst_bne, mode_rel},                            // 0xd0
+  {inst_cmp, mode_indy},                           // 0xd1
+  {inst_xxx, mode_xxx},                            // 0xd2
+  {inst_xxx, mode_xxx},                            // 0xd3
+  {inst_xxx, mode_zpx},                            // 0xd4
+  {inst_cmp, mode_zpx},                            // 0xd5
+  {inst_dec, mode_zpx},                            // 0xd6
+  {inst_xxx, mode_xxx},                            // 0xd7
+  {inst_cld, mode_imp},                            // 0xd8
+  {inst_cmp, mode_absy},                           // 0xd9
+  {inst_xxx, mode_acc},                            // 0xda
+  {inst_xxx, mode_xxx},                            // 0xdb
+  {inst_xxx, mode_xxx},                            // 0xdc
+  {inst_cmp, mode_absx},                           // 0xdd
+  {inst_dec, mode_absx},                           // 0xde
+  {inst_xxx, mode_xxx},                            // 0xdf
 
-    {inst_cpx, mode_imm},                            // 0xe0
-    {inst_sbc, mode_indx},                            // 0xe1
-    {inst_xxx, mode_xxx},                            // 0xe2
-    {inst_xxx, mode_xxx},                            // 0xe3
-    {inst_cpx, mode_zp},                            // 0xe4
-    {inst_sbc, mode_zp},                            // 0xe5
-    {inst_inc, mode_zp},                            // 0xe6
-    {inst_xxx, mode_xxx},                            // 0xe7
-    {inst_inx, mode_imp},                            // 0xe8
-    {inst_sbc, mode_imm},                            // 0xe9
-    {inst_nop, mode_acc},                            // 0xea
-    {inst_xxx, mode_xxx},                            // 0xeb
-    {inst_cpx, mode_abs},                            // 0xec
-    {inst_sbc, mode_abs},                            // 0xed
-    {inst_inc, mode_abs},                            // 0xee
-    {inst_xxx, mode_xxx},                            // 0xef
+  {inst_cpx, mode_imm},                            // 0xe0
+  {inst_sbc, mode_indx},                           // 0xe1
+  {inst_xxx, mode_xxx},                            // 0xe2
+  {inst_xxx, mode_xxx},                            // 0xe3
+  {inst_cpx, mode_zp},                             // 0xe4
+  {inst_sbc, mode_zp},                             // 0xe5
+  {inst_inc, mode_zp},                             // 0xe6
+  {inst_xxx, mode_xxx},                            // 0xe7
+  {inst_inx, mode_imp},                            // 0xe8
+  {inst_sbc, mode_imm},                            // 0xe9
+  {inst_nop, mode_acc},                            // 0xea
+  {inst_xxx, mode_xxx},                            // 0xeb
+  {inst_cpx, mode_abs},                            // 0xec
+  {inst_sbc, mode_abs},                            // 0xed
+  {inst_inc, mode_abs},                            // 0xee
+  {inst_xxx, mode_xxx},                            // 0xef
 
-    {inst_beq, mode_rel},                            // 0xf0
-    {inst_sbc, mode_indy},                            // 0xf1
-    {inst_xxx, mode_xxx},                            // 0xf2
-    {inst_xxx, mode_xxx},                            // 0xf3
-    {inst_xxx, mode_zpx},                            // 0xf4
-    {inst_sbc, mode_zpx},                            // 0xf5
-    {inst_inc, mode_zpx},                            // 0xf6
-    {inst_xxx, mode_xxx},                            // 0xf7
-    {inst_sed, mode_imp},                            // 0xf8
-    {inst_sbc, mode_absy},                            // 0xf9
-    {inst_xxx, mode_acc},                            // 0xfa
-    {inst_xxx, mode_xxx},                            // 0xfb
-    {inst_xxx, mode_xxx},                            // 0xfc
-    {inst_sbc, mode_absx},                            // 0xfd
-    {inst_inc, mode_absx},                            // 0xfe
-    {inst_xxx, mode_xxx}
+  {inst_beq, mode_rel},                            // 0xf0
+  {inst_sbc, mode_indy},                           // 0xf1
+  {inst_xxx, mode_xxx},                            // 0xf2
+  {inst_xxx, mode_xxx},                            // 0xf3
+  {inst_xxx, mode_zpx},                            // 0xf4
+  {inst_sbc, mode_zpx},                            // 0xf5
+  {inst_inc, mode_zpx},                            // 0xf6
+  {inst_xxx, mode_xxx},                            // 0xf7
+  {inst_sed, mode_imp},                            // 0xf8
+  {inst_sbc, mode_absy},                           // 0xf9
+  {inst_xxx, mode_acc},                            // 0xfa
+  {inst_xxx, mode_xxx},                            // 0xfb
+  {inst_xxx, mode_xxx},                            // 0xfc
+  {inst_sbc, mode_absx},                           // 0xfd
+  {inst_inc, mode_absx},                           // 0xfe
+  {inst_xxx, mode_xxx}                             // 0xff ?
 };
 
 
-class SIDTunesPlayer {
+class SIDTunesPlayer
+{
   public:
-    loopmode currentloopmode=MODE_SINGLE_TRACK;
-    uint16_t cycles,wval,pc;
-    long int buff,buffold,waitframe,wait,waitframeold,totalinframe;
-    uint8_t data_offset;
-    uint16_t init_addr,play_addr;
+
+    loopmode currentloopmode = MODE_SINGLE_TRACK;
+
+    sid_error error_type;
+
+    songstruct **listsongs = nullptr; // the internal playlist
+
+    MD5FileParser *MD5Parser = NULL; // for parsing the MD5 Database file
+    Sid_md5 md5; // for calculating the hash of SID Files on the filesystem
+
+    uint16_t currentsong;
+    uint16_t currentfile;
+    uint16_t getcurrentfile;
+    char     currentfilename[256];
+
     uint8_t subsongs;
     uint8_t startsong;
-    uint16_t currentsong, currentfile, getcurrentfile;
     uint8_t speed;
+
+    uint32_t default_song_duration = 180000;
+    uint32_t song_duration;
+    uint32_t delta_song_duration = 0;
+    uint32_t pause_duration = 0;
+    uint32_t int_speed = 100; // percent
+
+    bool playerrunning = false;
+    bool paused = false;
+
+    int numberOfSongs;
+    int ignoredSongs;
+    int volume;
+    //int reset;
+    size_t maxSongs = 0;
+
+    ~SIDTunesPlayer();
+    SIDTunesPlayer( size_t max_songs = 0 );
+
+    bool begin(int clock_pin,int data_pin, int latch );
+    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+
+    inline void setEventCallback(void (*fptr)(sidEvent event)) { eventCallback = fptr; }
+
+    bool setMaxSongs( size_t amount );
+    void setMD5Parser( MD5FileConfig *cfg );
+    void SetMaxVolume( uint8_t volume );
+    void setDefaultDuration( uint32_t duration );
+    void setSpeed(uint32_t speed );
+
+    bool playSidFile( songstruct *song );
+    bool playNext();
+    bool playPrev();
+    bool playNextSong();
+    bool playSongAtPosition( int position );
+    bool play();
+    bool getPlayerStatus();
+
+    void playSongNumber( int songnumber );
+    void playPrevSongInSid();
+    void playNextSongInSid();
+    void play(int duration);
+    void pausePlay();
+    void setLoopMode( loopmode mode );
+    void stopPlayer();
+    void stop();
+
+    int  addSong( fs::FS &fs,  const char * path );
+    int  addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false );
+    bool getInfoFromFile( fs::FS &fs, const char * path, songstruct * songinfo );
+    //void getSongslengthfromMd5(fs::FS &fs, const char * path);
+
+    uint32_t getElapseTime();
+    uint32_t getCurrentTrackDuration();
+    uint32_t getDefaultDuration();
+
+    char    *getName();
+    char    *getPublished();
+    char    *getAuthor();
+    char    *getFilename();
+    uint8_t *getSidType();
+
+    int     getPlaylistSize();
+    int     getPositionInPlaylist();
+    int     getNumberOfTunesInSid();
+    int     getCurrentTuneInSid();
+    int     getDefaultTuneInSid();
+
+    loopmode getLoopMode();
+    songstruct getSidFileInfo( int songnumber );
+
+  private:
+
+    void freeListsongsMem();
+    void initListsongsMem();
+    void kill();
+
+    static void SIDTUNESSerialPlayerTask(void * parameters);
+    static void loopPlayer(void *param);
+
+    void (*eventCallback)( sidEvent event ) = NULL;
+    void executeEventCallback(sidEvent event);
+
+
+    uint8_t getaddr( mode_enum mode );
+    uint8_t pop();
+
+    uint16_t pcinc();
+    uint16_t cpuParse();
+    uint16_t cpuJSR( uint16_t npc, uint8_t na );
+
+    void cpuReset();
+    void cpuResetTo( uint16_t npc, uint16_t na );
+    void setmem( uint16_t addr, uint8_t value );
+    void setaddr( mode_enum mode, uint8_t val );
+    void putaddr( mode_enum mode, uint8_t val );
+    void setflags( flag_enum flag, int cond );
+    void push( uint8_t val );
+    void getNextFrame( uint16_t npc, uint8_t na );
+    void branch( bool flag );
+
+    uint8_t  getmem( uint16_t addr );
+
+    long int buff;
+    long int buffold;
+    long int waitframe;
+    long int wait;
+    long int waitframeold;
+    long int totalinframe;
+
+    uint16_t init_addr;
+    uint16_t play_addr;
     uint16_t load_addr;
-    uint8_t *mem=NULL;
+    uint16_t cycles;
+    uint16_t wval;
+    uint16_t pc;
+    uint16_t plmo;
+
+    uint8_t a, x, y, p, s, bval; // wut ?
+    uint8_t data_offset;
+    uint8_t *mem = NULL;
+
     uint8_t sidtype[5];
     uint8_t published[32];
     uint8_t author[32];
     uint8_t name[32];
-    uint32_t default_song_duration=180000;
-    uint32_t song_duration;
-    uint32_t delta_song_duration=0;
-    uint32_t pause_duration=0;
-    uint32_t int_speed=100;
-    bool playerrunning=false;
-    bool stop_song=false;
-    bool is_error=false;
-    sid_error error_type;
+    int speedsong[32]; // TODO: actually use this
 
-    char currentfilename[256];
-    uint8_t a,x,y,p,s,bval;
-    bool frame;
-    int numberOfSongs;
-    int ignoredSongs;
     int nRefreshCIAbase; // what is it used for ??
-    //songstruct * listsongs[255];
-    char songstructCachePath[256] = {0};
-    songstruct **listsongs = nullptr;
-    size_t maxSongs = 0;
-    int volume;
-    int reset;
-    int speedsong[32];
-    uint16_t plmo;
 
-    ~SIDTunesPlayer() {
-      freeListsongsMem();
-      if( mem!=NULL ) free( mem );
-      if( MD5Parser != NULL ) delete( MD5Parser );
-      //TODO: free/delete more stuff
-    }
+    bool stop_song = false;
+    bool is_error = false;
+    bool frame;
 
-    SIDTunesPlayer( size_t max_songs = 0 ) {
-      #ifdef BOARD_HAS_PSRAM
-        psramInit();
-      #endif
-      if( max_songs == 0 ) {
-        if( psramInit() ) max_songs = MAX_LISTSONGS_PSRAM;
-        else              max_songs = MAX_LISTSONGS_NOPSRAM;
-      }
-      if( !setMaxSongs( max_songs ) ) {
-        log_e("Failed setting maxSongs to %d, the app will probably crash, try a lower value", max_songs);
-      } else {
-        log_w("Max songs in playlist: %d", maxSongs);
-      }
-      volume=15;
-      if(mem==NULL) {
-        log_d("We create the memory buffer for C64 memory");
-        log_d("Available heap:%d bytes (largest free block=%d bytes)\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
-        mem=(uint8_t*)sid_calloc(0x10000,1);
-        if(mem==NULL) {
-          log_e("Failed to allocate %d bytes for SID memory, the app WILL crash", 0x10000 );
-        }
-      }
-    }
-
-    void kill() {
-      if( SIDTUNESSerialPlayerTaskHandle   != NULL ) vTaskDelete( SIDTUNESSerialPlayerTaskHandle );
-      if( SIDTUNESSerialPlayerTaskLock     != NULL ) vTaskDelete( SIDTUNESSerialPlayerTaskLock );
-      if( SIDTUNESSerialSongPlayerTaskLock != NULL ) vTaskDelete( SIDTUNESSerialSongPlayerTaskLock );
-      if( SIDTUNESSerialLoopPlayerTask     != NULL ) vTaskDelete( SIDTUNESSerialLoopPlayerTask );
-    }
-
-    bool setMaxSongs( size_t amount ) {
-      freeListsongsMem();
-      maxSongs = amount;
-      initListsongsMem();
-      return listsongs != nullptr;
-    }
-
-    void freeListsongsMem() {
-      if( listsongs!=nullptr ) {
-        log_w("heap before free: %d", ESP.getFreeHeap() );
-        for (int i=0; i<maxSongs; i++) {
-          if( listsongs[i]!=nullptr  ) {
-            free(listsongs[i]);
-          }
-        }
-        free(listsongs);
-        listsongs = nullptr;
-        log_w("heap after free: %d", ESP.getFreeHeap() );
-      }
-      numberOfSongs=0;
-      ignoredSongs=0;
-      currentfile=0;
-      getcurrentfile=0;
-    }
-
-    void initListsongsMem() {
-      if( maxSongs == 0 ) {
-        log_e("Can't init empty playlist!!");
-        return;
-      }
-      log_w("heap before alloc: %d", ESP.getFreeHeap() );
-      listsongs = (songstruct**)sid_calloc( maxSongs, sizeof( songstruct* ) );
-      log_w("heap after alloc: %d", ESP.getFreeHeap() );
-    }
-
-    bool setSongstructCachePath( fs::FS &fs, const char* path ) {
-      if( !fs.exists( path ) ) return false;
-      memset( songstructCachePath, 0, sizeof(songstructCachePath) );
-      size_t bytes_span = sizeof(songstructCachePath)<=strlen(path)+1 ? sizeof(songstructCachePath) : strlen(path)+1;
-      memcpy( songstructCachePath, path, bytes_span );
-      log_w("Cache file path set to %s", songstructCachePath );
-      return true;
-    }
-
-
-    MD5FileParser *MD5Parser = NULL;
-
-    void setMD5Parser( MD5FileConfig *cfg )
-    {
-      MD5Parser = new MD5FileParser( cfg );
-    }
-
-
-    uint8_t getmem(uint16_t addr);
-    bool begin(int clock_pin,int data_pin, int latch );
-    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-    void setmem(uint16_t addr,uint8_t value);
-    void SetMaxVolume( uint8_t volume);
-    uint16_t pcinc();
-    uint32_t getElapseTime();
-    void setDefaultDuration(uint32_t duration);
-    uint32_t getCurrentTrackDuration();
-    uint32_t getDefaultDuration();
-    void setSpeed(uint32_t speed);
-
-    void cpuReset();
-    void cpuResetTo(uint16_t npc, uint16_t na);
-    uint8_t getaddr(mode_enum mode);
-    void setaddr(mode_enum mode,uint8_t val);
-    void putaddr(mode_enum mode,uint8_t val);
-    void setflags(flag_enum flag, int cond);
-    void push(uint8_t val);
-    uint8_t pop ();
-    void branch(bool flag);
-    uint16_t cpuParse();
-    uint16_t cpuJSR(uint16_t npc, uint8_t na);
-    void getNextFrame(uint16_t npc, uint8_t na);
-    bool playSidFile( songstruct *song );
-    static void SIDTUNESSerialPlayerTask(void * parameters);
-    static void loopPlayer(void *param);
-    void playSongNumber(int songnumber);
-    void playPrevSongInSid();
-    void playNextSongInSid();
-    void stopPlayer();
-    void stop();
-    int addSong(fs::FS &fs,  const char * path);
-    bool play();
-    void play(int duration);
-    bool playNext();
-    bool playPrev();
-    void pausePlay();
-    char * getName();
-    char * getPublished();
-    char * getAuthor();
-    char * getFilename();
-    int getPlaylistSize();
-    int getPositionInPlaylist();
-    int getNumberOfTunesInSid();
-    int getCurrentTuneInSid();
-    int getDefaultTuneInSid();
-    bool  playNextSong();
-    bool getPlayerStatus();
-    bool getInfoFromFile(fs::FS &fs, const char * path, songstruct * songinfo);
-    void setLoopMode(loopmode mode);
-    bool playSongAtPosition(int position);
-    loopmode getLoopMode();
-    void executeEventCallback(sidEvent event);
-    songstruct getSidFileInfo(int songnumber);
-    int addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ) ;
-    void getSongslengthfromMd5(fs::FS &fs, const char * path);
-    bool isSIDPlayable(fs::File &file );
-    inline void setEventCallback(void (*fptr)(sidEvent event)) {
-        eventCallback = fptr;
-    }
-  private:
-     void (*eventCallback)(sidEvent event)=NULL;
-    bool paused=false;
-    Sid_md5 md5;
 };
 
 //static MOS6501 sidFilePlayer;

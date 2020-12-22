@@ -181,13 +181,13 @@ struct _sid_control {
 
 struct songstruct {
     fs::FS   *fs;
-    char     filename[255];
+    char     filename[255]; // SD limitations=255, SPIFFS is limited to 32
     uint8_t  name[32];
     uint8_t  author[32];
     char     md5[32];
     uint8_t  published[32];
     uint8_t  subsongs,startsong;
-    uint32_t *durations;//[64];
+    uint32_t *durations; // up to 255 durations in a song
 };
 
 
