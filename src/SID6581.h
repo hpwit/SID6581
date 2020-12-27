@@ -206,7 +206,7 @@ static void songdebug( songstruct* song ) {
       size_t found = 0;
       for( int i=0; i<song->subsongs; i++ ) {
         if( song->durations[i]>0 ) {
-          Serial.printf("%zu ms ", song->durations[i]);
+          Serial.printf("%d ms ", int(song->durations[i]));
           found++;
         }
       }

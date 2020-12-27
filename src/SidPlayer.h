@@ -419,6 +419,7 @@ class SIDTunesPlayer
     uint32_t default_song_duration = 180000;
     uint32_t song_duration;
     uint32_t delta_song_duration = 0;
+    uint32_t start_time = 0;
     uint32_t pause_duration = 0;
     uint32_t int_speed = 100; // percent
 
