@@ -45,7 +45,7 @@ static String gnu_basename( String path ) {
   return base ? String( base+1) : path;
 }
 
-
+// MD5 file lookup methods
 enum MD5LookupMethod
 {
   MD5_RAW_READ,      // parse the whole md5 file if necessary, very slow
@@ -53,25 +53,34 @@ enum MD5LookupMethod
   MD5_RAINBOW_LOOKUP // SD REQUIRED: reverse md5 lookup files, useful for custom playlists
 };
 
+// HVSC download/unpack info
+struct MD5Archive
+{
+  const char* name; // example: "HVSC 74", can't be empty
+  const char* url;  // example: "https://phpsecu.re/HVSC-74.tar.gz", must be a URL to a .tar.gz file mirroring the contents of /C64Music folder in HVSC archive
+  const char* path; // example: "HVSC-74", unique name ([a-z0-9_-]+) for dotfile creation, used to mark the archive as successfully unpacked
+};
 
+// overall config holder
 struct MD5FileConfig
 {
-  fs::FS *fs;
-  const char* sidfolder;   // /sid
-  const char* md5folder;   // /md5
-  const char* md5filepath; // /md5/Songlengths.full.md5
-  const char* md5idxpath;  // /md5/Songlengths.full.md5.idx
-  const char* md5url;      // https://www.prg.dtu.dk/HVSC/C64Music/DOCUMENTS/Songlengths.md5
-  MD5LookupMethod lookupMethod;
-  void (*progressCb)( size_t progress, size_t total ); // callback function for init
+  fs::FS *fs;              // example: SD strongly recommended
+  MD5Archive* archive;     // HVSC Archive previously declared
+  const char* sidfolder;   // example: /sid
+  const char* md5folder;   // example: /md5
+  const char* md5filepath; // example: /md5/Songlengths.full.md5
+  const char* md5idxpath;  // example: /md5/Songlengths.full.md5.idx
+  const char* md5url;      // example: https://phpsecu.re/Songlengths.md5
+  MD5LookupMethod lookupMethod; // preferred lookup method although not exclusive
+  void (*progressCb)( size_t progress, size_t total ); // callback function for init, this may be handy since the operation can be very long
 };
 
 
 // items in the BufferedIndex storage
 struct FileIndex
 {
-  size_t  offset  = 0;
-  uint8_t pathlen = 0;
+  size_t  offset  = 0; // real offset in the MD5 File
+  uint8_t pathlen = 0; // bytes to seek() before the next item in the buffer
   char*   path    = nullptr;
 };
 
@@ -214,7 +223,7 @@ struct BufferedIndex
   {
     fs::File md5File = _fs->open( md5Path );
     if( ! md5File ) {
-      log_e("Could not open md5 file");
+      log_e("Fatal: could not open md5 file");
       return false;
     }
 
@@ -237,6 +246,8 @@ struct BufferedIndex
 
     if( !open( _fs, idxpath, false ) ) return false; // can't create index file
 
+    if( progressCb != nullptr ) progressCb( 0, md5Size );
+
     while( md5File.available() ) {
       size_t offset = md5File.position();
       buffer = md5File.readStringUntil('\n');
@@ -258,6 +269,7 @@ struct BufferedIndex
         if( progressCb != nullptr ) progressCb( offset, md5Size );
       }
     }
+    if( progressCb != nullptr ) progressCb( md5Size, md5Size );
     md5File.close();
     close();
 
@@ -273,12 +285,18 @@ struct BufferedIndex
   // build folders structure and store md5 hashes in different
   // files for faster lookup, only useful with custom-made
   // folders or non-HVSC SID collection
-  bool buildSIDHashIndex(  fs::FS *_fs, const char* md5Path, const char* idxpath, bool purge = false )
+  bool buildSIDHashIndex(  fs::FS *_fs, const char* md5Path, const char* folderpath, bool purge = false )
   {
+
+    char path[255] = {0};
+    sprintf( path, "%s/.HashIndexDone", folderpath );
+
+    if( _fs->exists( path ) ) purge = true;
+
     if( purge ) {
       // recursively delete files
       char folders[] = "0123456789abcdef";
-      char path[255] = {0};
+
       String fname = gnu_basename( md5Path );
       size_t pathlen = strlen( md5Path ) - fname.length();
       memcpy( path, md5Path, pathlen );
@@ -289,7 +307,7 @@ struct BufferedIndex
         sprintf( folder, "%s%s", path, sub );
         File root = _fs->open( folder );
         if(!root){
-          log_w("Failed to open %s directory\n", folder);
+          log_d("Skipping directory %s\n", folder);
           continue;
         }
         if(!root.isDirectory()){
@@ -320,6 +338,8 @@ struct BufferedIndex
     char md5hash[32];
     char fullidxpath[255];
 
+    if( progressCb != nullptr ) progressCb( 0, md5Size );
+
     while( md5File.available() ) {
       size_t offset = md5File.position();
       buffer = md5File.readStringUntil('\n');
@@ -334,9 +354,9 @@ struct BufferedIndex
         // e.g. hash abcdef01abcdef01abcdef01abcdef01 will be stored in "/md5/a/ab.md5idx"
         char c1[2] = { buffer.c_str()[0], '\0' };
         char c3[3] = { buffer.c_str()[0], buffer.c_str()[1], '\0' };
-        snprintf( fullidxpath, 255, "%s/%s", idxpath, c1 );
+        snprintf( fullidxpath, 255, "%s/%s", folderpath, c1 );
         if( !_fs->exists( fullidxpath ) ) _fs->mkdir( fullidxpath );
-        snprintf( fullidxpath, 255, "%s/%s/%s.md5idx", idxpath, c1, c3 );
+        snprintf( fullidxpath, 255, "%s/%s/%s.md5idx", folderpath, c1, c3 );
         fs::File md5GroupFile = _fs->open( fullidxpath, "a+" ); // append or create
         if(! md5GroupFile ) {
           log_e("Could not create/update group file %s, aborting", fullidxpath );
@@ -349,6 +369,12 @@ struct BufferedIndex
     }
     md5File.close();
     close();
+    fs::File indexDoneFile;
+    sprintf( path, "%s/.HashIndexDone", folderpath );
+    indexDoneFile = _fs->open( path, FILE_WRITE );
+    indexDoneFile.write( 64 );
+    indexDoneFile.close();
+    if( progressCb != nullptr ) progressCb( md5Size, md5Size );
     return true;
   }
 
@@ -367,14 +393,25 @@ struct MD5FileParser
       if( cfg->progressCb != nullptr ) {
         MD5Index.progressCb = cfg->progressCb;
       }
-      if( ! cfg->fs->exists( cfg->md5idxpath ) ) {
-        if( cfg->lookupMethod == MD5_INDEX_LOOKUP ) {
-          Serial.printf("Indexing MD5 file %s, this is a one-time operation\n", cfg->md5idxpath );
-          if( ! MD5Index.buildSIDPathIndex( cfg->fs, cfg->md5filepath, cfg->md5idxpath ) ) {
-            log_e("Fatal error, aborting");
-          }
+
+      if( !cfg->fs->exists( cfg->md5idxpath ) ) {
+        Serial.printf("Now indexing MD5 paths into %s file, this is a one-time operation\n", cfg->md5idxpath );
+        if( ! MD5Index.buildSIDPathIndex( cfg->fs, cfg->md5filepath, cfg->md5idxpath ) ) {
+          log_e("Fatal error, aborting");
+          // no need to go any further
+          return;
         }
       }
+
+      char path[255] = {0};
+      sprintf( path, "%s/.HashIndexDone", cfg->md5folder );
+
+      if( !cfg->fs->exists( path ) ) {
+        // hash index is missing, rebuild it
+        Serial.printf("Now spreading MD5 hashes across %s folder, this is a one-time operation\n", cfg->md5folder );
+        MD5Index.buildSIDHashIndex( cfg->fs, cfg->md5filepath, cfg->md5folder, true );
+      }
+
     }
 
 
@@ -406,7 +443,7 @@ struct MD5FileParser
     bool getDurationsFromSIDPath( songstruct *song )
     {
       if( ! cfg->fs->exists( cfg->md5idxpath ) ) {
-        log_e("Fatal error, aborting");
+        log_e("MD5 Index file is missing, aborting");
         return false;
       }
       bool found = false;
@@ -544,6 +581,7 @@ struct MD5FileParser
       while( md5File.available() ) {
         size_t offset = md5File.position();
         buffer = md5File.readStringUntil('\n');
+        if( buffer.c_str()[0] == '[' ) continue; // skip header
         if( buffer.c_str()[0] == ';' ) continue; // skip filename
         if( buffer.startsWith( song->md5 ) ) {
           found = true;
