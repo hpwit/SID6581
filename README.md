@@ -18,14 +18,19 @@ Please look at the schematics for the setup of the shift registers. [MOS 6581 do
 
 ## To start
 ```C
-// The sid object is automatically created.
-// if you have a external oscillator that gives you the 1Mhz clock you can use:
-begin(int clock_pin,int data_pin, int latch);
 
-// if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
-begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-// the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581
-// !!! NB: this pin number has to be >=16
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SID6581.h>
+
+
+  // if you have a external oscillator that gives you the 1Mhz clock you can use:
+  begin(int clock_pin,int data_pin, int latch);
+
+  // if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
+  begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+  // the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581
+  // !!! NB: this pin number has to be >=16
 
 ```
 # Playing SID tunes
@@ -35,27 +40,23 @@ You have to ways of playing sid tunes:
   1) Playing .sid files (PSID for the moment) the player is still under development so if you have issues do not hesistate to link the file which you have encountered issues with
   2) Playing registers dump
 
-## 1 - To play a SIDtunes from a .sid file the PSID version only for the moment (SIDTunesPlayer Class)
+## 1 - To play a SIDTune from a .sid file (PSID version only for the moment)
+
 You can play SIDTunes stored as .sid files ont the SPIFFS or SD card
 Below the list of command to control the player
 
-NB1: the sid tunes do not have an end hence they will play by default for 3 minutes. To stop a song you need to use stopPlayer()
+NB1: the sid tunes do not have an end hence they will play by default for 3 minutes. To stop a song you need to use stop()
 
 ```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-void addSong(fs::FS &fs,  const char * path); //add a song to the playlist
-void addSongsFromFolder( fs::FS &fs, const char* foldername, const char* filetype=".sid", bool recursive=false ); //Add all the song of a directory (can be recursive)
 bool play(); //play in loop the playlist
-bool playNext(); //play next song of the playlist
-bool playPrev(); //play prev song of the playlist
 bool playSongAtPosition(int position); //play song at a specific position of the playlist.
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
-void pausePlay(); //pause/play the player
-void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
+void togglePause(); //pause/play the player
+void setMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
 void stop(); //stop the current song restart with playNext() or playPrev()
-void stopPlayer(); //stop the player to restart use play()
 void setDefaultDuration(uint32_t duration); //will set the default duration of a track in milliseconds
 uint32_t getDefaultDuration();
 
@@ -65,14 +66,13 @@ loopmode getLoopMode(); // returns the current loop mode
 
 Possible `loopmode` values:
 
-  - `MODE_SINGLE_TRACK` : don't loop (default, will play next until end of sid and/or track)
-  - `MODE_SINGLE_SID` : play all songs available in one sid once
-  - `MODE_LOOP_SID` : loop all songs in on sid file
-  - `MODE_LOOP_PLAYLIST_SINGLE_TRACK` : loop all tracks available in one playlist playing the default tunes
-  - `MODE_LOOP_PLAYLIST_SINGLE_SID` : loop all tracks available in one playlist playing all the subtunes
+  - `SID_LOOP_ON`: loop inside a SID track, whatever the number of subsongs
+  - `SID_LOOP_RANDOM` : same as SID_LOOP_ON with random selection of the next song in the SID track
+  - `SID_LOOP_OFF` : ends after playing one song in the SID track
+
 
 ```C
-bool  playNextSong(); // will jump to the next song according to the chosen loopmode return true if a next song can ne played otherwise false
+
 bool getPlayerStatus(); //tells you if the runner is playing or not
 
 // Specific functions to have info on the current sid file
@@ -86,286 +86,123 @@ int getNumberOfTunesInSid(); //get the number of tunes in a sidfile
 int getCurrentTuneInSid(); // get the number of the current playing tunes in the sid (NB: the tunes are from 0->getNumberOfTunesInSid()-1
 int getDefaultTuneInSid(); //get the number of the default tunes.
 
-//Playlist information
-int getPositionInPlaylist();
-int getPlaylistSize();
-songstruct getSidFileInfo(int songnumber); // retrieve song information
+// SID Meta information
 
-struct songstruct{
-        fs::FS  *fs;
-        char filename[80];
-        uint8_t name[32];
-        uint8_t author[32];
-        char md5[32];
-        uint8_t published[32];
-        uint8_t subsongs,startsong;
-        uint32_t  durations[32];
+struct SID_Meta_t
+{
+
+  char     filename[255]; // This eliminates SPIFFS which is limited to 32 chars
+  uint8_t  name[32];      // Song title
+  uint8_t  author[32];    // Original author
+  char     md5[32];       // The MD5 hash according to HVSC MD5 File
+  uint8_t  published[32]; // This is NOT a copyright
+  uint8_t  subsongs;      // How many subsongs in this track (up to 255)
+  uint8_t  startsong;     // Which song should be played first
+  uint32_t *durations = nullptr; // up to 255 durations in a song
+
 };
 
 ```
 By default the song duration is 3 minutes and can be changed with `setDefaultDuration(uint32_t duration)`.
 You can retrieve the actual song durations from [https://www.hvsc.de](https://www.hvsc.de) archives. `DOCUMENTS/Songlengths.md5`.
-If you have that file you can match the actual song duration with `getSongslengthfromMd5(fs::FS &fs, const char * path)`.
+If you have that file you can match the actual song duration with `getDuration( SID_Meta_t *song )`.
 
 
 
 Example:
 
 ```C
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
-#include "SPIFFS.h"
-#include "FS.h"
-#include "SidPlayer.h"
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
-SIDTunesPlayer * player;
+
+static MD5Archive HSVC =
+{
+  "HVSC 74",    // just a fancy name
+  "HVSC-74"     // !! a dotfile name will be derivated from that
+};
+
+static MD5FileConfig MD5Config =
+{
+  &SD,                                   // The filesystem (reminder: SPIFFS is limited to 32 chars paths)
+  &HVSC,                                 // High Voltage SID Collection meta info
+  "/C64Music",                           // Folder where the HVSC unzipped contents can be found
+  "/md5",                                // Folder where MD5 pre-parsed files will be spreaded (SD only)
+  "/C64Music/DOCUMENTS/Songlengths.md5", // Where the MD5 file can be found (a custom/shorter file may be specified)
+  "/md5/Songlengths.md5.idx",            // Where the Songlengths file will be indexed (SD only)
+  MD5_INDEX_LOOKUP,                      // one of MD5_RAW_READ (SPIFFS), MD5_INDEX_LOOKUP (SD), or MD5_RAINBOW_LOOKUP (SD)
+  nullptr                                // callback function for progress when the cache init happens, can be overloaded later
+};
+
+
+SIDTunesPlayer *player;
 
 void setup() {
-    // put your setup code here, to run once:
-    Serial.begin(115200);
-    player=new SIDTunesPlayer();
-    player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
+  // put your setup code here, to run once:
+  Serial.begin(115200);
 
-    if(!SPIFFS.begin(true)){
-        Serial.println("SPIFFS Mount Failed");
-        return;
-    }
-    //the following line will go through all the files in the SPIFFS
-    //Do not forget to do "Tools-> ESP32 Scketch data upload"
+  player = new SIDTunesPlayer( &MD5Config );
 
+  player->begin( SID_CLOCK, SID_DATA, SID_LATCH );
 
-    player->addSongsFromFolder(SPIFFS,"/"); //add all the songs in the root directory
-    //player->addSongsFromFolder(SPIFFS,"/",".sid",true); //if you want to parse the directories recursively
-    player->getSongslengthfromMd5(SPIFFS,"/soundlength.md5"); //will match the track length
+  if(!SD.begin()){
+    Serial.println("SD Mount Failed");
+    return;
+  }
 
-    //list all information of the songs
-    for(int i=0;i<player->getPlaylistSize();i++)
-    {
-        songstruct song=player->getSidFileInfo(i);
-        Serial.printf("%s %s %s %s %s %d %d \n",song.filename,song.name,song.author,song.published,song.md5,song.subsongs,song.startsong);
-        for(int g=0;g<song.subsongs;g++)
-            {
-                Serial.printf("        song n:%d  duration:%d\n",g,song.durations[g]);
-            }
-
-
-    }
-
-
+  if( player->getInfoFromSIDFile( "/C64Music/MUSICIANS/H/Hubbard_Rob/Synth_Sample_III.sid" ) ) {
     player->play();
+  }
 
-    Serial.println();
-    Serial.printf("author:%s\n",player->getAuthor());
-    Serial.printf("published:%s\n",player->getPublished());
-    Serial.printf("name:%s\n",player->getName());
-    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
+  Serial.println();
+  Serial.printf("author:%s\n",player->getAuthor());
+  Serial.printf("published:%s\n",player->getPublished());
+  Serial.printf("name:%s\n",player->getName());
+  Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
 
-    delay(5000);
-    player->playNextSongInSid();
-    delay(5000);
-    player->playNext();
-    delay(5000);
-    Serial.println();
-    Serial.printf("author:%s\n",player->getAuthor());
-    Serial.printf("published:%s\n",player->getPublished());
-    Serial.printf("name:%s\n",player->getName());
-    Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
+  delay(5000);
+  player->playNextSongInSid();
+  delay(5000);
+  Serial.println();
+  Serial.printf("author:%s\n",player->getAuthor());
+  Serial.printf("published:%s\n",player->getPublished());
+  Serial.printf("name:%s\n",player->getName());
+  Serial.printf("nb tunes:%d default tunes:%d\n",player->getNumberOfTunesInSid(),player->getDefaultTuneInSid());
+
 }
 
 
 void loop() {
     delay(5000);
     Serial.println("Pause the song");
-    player->pausePlay();
+    player->togglePause();
     delay(4000);
     Serial.println("restart the song");
-    player->pausePlay();
+    player->togglePause();
     delay(3000);
     Serial.println("hi volume");
-    player->SetMaxVolume(15);
+    player->setMaxVolume(15);
     delay(3000);
     Serial.println("low volume ");
-    player->SetMaxVolume(3);
+    player->setMaxVolume(3);
     delay(3000);
     Serial.println("medium");
-    player->SetMaxVolume(7);
+    player->setMaxVolume(7);
     delay(6000);
-    Serial.println("next song");
-    player->playNext(); //sid.playPrev(); if you want to go backwards
-    delay(10000);
-    //player->stopPlayer(); //to stop the plater completely
-    //delay(10000);
-    //player->play(); //to restart it
-}
-```
-
-
-## 2 - To play a SIDtunes based on registry dump (SIDRegisterPlayer Class)
-You can play SIDTunes stored as register dump on the SPIFF or the SD card
-
-
-⚠️ playSIDTunes based on registry dump will only work with WROVER because I use PSRAM for the moment. all the rest will run with all esp32.
-
-Below the list of command to control the player
-
-```C
-begin(int clock_pin,int data_pin, int latch);
-begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-void addSong(fs::FS &fs,  const char * path); //add song to the playlist
-void play(); //play in loop the playlist
-void playNext(); //play next song of the playlist
-void playPrev(); //play prev song of the playlist
-void soundOff(); //cut off the sound
-void soundOn(); //trun the sound on
-void pausePlay(); //pause/play the player
-void SetMaxVolume( uint8_t volume); //each sid tunes usually set the volume this function will allow to scale the volume
-void stopPlayer(); //stop the player to restart use play()
-char * getFilename(); //return the filename of the current Sidfile playing
-int getPositionInPlaylist();
-int getPlaylistSize();
-void executeEventCallback(sidEvent event);
-inline void setEventCallback(void (*fptr)(sidEvent event))
-```
-
-### Example
-
-```C
-#include "SidPlayer.h"
-#define SID_CLOCK 25
-#define SID_DATA 33
-#define SID_LATCH 27
-#include "SPIFFS.h"
-
-SIDRegisterPlayer * player;
-
-void setup() {
-    // put your setup code here, to run once:
-    Serial.begin(115200);
-    player=new SIDRegisterPlayer();
-    player->begin(SID_CLOCK,SID_DATA,SID_LATCH);
-
-    if(!SPIFFS.begin(true)){
-        Serial.println("SPIFFS Mount Failed");
-        return;
-    }
-    //the following line will go through all the files in the SPIFFS
-    //Do not forget to do "Tools-> ESP32 Scketch data upload"
-    File root = SPIFFS.open("/");
-    if(!root){
-        Serial.println("- failed to open directory");
-        return;
-    }
-    if(!root.isDirectory()){
-        Serial.println(" - not a directory");
-        return;
-    }
-
-    File file = root.openNextFile();
-    while(file){
-        if(file.isDirectory()){
-
-        } else {
-            Serial.print(" add file  FILE: ");
-            Serial.print(file.name());
-            Serial.print("\tSIZE: ");
-            Serial.println(file.size());
-            player->addSong(SPIFFS,file.name()); //add all the files on the root of the spiff to the playlist
-        }
-        file = root.openNextFile();
-    }
-    player->SetMaxVolume(7); //value between 0 and 15
-    player->play(); //it will play all songs in loop
 }
 
-void loop() {
-    //if you jsut want to hear the songs just comment the lines below
-    delay(5000);
-    Serial.println("Pause the song");
-    player->pausePlay();
-    delay(4000);
-    Serial.println("restart the song");
-    player->pausePlay();
-    delay(3000);
-    Serial.println("hi volume");
-    player->SetMaxVolume(15);
-    delay(3000);
-    Serial.println("low volume ");
-    player->SetMaxVolume(3);
-    delay(3000);
-    Serial.println("medium");
-    player->SetMaxVolume(7);
-    delay(6000);
-    Serial.println("next song");
-    player->playNext(); //sid.playPrev(); if you want to go backwards
-    delay(10000);
-    //player->stopPlayer(); //to stop the plater completely
-    //delay(10000);
-    //player->play(); //to restart it
-}
 ```
 
-PS: to transform the .sid into register commands
-
-1) I use the fantastic program of Ken Händel
-
-  - [https://haendel.ddns.net/~ken/#_latest_beta_version](https://haendel.ddns.net/~ken/#_latest_beta_version)
-
-```
-java -jar jsidplay2_console-4.1.jar --audio LIVE_SID_REG --recordingFilename export_file sid_file
-```
-
-ⓘ use SID_REG instead of LIVE_SID_REG to keep you latptop quiet
-
-2) I use the program traduct_2.c
-
-To compile it for your platform:
-
-```
->gcc traduct_2.c -o traduct
-```
-
-Usage:
-
-```
-./traduct export_file > final_file
-
-```
-
-ⓘ Put the final_file on a SDCard or SPIFFS
-
-### Send register data via serial
-You can send via serial the registers commands. Look at the example sid_serial.ino
-
-To launch the serial from your computer, first compile the program:
-
-```
-> gcc Send_sid_via_serial.c -o sendserial
-```
-
-Usage:
-
-```
-./sendserial export_file usbport
-```
-
-    * export_file: the result of the first command above "java -jar jsidplay2 ....."
-    * usbport: same name as the usb port in you arduino interface
-
-Example:
-
-```
-./sendserial zibehurling-01.csv /dev/cu.SLAB_USBtoUART15
-```
-
-See the zibehurling-01.csv file in the `Examples` folder
-
-  - ⚠️ The serial console of the Arduino IDE will need to be closed to prevent any conflict with the USB port
-  - ⚠️ Restart the esp32 for each song
-  - ⚠️ Still have to cope with the fact that sometimes the transmission and the buffering isn't always perfect
 
 
-## 3 - callback events of the players
+## 2 - callback events of the players
 
 Both players can fire custom events for better control:
 
@@ -381,17 +218,20 @@ possible values of the event
   - `SID_PAUSE_PLAY` :pause track
   - `SID_RESUME_PLAY` : resume track
   - `SID_END_TRACK` : end of a track
-  -`SID_STOP_TRACK`: stop the current trak
+  - `SID_STOP_TRACK`: stop the current trak
 
 Example:
 
 ```C
-#include "SidPlayer.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
-#include "SPIFFS.h"
-#include "SD.h"
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 SIDRegisterPlayer * player;
 
@@ -600,10 +440,15 @@ This function will reset all the SID chips
 Example
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void setup() {
     Serial.begin(115200);
@@ -635,7 +480,7 @@ void loop() {
 ```
 
 
-## 2 - Read the regitsters
+## 2 - Read the registers
 
 Getters to read the value of the registers
 
@@ -747,10 +592,15 @@ All these commands will play a note on a specific voice for a certain duration:
 Example:
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void setup() {
     // initialize serial:
@@ -769,10 +619,15 @@ void loop() {
 You can play several voices at the same time
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void setup() {
     // initialize serial:
@@ -799,10 +654,15 @@ void loop() {
 ⚠️ If the duration is equal to 0, then the sound will not stop until you call the function stopNote.
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void setup() {
     // initialize serial:
@@ -842,10 +702,15 @@ Possible values:
 Example:
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void playtunes() {
     for(int i=0;i<3;i++) {
@@ -899,10 +764,15 @@ Possible values:
 Example:
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void playtunes() {
     for(int i=0;i<3;i++) {
@@ -961,10 +831,15 @@ class new_instrument : public sid_instrument {
 1)  Simple instrument
 
  ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void playtunes() {
     for(int i=0;i<3;i++) {
@@ -1005,10 +880,15 @@ void loop() {
 2) Slightly more complicated use case:
 
 ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void playtunes() {
     for(int i=0;i<3;i++) {
@@ -1061,10 +941,15 @@ void loop() {
  Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
 
  ```C
-#include "SID6581.h"
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
+#define SID_PLAYER
+#define SID_INSTRUMENTS
+#include <SD.h>
+#include <FS.h>
+#include <SID6581.h>
 
 void playtunes() {
     for(int i=0;i<3;i++) {
@@ -1166,7 +1051,7 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 # Credits & Thanks
 
-- [Tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
+- [tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
     Please check his repo where he's using this library to implement not only a full player but also a [SID vizualizer](https://github.com/tobozo/ESP32-SIDView).
 
 - [Ken Händel](https://haendel.ddns.net/~ken/#_latest_beta_version) for his advices and his tools

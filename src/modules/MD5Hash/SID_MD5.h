@@ -28,20 +28,15 @@
  *
 \*/
 
-#ifndef Sid_md5_hpp
-#define Sid_md5_hpp
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-*/
-#include "FS.h"
+#ifndef _SID_MD5_H_
+#define _SID_MD5_H_
 
+#include <FS.h>
 #include "mbedtls/md5.h"
 
 
-class Sid_md5 {
+class Sid_md5
+{
 
   public:
 
@@ -93,4 +88,5 @@ class Sid_md5 {
     }
 
 };
-#endif /* Sid_md5_hpp */
+
+#endif
