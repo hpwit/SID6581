@@ -19,20 +19,16 @@ Please look at the schematics for the setup of the shift registers. [MOS 6581 do
 ## To start
 ```C
 
-#define SID_PLAYER
-#define SID_INSTRUMENTS
-#include <SID6581.h>
+// if you have a external oscillator that gives you the 1Mhz clock you can use:
+begin(int clock_pin,int data_pin, int latch);
 
-
-  // if you have a external oscillator that gives you the 1Mhz clock you can use:
-  begin(int clock_pin,int data_pin, int latch);
-
-  // if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
-  begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-  // the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581
-  // !!! NB: this pin number has to be >=16
+// if you do not have an external oscillator the esp32 can create the 1Mhz signal uisng i2s using this
+begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+// the sid_clock_pin will need to be plugged to the 02 pin or clock pin of the SID 6581
+// !!! NB: this pin number has to be >=16
 
 ```
+
 # Playing SID tunes
 
 You have to ways of playing sid tunes:
@@ -113,13 +109,15 @@ Example:
 
 ```C
 
+#include <FS.h>
+#include <SD.h>
+
 #define SID_CLOCK 25
 #define SID_DATA 33
 #define SID_LATCH 27
 #define SID_PLAYER
 #define SID_INSTRUMENTS
-#include <SD.h>
-#include <FS.h>
+
 #include <SID6581.h>
 
 
@@ -157,9 +155,12 @@ void setup() {
     return;
   }
 
-  if( player->getInfoFromSIDFile( "/C64Music/MUSICIANS/H/Hubbard_Rob/Synth_Sample_III.sid" ) ) {
-    player->play();
+  if( !player->getInfoFromSIDFile( "/C64Music/MUSICIANS/H/Hubbard_Rob/Synth_Sample_III.sid" ) ) {
+    Serial.println("SID File is not readable!");
+    while(1);
   }
+
+  player->play();
 
   Serial.println();
   Serial.printf("author:%s\n",player->getAuthor());
