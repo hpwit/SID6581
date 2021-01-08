@@ -76,10 +76,10 @@ static void songdebug( SID_Meta_t* SIDMeta )
         Serial.print("[unpopulated durations]");
       }
     } else {
-      Serial.print("[Error: SID has no durations]");
+      Serial.print("[no durations]");
     }
   } else {
-    Serial.print("[Error: SID has NO subsongs]");
+    Serial.print("[no subsongs]");
   }
   Serial.println();
 }

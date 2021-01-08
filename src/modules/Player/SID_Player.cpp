@@ -197,7 +197,7 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
   }
 
   if( songinfo == nullptr ) {
-    log_w("[%d] Allocating %d bytes for songinfo", ESP.getFreeHeap(), sizeof(SID_Meta_t) );
+    log_d("[%d] Allocating %d bytes for songinfo", ESP.getFreeHeap(), sizeof(SID_Meta_t) );
     songinfo = (SID_Meta_t*)sid_calloc(1, sizeof(SID_Meta_t) );
   } else {
     if( songinfo->durations != nullptr ) {
@@ -279,7 +279,7 @@ bool SIDTunesPlayer::playSidFile()
     return false;
   }
 
-  log_i("playing file:%s\n", song->filename );
+  log_d("playing file:%s\n", currenttrack->filename );
 
   if(mem == NULL) {
     log_w("[%d] allocating %d bytes\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
@@ -390,7 +390,7 @@ bool SIDTunesPlayer::playSidFile()
   #ifdef _SID_HVSC_FILE_INDEXER_H_
   if( MD5Parser != NULL ) {
     //if( currenttrack->durations == nullptr ) {
-      log_w("[%d] Fetching durations", ESP.getFreeHeap() );
+      log_d("[%d] Fetching durations", ESP.getFreeHeap() );
       if( !MD5Parser->getDuration( currenttrack ) ) {
         log_e("Can't get duration for this song (md5:%s):-(", currenttrack->md5 );
         currenttrack->durations[0] = 0;
@@ -399,7 +399,7 @@ bool SIDTunesPlayer::playSidFile()
     //  log_w("[%d] Durations don't need parsing", ESP.getFreeHeap() );
     //}
   } else {
-    log_w("[%d] No MD5 Parser", ESP.getFreeHeap() );
+    log_d("[%d] No MD5 Parser", ESP.getFreeHeap() );
   }
   #endif
 
@@ -600,7 +600,7 @@ void SIDTunesPlayer::SIDTunePlayerTask(void * parameters)
 bool SIDTunesPlayer::playSID()
 {
   if( xPlayerLoopTaskHandle != NULL ) {
-    log_w("player loop task already running");
+    log_d("player loop task already running");
     vTaskDelete( xPlayerLoopTaskHandle );
     playerrunning = false;
   }
@@ -619,7 +619,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
   SIDTunesPlayer *cpu = (SIDTunesPlayer *)param;
 
   if( !cpu->playSidFile() ) {
-    log_w("playSidFile failed (asked #%d out of %d subsongs)", cpu->currentsong, cpu->subsongs );
+    log_e("playSidFile failed (asked #%d out of %d subsongs)", cpu->currentsong, cpu->subsongs );
     playerloop = false;
   }
 
@@ -637,7 +637,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
         switch( cpu->currentloopmode ) {
           case SID_LOOP_ON:
             if( ! cpu->playNextSongInSid() ) {
-              log_w("playNextSongInSid failed (asked #%d out of %d subsongs)", cpu->currentsong+1, cpu->subsongs );
+              log_e("playNextSongInSid failed (asked #%d out of %d subsongs)", cpu->currentsong+1, cpu->subsongs );
               playerloop = false;
             }
           break;
@@ -647,7 +647,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
             // TODO: avoid playing the same song twice
             cpu->stop();
             if( !cpu->playSongNumber( randomSongNumber ) ) {
-              log_w("Random failed (diced %d out of %d subsongs)", randomSongNumber, cpu->subsongs );
+              log_e("Random failed (diced %d out of %d subsongs)", randomSongNumber, cpu->subsongs );
               playerloop = false;
             }
           }
@@ -657,7 +657,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
               playerloop = false;
             } else {
               if( ! cpu->playNextSongInSid() ) {
-                log_w("playNextSongInSid failed (asked #%d out of %d subsongs)", cpu->currentsong+1, cpu->subsongs );
+                log_e("playNextSongInSid failed (asked #%d out of %d subsongs)", cpu->currentsong+1, cpu->subsongs );
                 playerloop = false;
               }
             }
@@ -665,7 +665,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
         }
       break;
       case SID_ONE_SONG:
-        log_w("loop mode = SID_ONE_SONG, stopping");
+        log_d("loop mode = SID_ONE_SONG, stopping");
         playerloop = false;
       break;
     }
@@ -679,7 +679,7 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
   cpu->stop();
   cpu->playerrunning = false;
   cpu->fireEvent( cpu, SID_END_PLAY );
-  log_e("Leaving SIDLoopPlayerTask");
+  log_d("Leaving SIDLoopPlayerTask");
   xPlayerLoopTaskHandle = NULL;
   vTaskDelete( NULL );
 

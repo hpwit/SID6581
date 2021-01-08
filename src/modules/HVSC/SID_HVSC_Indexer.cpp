@@ -93,11 +93,11 @@ void BufferedIndex::close()
     indexFile.close();
   }
   if( outBuffer != nullptr ) {
-    log_w("[%d] Clearing outBuffer", ESP.getFreeHeap() );
+    log_d("[%d] Clearing outBuffer", ESP.getFreeHeap() );
     free( outBuffer );
     outBuffer = nullptr;
   }
-  log_w("[%d] BufferedIndexWriter closed!", ESP.getFreeHeap() );
+  log_d("[%d] BufferedIndexWriter closed!", ESP.getFreeHeap() );
 }
 
 
@@ -139,14 +139,14 @@ void BufferedIndex::writeIndexBuffer()
     log_e("No buffer to write to, call 'open()' first");
     return;
   }
-  log_w("[%d] Writing %d bytes from buffer", ESP.getFreeHeap(), bufferPos );
+  log_d("[%d] Writing %d bytes from buffer", ESP.getFreeHeap(), bufferPos );
   indexFile.write( (uint8_t*)outBuffer, bufferPos );
   memset( outBuffer, 0, outBufferSize );
   bufferPos = 0;
 }
 
 
-void debugItem()
+void BufferedIndex::debugItem()
 {
   log_d("[Heap:%6d][Buff pos:%d][Offset: %d][objsize:%3d][pathlen:%03d] %s",
     ESP.getFreeHeap(),
@@ -237,7 +237,7 @@ bool BufferedIndex::buildSIDPathIndex( const char* md5Path, const char* idxpath 
   free( tmpName    );
   free( bufferstr  );
 
-  log_w("[%d] Total folders: %d", ESP.getFreeHeap(), foldersCount );
+  log_d("[%d] Total folders: %d", ESP.getFreeHeap(), foldersCount );
   return true;
 }
 
@@ -454,7 +454,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
       int subsongs = getDurationsFromMd5String( md5line, song );
       if( subsongs == song->subsongs ) {
         for( int i=0; i<subsongs; i++ ) {
-          log_w("Subsong #%d: %d millis", i, int( song->durations[i] ) );
+          log_d("Subsong #%d: %d millis", i, int( song->durations[i] ) );
         }
       } else {
         log_e("Subsongs count mismatch %d vs %d", subsongs, song->subsongs );
