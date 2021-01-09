@@ -11,9 +11,9 @@ the song lengths and a MD5 digest for every SID file in the collection.
 The purpose of this class is to provide three means of searching in this file.
 
 
-1) `MD5_RAW_READ` : Path-based lookups (by building a folder=>offset database)
+1) `MD5_INDEX_LOOKUP` : Path-based lookups (by building a folder=>offset database)
 2) `MD5_RAINBOW_LOOKUP` : Hash-based lookups (by spreading MD5 hashes into folder/files)
-3) `MD5_INDEX_LOOKUP` : Raw-based loopup (by reading the file until a match is found)
+3) `MD5_RAW_READ` : Raw-based loopup (by reading the file until a match is found)
 
 Raw-based lookup is the slowest of all but requires no index building, use only on reduced
 version of the MD5 File, may be useful for small SPIFF based appliances.

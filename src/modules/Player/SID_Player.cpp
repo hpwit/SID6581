@@ -72,7 +72,7 @@ SIDTunesPlayer::SIDTunesPlayer( fs::FS *_fs ) : fs(_fs)
   volume = 15;
   if( mem == NULL ) {
     log_d("We create the memory buffer for C64 memory");
-    log_d("[%d] largest free block=%d bytes)\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+    log_d("[%d] largest free block=%d bytes)", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
     mem = (uint8_t*)sid_calloc( 0x10000, 1 );
     if( mem == NULL ) {
       log_e("Failed to allocate %d bytes for SID memory, the app WILL crash", 0x10000 );
@@ -187,12 +187,12 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
 {
   uint8_t stype[5];
   if( !fs->exists( path ) ) {
-    log_e("File %s does not exist\n", path);
+    log_e("File %s does not exist", path);
     return false;
   }
   File file = fs->open( path );
   if(!file) {
-    log_e("Unable to open %s\n", path);
+    log_e("Unable to open %s", path);
     return false;
   }
 
@@ -249,12 +249,13 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
     );
   }
 
-  snprintf( songinfo->md5, 33, "%s", Sid_md5::calcMd5( file ) );
-
-  file.close();
 
   #ifdef _SID_HVSC_FILE_INDEXER_H_
   if( MD5Parser != NULL ) {
+
+    snprintf( songinfo->md5, 33, "%s", Sid_md5::calcMd5( file ) );
+    file.close();
+
     if( !MD5Parser->getDurationsFromSIDPath( songinfo ) ) {
       if( MD5Parser->getDurationsFastFromMD5Hash( songinfo ) ) {
         log_d("[%d] Hash lookup success after SID Path lookup failed for '%s' ", ESP.getFreeHeap(), songinfo->name );
@@ -264,7 +265,13 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
     } else {
       log_d("[%d] SID Path lookup success for song '%s' ", ESP.getFreeHeap(), songinfo->name );
     }
+  } else {
+    log_d("[%d] NOT Collecting/Checking md5" );
+    snprintf( songinfo->md5, 33, "%s", "00000000000000000000000000000000" );
   }
+  #else
+    snprintf( songinfo->md5, 33, "%s", Sid_md5::calcMd5( file ) );
+    file.close();
   #endif
   //if( playable ) songdebug( songinfo );
   return playable;
@@ -279,13 +286,13 @@ bool SIDTunesPlayer::playSidFile()
     return false;
   }
 
-  log_d("playing file:%s\n", currenttrack->filename );
+  log_d("playing file:%s", currenttrack->filename );
 
   if(mem == NULL) {
-    log_w("[%d] allocating %d bytes\n", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
+    log_w("[%d] allocating %d bytes", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_32BIT));
     mem = (uint8_t*)sid_calloc( 0x10000, 1 );
     if(mem == NULL) {
-      log_e("not enough memory\n");
+      log_e("not enough memory");
       is_error = true;
       //error_type = NOT_ENOUGH_MEMORY;
       return false;
@@ -393,6 +400,8 @@ bool SIDTunesPlayer::playSidFile()
       log_d("[%d] Fetching durations", ESP.getFreeHeap() );
       if( !MD5Parser->getDuration( currenttrack ) ) {
         log_e("Can't get duration for this song (md5:%s):-(", currenttrack->md5 );
+        free( currenttrack->durations );
+        currenttrack->durations = (uint32_t*)sid_calloc(1, sizeof(uint32_t));
         currenttrack->durations[0] = 0;
       }
     //} else {
@@ -414,7 +423,7 @@ bool SIDTunesPlayer::playNextSongInSid()
 {
   stop();
   currentsong = int(currentsong+1)%subsongs;
-  return playSongNumber(currentsong);
+  return playSongNumber( currentsong );
 }
 
 
@@ -506,7 +515,7 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
     log_e("Wrong song number");
     return false;
   }
-  log_i( "playing song n:%d/%d\n", (songnumber+1), subsongs );
+  log_i( "playing song n:%d/%d", (songnumber+1), subsongs );
 
   cpuReset();
 
@@ -523,7 +532,7 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
   }
 
   //sid.soundOn();
-  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDTunePlayerTask, "SIDTunePlayerTask",  4096,  this, SID_CPU_TASK_PRIORITY, &xPlayerTaskHandle, SID_CPU_CORE);
+  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDTunePlayerTask, "SIDTunePlayerTask",  1024,  this, SID_CPU_TASK_PRIORITY, &xPlayerTaskHandle, SID_CPU_CORE);
   delay(200);
 
   if(currenttrack->durations[currentsong]==0) {
@@ -604,7 +613,13 @@ bool SIDTunesPlayer::playSID()
     vTaskDelete( xPlayerLoopTaskHandle );
     playerrunning = false;
   }
-  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDLoopPlayerTask, "SIDLoopPlayerTask", 4096, this, 1, & xPlayerLoopTaskHandle, SID_PLAYER_CORE);
+
+  if( !playSidFile() ) {
+    log_e("playSID failed (asked #%d out of %d subsongs)", currentsong, subsongs );
+    return false;
+  }
+
+  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDLoopPlayerTask, "SIDLoopPlayerTask", 2048, this, 1, & xPlayerLoopTaskHandle, SID_PLAYER_CORE);
   vTaskDelay(200);
   playerrunning = true;
   return true;
@@ -618,10 +633,12 @@ void SIDTunesPlayer::SIDLoopPlayerTask(void *param)
   bool playerloop = true;
   SIDTunesPlayer *cpu = (SIDTunesPlayer *)param;
 
+  /*
+  // moved outside the task to prevent concurrent SPI access from different cores
   if( !cpu->playSidFile() ) {
     log_e("playSidFile failed (asked #%d out of %d subsongs)", cpu->currentsong, cpu->subsongs );
     playerloop = false;
-  }
+  }*/
 
   cpu->fireEvent( cpu, SID_START_PLAY );
 

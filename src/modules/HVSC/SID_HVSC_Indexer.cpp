@@ -57,17 +57,17 @@ bool BufferedIndex::open( const char *name, bool readonly )
       log_e("Unable to access file %s", name );
       return false;
     }
-    log_d("Opened %s as readonly", name );
+    log_v("Opened %s as readonly", name );
   } else {
     indexFile = fs->open( name, FILE_WRITE );
     if(! indexFile ) {
       log_e("Unable to create file %s", name );
       return false;
     }
-    log_d("Opened %s as r/w", name );
+    log_v("Opened %s as r/w", name );
   }
   if( IndexItem == nullptr ) {
-    log_d("Allocating item");
+    log_v("Allocating item");
     IndexItem = (fileIndex_t*)sid_calloc( 1, sizeof( IndexItem )+1 );
     if( IndexItem == NULL ) {
       log_e("Failed to allocate %d bytes", sizeof( IndexItem )+1 );
@@ -93,7 +93,7 @@ void BufferedIndex::close()
     indexFile.close();
   }
   if( outBuffer != nullptr ) {
-    log_d("[%d] Clearing outBuffer", ESP.getFreeHeap() );
+    log_v("[%d] Clearing outBuffer", ESP.getFreeHeap() );
     free( outBuffer );
     outBuffer = nullptr;
   }
@@ -113,7 +113,7 @@ void BufferedIndex::addItem( size_t offset, const char *folderName )
 void BufferedIndex::write()
 {
   if( outBuffer == nullptr ) {
-    log_d("Allocating buffer");
+    log_v("Allocating buffer");
     outBuffer = (char*)sid_calloc( outBufferSize, sizeof(char) );
     if( outBuffer == NULL ) {
       log_e("Failed to allocate %d bytes", outBufferSize );
@@ -421,7 +421,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
   int64_t respoffset =  MD5Index->find( cfg->md5idxpath, MD5FolderPath);
 
   if( respoffset > -1 ) {
-    log_d("Offset for %s is %d", MD5FolderPath, int(respoffset) );
+    log_v("Offset for %s is %d", MD5FolderPath, int(respoffset) );
     fs::File MD5File = cfg->fs->open( cfg->md5filepath );
     MD5File.seek( respoffset );
     String fname, md5line;
@@ -443,7 +443,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
         found = true;
         break;
       } else {
-        log_d("[SKIPPING] [%s]!=[%s], md5needle=%s, md5line=%s", fname.c_str(), sidneedle.c_str(), md5needle.c_str(), md5line.c_str() );
+        log_v("[SKIPPING] [%s]!=[%s], md5needle=%s, md5line=%s", fname.c_str(), sidneedle.c_str(), md5needle.c_str(), md5line.c_str() );
       }
     }
     MD5File.close();
@@ -465,9 +465,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
   } else {
     log_w("Offset not found for %s", MD5FolderPath );
   }
-  __attribute__((unused))
-  auto duration = int( millis()-start_seek );
-  log_d("Seeking md5 hash info took %d millis for %s and %s", duration, song->filename, found ? "succeeded" : "failed" );
+  log_d("Seeking md5 hash info took %d millis for %s and %s", int( millis()-start_seek ), song->filename, found ? "succeeded" : "failed" );
   return found;
 }
 
@@ -562,7 +560,7 @@ bool MD5FileParser::getDurationsFromMD5Hash( SID_Meta_t *song )
 
 int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
 {
-  log_d("Parsing md5 string: %s", md5line.c_str() );
+  log_v("Parsing md5 string: %s", md5line.c_str() );
   if( !md5line.endsWith(" ") ) md5line += " "; // append a space as a terminator
   const char* md5linecstr = md5line.c_str();
   size_t lineLen = strlen( md5linecstr );
@@ -576,7 +574,7 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
     log_e("[ERROR] bad md5 line: %s", md5linecstr );
     return -1;
   }
-  log_d("Scanning string (%d bytes)", lineLen);
+  log_v("Scanning string (%d bytes)", lineLen);
 
   char parsedTime[11]     = {0}; // for storing mm.ss.SSS
   uint8_t parsedTimeCount = 0;   // how many durations/subsongs
@@ -592,7 +590,7 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
           int mm,ss,SSS; // for storing the extracted time values
           sscanf( parsedTime, "%d:%d.%d", &mm, &ss, &SSS );
           song->durations[parsedTimeCount] = (mm*60*1000)+(ss*1000)+SSS;
-          log_d("Subsong #%d: %s (mm:ss.SSS) / %d (ms)\n", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );
+          log_d("Subsong #%d: %s (mm:ss.SSS) / %d (ms)", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );
           parsedTimeCount++;
         }
         parsedIndex = 0;

@@ -49,7 +49,7 @@
 #endif
 
 #ifndef SID_CPU_TASK_PRIORITY
-  #define SID_CPU_TASK_PRIORITY 8
+  #define SID_CPU_TASK_PRIORITY 2
 #endif
 
 
@@ -133,8 +133,8 @@ class SIDTunesPlayer : public MOS_CPU_Controls
     bool playSongNumber( int songnumber ); // play a subsong from the current SID track slot
     bool playPrevSongInSid();
     bool playNextSongInSid();
-    bool isRunning(); // player looptask
-    bool isPlaying(); // sid registers looptask
+    bool isRunning(); // player looptask (does NOT imply a track is being played)
+    bool isPlaying(); // sid registers looptask (returns true if a track is being played)
 
     bool getInfoFromSIDFile( const char * path );
     bool getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo );
