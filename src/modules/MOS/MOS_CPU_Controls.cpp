@@ -764,7 +764,7 @@ void MOS_CPU_Controls::getNextFrame( uint16_t npc, uint8_t na )
     frame=true;
     //waitframe=0;
     int nRefreshCIA = (int)( ((19954 * (getmem(0xdc04) | (getmem(0xdc05) << 8)) / 0x4c00) + (getmem(0xdc04) | (getmem(0xdc05) << 8))  )  /2 )    ;
-    if ((nRefreshCIA == 0) or speed==0) nRefreshCIA = 48000;
+    if ((nRefreshCIA == 0) || speed==0) nRefreshCIA = 48000;
     // printf("tota l:%d\n",nRefreshCIA);
     waitframe=nRefreshCIA;
   }

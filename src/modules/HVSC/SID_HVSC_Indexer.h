@@ -87,6 +87,19 @@ typedef struct
 } fileIndex_t;
 
 
+#ifdef BOARD_HAS_PSRAM
+
+typedef struct
+{
+  const char*    name = nullptr;
+  size_t         size = 0;
+  uint8_t*       data = nullptr;
+
+} RamDiskItem;
+
+#endif
+
+
 // creates and stores an index of "folder name" => position
 // in the md5file for faster "search by path" lookups
 // only useful with HVSC folder structures
@@ -118,12 +131,17 @@ class BufferedIndex
       return base ? String( base+1) : path;
     }
 
+   #ifdef BOARD_HAS_PSRAM
+      RamDiskItem ramDiskFile;
+      bool openRamDiskFile( const char* name );
+   #endif
+
   private:
 
     fs::FS      *fs;
+    fs::File    indexFile;
     char        *outBuffer = nullptr;
     fileIndex_t *IndexItem = nullptr;
-    fs::File    indexFile;
     size_t      outBufferSize = 4096;
     size_t      bufferPos = 0;
 
@@ -131,6 +149,7 @@ class BufferedIndex
     void write();
     void writeIndexBuffer();
     void debugItem();
+
 
 
 };

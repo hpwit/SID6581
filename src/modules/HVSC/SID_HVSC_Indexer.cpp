@@ -41,6 +41,7 @@
 #include "SID_HVSC_Indexer.h"
 
 
+
 BufferedIndex::BufferedIndex( fs::FS *_fs ) : fs(_fs)
 {
   // constructor
@@ -48,11 +49,13 @@ BufferedIndex::BufferedIndex( fs::FS *_fs ) : fs(_fs)
 
 
 
-
 bool BufferedIndex::open( const char *name, bool readonly )
 {
+  log_d("Opening %s as %s from core %d", name, readonly ? "ro" : "rw", xPortGetCoreID() );
+
   if( readonly ) {
     indexFile = fs->open( name );
+    //indexFile = &blah;
     if(! indexFile ) {
       log_e("Unable to access file %s", name );
       return false;
@@ -60,6 +63,7 @@ bool BufferedIndex::open( const char *name, bool readonly )
     log_v("Opened %s as readonly", name );
   } else {
     indexFile = fs->open( name, FILE_WRITE );
+    //indexFile = &blah;
     if(! indexFile ) {
       log_e("Unable to create file %s", name );
       return false;
@@ -97,7 +101,7 @@ void BufferedIndex::close()
     free( outBuffer );
     outBuffer = nullptr;
   }
-  log_d("[%d] BufferedIndexWriter closed!", ESP.getFreeHeap() );
+  log_d("[%d] BufferedIndex closed!", ESP.getFreeHeap() );
 }
 
 
@@ -159,21 +163,91 @@ void BufferedIndex::debugItem()
 }
 
 
-int64_t BufferedIndex::find( const char* haystack, const char* needle )
-{
-  if( !open( haystack ) ) return -1;
-  while( indexFile.available() ) {
-    indexFile.readBytes( (char*)&IndexItem->offset, sizeof( size_t ) );
-    IndexItem->pathlen = indexFile.read();
-    indexFile.readBytes( (char*)IndexItem->path, IndexItem->pathlen );
-    IndexItem->path[IndexItem->pathlen] = '\0';
-    if( strcmp( needle, IndexItem->path ) == 0 ) {
-      return IndexItem->offset;
-    } // else debugItem();
+#ifdef BOARD_HAS_PSRAM
+
+  bool BufferedIndex::openRamDiskFile( const char* name )
+  {
+    if( ramDiskFile.size > 0 ) {
+      log_d("RamDisk cache hit!");
+      return true;
+    }
+    if( !open( name ) ) return -1;
+    size_t fileSize = indexFile.size();
+    log_d("Creating ramdisk cache for file %s (%d bytes)", name, fileSize );
+    psramInit();
+    ramDiskFile.data = (uint8_t*)ps_calloc( fileSize, sizeof(uint8_t) + 1 );
+    if( ramDiskFile.data == NULL ) {
+      log_e("Failed to allocate %d bytes for ramdisk cache :-(", fileSize );
+      return false;
+    }
+
+    char buffer[4096] = {0};
+    size_t offset = 0;
+    size_t read_bytes = 0;
+    while( indexFile.available() ) {
+      offset = indexFile.position();
+      read_bytes = indexFile.readBytes( (char*)buffer, 4096 );
+      memcpy( ramDiskFile.data+offset, buffer, read_bytes );
+    }
+
+    close();
+
+    if( offset+read_bytes == fileSize ) {
+      ramDiskFile.size = fileSize;
+      ramDiskFile.name = name;
+      log_d("Ramdisk cache %s successfully created (%d bytes)", name, fileSize );
+      return true;
+    }
+    log_e("Failed to created ramdisk cache :-(");
+    return false;
   }
-  close();
-  return -1;
-}
+
+
+  int64_t BufferedIndex::find( const char* haystack, const char* needle )
+  {
+
+    if( !openRamDiskFile( haystack ) ) return -1;
+
+    size_t offset = 0;
+
+    do {
+      memcpy( (char*)&IndexItem->offset, ramDiskFile.data+offset, sizeof( size_t ) );
+      offset += sizeof( size_t );
+      memcpy( (uint8_t*)&IndexItem->pathlen, ramDiskFile.data+offset, 1 );
+      offset++;
+      memcpy( (char*)IndexItem->path, ramDiskFile.data+offset, IndexItem->pathlen );
+      IndexItem->path[IndexItem->pathlen] = '\0';
+      offset += IndexItem->pathlen;
+      if( strcmp( needle, IndexItem->path ) == 0 ) {
+        return IndexItem->offset;
+      } // else debugItem();
+    } while( offset + sizeof( size_t ) + 1 < ramDiskFile.size );
+
+    return -1;
+  }
+
+
+#else
+
+
+  int64_t BufferedIndex::find( const char* haystack, const char* needle )
+  {
+    if( !open( haystack ) ) return -1;
+    while( indexFile.available() ) {
+      indexFile.readBytes( (char*)&IndexItem->offset, sizeof( size_t ) );
+      IndexItem->pathlen = indexFile.read();
+      indexFile.readBytes( (char*)IndexItem->path, IndexItem->pathlen );
+      IndexItem->path[IndexItem->pathlen] = '\0';
+      if( strcmp( needle, IndexItem->path ) == 0 ) {
+        close();
+        return IndexItem->offset;
+      } // else debugItem();
+    }
+    close();
+    return -1;
+  }
+
+#endif
 
 
 // build an index based on FILE PATH in order to provide
@@ -362,6 +436,11 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
       return;
     }
   }
+  #ifdef BOARD_HAS_PSRAM
+  //else {
+    MD5Index->openRamDiskFile( cfg->md5idxpath );
+  //}
+  #endif
 
   char path[255] = {0};
   sprintf( path, "%s/.HashIndexDone", cfg->md5folder );
@@ -377,6 +456,13 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
 
 bool MD5FileParser::getDuration( SID_Meta_t *song)
 {
+
+  if( strcmp( song->md5, "00000000000000000000000000000000" ) == 0 && cfg->lookupMethod == MD5_RAINBOW_LOOKUP )
+  {
+    log_e("Attempted to lookup a zero hash");
+    return false;
+  }
+
   switch( cfg->lookupMethod )
   {
     case MD5_RAW_READ       : return getDurationsFromMD5Hash( song ); break;     // parse the whole md5 file if necessary, very slow
@@ -466,6 +552,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
     log_w("Offset not found for %s", MD5FolderPath );
   }
   log_d("Seeking md5 hash info took %d millis for %s and %s", int( millis()-start_seek ), song->filename, found ? "succeeded" : "failed" );
+
   return found;
 }
 

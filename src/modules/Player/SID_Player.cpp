@@ -374,14 +374,17 @@ bool SIDTunesPlayer::playSidFile()
 
   // CODE SMELL: should read file.size() - current offset
   __attribute__((unused))
-  size_t g = file.read(&mem[load_addr], file.size()-(data_offset+2) );
+  size_t g = file.read(&mem[load_addr], file.size()/*-(data_offset+2)*/ );
   log_d("Read %d bytes when %d were expected (max=%d, current offset=%d)", g, file.size()-(data_offset+2), file.size(), data_offset );
   //memset(&mem[load_addr+g],0xea,0x10000-load_addr+g);
   for(int i=0;i<32;i++) {
     uint8_t fm;
     file.seek( 0x12+(i>>3) );
     fm = file.read();
-    speedsong[31-i]= (fm & (byte)pow(2,7-i%8))?1:0;
+    speedsong[31-i] = (fm & (byte)pow(2,7-i%8))?1:0;
+    if( speedsong[31-i] != 0 ) {
+      log_d("Speedsong[%d] = %d", 31-i, speedsong[31-i] );
+    }
   }
   //snprintf( currentfilename, 256, "%s", currenttrack->filename );
   //getcurrentfile = currentfile;
@@ -507,6 +510,7 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
   previousoffset = 0;
   currentsong = songnumber;
   if( xPlayerTaskHandle != NULL ) {
+    log_d("Deleting previous task handle");
     vTaskDelete( xPlayerTaskHandle );
     xPlayerTaskHandle = NULL;
     stop_song = true;
@@ -519,11 +523,11 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
 
   cpuReset();
 
-  if( play_addr == 0 ) {
-    cpuJSR( init_addr, 0 ); //0
+  if( play_addr == 0 ) { // no song selected or first song
+    cpuJSR( init_addr, 0 );
     play_addr = (mem[0x0315] << 8) + mem[0x0314];
     cpuJSR( init_addr, songnumber );
-    if(play_addr==0) {
+    if(play_addr==0) { // one song only ?
       play_addr=(mem[0xffff] << 8) + mem[0xfffe];
       mem[1]=0x37;
     }
@@ -531,11 +535,13 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
     cpuJSR( init_addr, songnumber );
   }
 
+  log_d("Play_addr = $%04x, Init_addr = $%04x (song %d), clockspeed=%d, songspeed=%d", play_addr, init_addr, songnumber, speed, speedsong[songnumber]);
+
   //sid.soundOn();
   xTaskCreatePinnedToCore( SIDTunesPlayer::SIDTunePlayerTask, "SIDTunePlayerTask",  1024,  this, SID_CPU_TASK_PRIORITY, &xPlayerTaskHandle, SID_CPU_CORE);
   delay(200);
 
-  if(currenttrack->durations[currentsong]==0) {
+  if((int)currenttrack->durations[currentsong]<=0) {
     song_duration = default_song_duration;
     log_w("[%d] Playing task (4Kb) with default song duration %d ms", ESP.getFreeHeap(), song_duration);
   } else {
@@ -567,9 +573,9 @@ void SIDTunesPlayer::SIDTunePlayerTask(void * parameters)
       cpu->totalinframe += cpu->cpuJSR( cpu->play_addr, 0 );
       cpu->wait += cpu->waitframe;
       cpu->frame = true;
-      int nRefreshCIA = (int)( ((19650 * (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8)) / 0x4c00) + (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8))  )  /2 );
+      int nRefreshCIA = (int)( ((19954 * (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8)) / 0x4c00) + (cpu->getmem(0xdc04) | (cpu->getmem(0xdc05) << 8))  )  /2 );
       if ((nRefreshCIA == 0) /*|| (cpu->speedsong[cpu->currentsong]==0)*/)
-        nRefreshCIA = 19650;
+        nRefreshCIA = 19954;
       cpu->waitframe = nRefreshCIA;
 
       if( cpu->song_duration > 0 ) {
@@ -619,7 +625,7 @@ bool SIDTunesPlayer::playSID()
     return false;
   }
 
-  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDLoopPlayerTask, "SIDLoopPlayerTask", 2048, this, 1, & xPlayerLoopTaskHandle, SID_PLAYER_CORE);
+  xTaskCreatePinnedToCore( SIDTunesPlayer::SIDLoopPlayerTask, "SIDLoopPlayerTask", 2048, this, 1, & xPlayerLoopTaskHandle, SID_PLAYER_CORE );
   vTaskDelay(200);
   playerrunning = true;
   return true;

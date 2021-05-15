@@ -42,10 +42,10 @@
 #include "SID_Track.h"
 
 #ifndef SID_CPU_CORE
-  #define SID_CPU_CORE 0
+  #define SID_CPU_CORE 1
 #endif
 #ifndef SID_PLAYER_CORE
-  #define SID_PLAYER_CORE 1
+  #define SID_PLAYER_CORE 0
 #endif
 
 #ifndef SID_CPU_TASK_PRIORITY

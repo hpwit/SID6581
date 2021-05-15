@@ -536,7 +536,7 @@ void  SID6581::setFilterFrequency(int chip,int filterfrequency)
 
 int SID6581::getFilterFrequency(int chip)
 {
-  return sidregisters[chip*32+0x15] +sidregisters[chip*32+0x16]*256;
+  return sidregisters[chip*32+0x15] + sidregisters[chip*32+0x16]*256;
 }
 
 
