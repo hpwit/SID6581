@@ -143,7 +143,7 @@ static MD5FileConfig MD5Config =
 SIDTunesPlayer *player;
 
 void setup() {
-  // put your setup code here, to run once:
+
   Serial.begin(115200);
 
   player = new SIDTunesPlayer( &MD5Config );
