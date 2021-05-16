@@ -103,7 +103,7 @@ void setup()
   }
 
   player->setMaxVolume(7); //value between 0 and 15
-  player->play(); //it will play all songs in loop
+  player->playSID(); //it will play all songs in loop
 }
 
 void loop()

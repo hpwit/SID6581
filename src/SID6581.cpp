@@ -101,6 +101,9 @@ bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin)
     i2s_set_pin(i2s_num, &pin_config);
 
     i2s_begun = true;
+    log_d("I2S config done");
+  } else {
+    log_d("Skipping I2S config");
   }
 
   return begin(clock_pin,data_pin,latch );

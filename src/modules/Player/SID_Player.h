@@ -43,13 +43,26 @@
 
 #ifndef SID_CPU_CORE
   #define SID_CPU_CORE 1
+#else
+  #warning "User defined CPU CORE"
 #endif
+
 #ifndef SID_PLAYER_CORE
   #define SID_PLAYER_CORE 0
+#else
+  #warning "User defined PLAYER CORE"
 #endif
 
 #ifndef SID_CPU_TASK_PRIORITY
-  #define SID_CPU_TASK_PRIORITY 2
+  #define SID_CPU_TASK_PRIORITY 5
+#else
+  #warning "User defined CPU TASK PRIORITY"
+#endif
+
+#ifndef SID_PLAYER_TASK_PRIORITY
+  #define SID_PLAYER_TASK_PRIORITY 0
+#else
+  #warning "User defined CPU TASK PRIORITY"
 #endif
 
 
@@ -130,6 +143,7 @@ class SIDTunesPlayer : public MOS_CPU_Controls
     inline void setEventCallback(void (*fptr)(SIDTunesPlayer* player, sidEvent event)) { eventCallback = fptr; }
 
     bool playSID(); // play subsongs inside a SID file
+    bool playSID(SID_Meta_t *songinfo );
     bool playSongNumber( int songnumber ); // play a subsong from the current SID track slot
     bool playPrevSongInSid();
     bool playNextSongInSid();
@@ -141,6 +155,7 @@ class SIDTunesPlayer : public MOS_CPU_Controls
 
     void setLoopMode( loopmode mode );
     void setPlayMode( playmode mode );
+    void setDefaultDuration( uint32_t duration );
 
     loopmode getLoopMode();
     playmode getPlayMode();
@@ -161,13 +176,12 @@ class SIDTunesPlayer : public MOS_CPU_Controls
 
   private:
 
-    static void SIDTunePlayerTask(void * parameters); // sends song registers to SID
+    static void SIDTunePlayerTask(void *parameters); // sends song registers to SID
     static void SIDLoopPlayerTask(void *param);       // handles subsong start/end events
 
     bool playSidFile(); // play currently loaded SID file (and subsongs if any)
     void (*eventCallback)( SIDTunesPlayer* player, sidEvent event ) = NULL;
     void fireEvent( SIDTunesPlayer* player, sidEvent event);
-    void setDefaultDuration( uint32_t duration );
 
     int      speedsong[32]; // TODO: actually use this
     int      nRefreshCIAbase; // what is it used for ??
@@ -180,7 +194,9 @@ class SIDTunesPlayer : public MOS_CPU_Controls
     //uint8_t  name[32];
     uint8_t  data_offset;
 
-    bool stop_song = true;
+    bool TunePlayerTaskRunning = false;
+    bool TunePlayerTaskPlaying = false;
+    bool LoopPlayerTaskRunning = false;
     bool is_error = false;
 
 

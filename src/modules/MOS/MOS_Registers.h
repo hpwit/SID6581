@@ -73,7 +73,7 @@ enum inst_enum
   inst_cld, inst_cli, inst_clv, inst_cmp, inst_cpx, inst_cpy, inst_dec, inst_dex, inst_dey, inst_eor, inst_inc, inst_inx, inst_iny, inst_jmp,
   inst_jsr, inst_lda, inst_ldx, inst_ldy, inst_lsr, inst_nop, inst_ora, inst_pha, inst_php, inst_pla, inst_plp, inst_rol, inst_ror, inst_rti,
   inst_rts, inst_sbc, inst_sec, inst_sed, inst_sei, inst_sta, inst_stx, inst_sty, inst_tax, inst_tay, inst_tsx, inst_txa, inst_txs, inst_tya,
-  inst_xxx
+  inst_slo, inst_axs, inst_lax, inst_sax, inst_shy, inst_shx, inst_sha, inst_shs, inst_xxx
 };
 
 
@@ -91,11 +91,11 @@ static volatile instruction opcodes[256] =
   {inst_brk, mode_imp},                            // 0x00
   {inst_ora, mode_indx},                           // 0x01
   {inst_xxx, mode_xxx},                            // 0x02
-  {inst_xxx, mode_xxx},                            // 0x03
+  {inst_slo, mode_indx},                           // 0x03
   {inst_xxx, mode_zp},                             // 0x04
   {inst_ora, mode_zp},                             // 0x05
   {inst_asl, mode_zp},                             // 0x06
-  {inst_xxx, mode_xxx},                            // 0x07
+  {inst_slo, mode_zp},                             // 0x07
   {inst_php, mode_imp},                            // 0x08
   {inst_ora, mode_imm},                            // 0x09
   {inst_asl, mode_acc},                            // 0x0a
@@ -103,23 +103,23 @@ static volatile instruction opcodes[256] =
   {inst_xxx, mode_abs},                            // 0x0c
   {inst_ora, mode_abs},                            // 0x0d
   {inst_asl, mode_abs},                            // 0x0e
-  {inst_xxx, mode_xxx},                            // 0x0f
+  {inst_slo, mode_abs},                            // 0x0f
   {inst_bpl, mode_rel},                            // 0x10
   {inst_ora, mode_indy},                           // 0x11
   {inst_xxx, mode_xxx},                            // 0x12
-  {inst_xxx, mode_xxx},                            // 0x13
+  {inst_slo, mode_indy},                           // 0x13
   {inst_xxx, mode_xxx},                            // 0x14
   {inst_ora, mode_zpx},                            // 0x15
   {inst_asl, mode_zpx},                            // 0x16
-  {inst_xxx, mode_xxx},                            // 0x17
+  {inst_slo, mode_zpx},                            // 0x17
   {inst_clc, mode_imp},                            // 0x18
   {inst_ora, mode_absy},                           // 0x19
   {inst_xxx, mode_xxx},                            // 0x1a
-  {inst_xxx, mode_xxx},                            // 0x1b
+  {inst_slo, mode_absy},                           // 0x1b
   {inst_xxx, mode_xxx},                            // 0x1c
   {inst_ora, mode_absx},                           // 0x1d
   {inst_asl, mode_absx},                           // 0x1e
-  {inst_xxx, mode_xxx},                            // 0x1f
+  {inst_slo, mode_absx},                           // 0x1f
   {inst_jsr, mode_abs},                            // 0x20
   {inst_and, mode_indx},                           // 0x21
   {inst_xxx, mode_xxx},                            // 0x22
@@ -223,11 +223,11 @@ static volatile instruction opcodes[256] =
   {inst_xxx, mode_imm},                            // 0x80
   {inst_sta, mode_indx},                           // 0x81
   {inst_xxx, mode_xxx},                            // 0x82
-  {inst_xxx, mode_xxx},                            // 0x83
+  {inst_sax, mode_indx},                           // 0x83
   {inst_sty, mode_zp},                             // 0x84
   {inst_sta, mode_zp},                             // 0x85
   {inst_stx, mode_zp},                             // 0x86
-  {inst_xxx, mode_xxx},                            // 0x87
+  {inst_sax, mode_zp},                             // 0x87
   {inst_dey, mode_imp},                            // 0x88
   {inst_xxx, mode_imm},                            // 0x89
   {inst_txa, mode_acc},                            // 0x8a
@@ -235,50 +235,50 @@ static volatile instruction opcodes[256] =
   {inst_sty, mode_abs},                            // 0x8c
   {inst_sta, mode_abs},                            // 0x8d
   {inst_stx, mode_abs},                            // 0x8e
-  {inst_xxx, mode_xxx},                            // 0x8f
+  {inst_sax, mode_abs},                            // 0x8f
 
   {inst_bcc, mode_rel},                            // 0x90
   {inst_sta, mode_indy},                           // 0x91
   {inst_xxx, mode_xxx},                            // 0x92
-  {inst_xxx, mode_xxx},                            // 0x93
+  {inst_sha, mode_indy},                           // 0x93
   {inst_sty, mode_zpx},                            // 0x94
   {inst_sta, mode_zpx},                            // 0x95
   {inst_stx, mode_zpy},                            // 0x96
-  {inst_xxx, mode_xxx},                            // 0x97
+  {inst_sax, mode_zpy},                            // 0x97
   {inst_tya, mode_imp},                            // 0x98
   {inst_sta, mode_absy},                           // 0x99
   {inst_txs, mode_acc},                            // 0x9a
-  {inst_xxx, mode_xxx},                            // 0x9b
-  {inst_xxx, mode_xxx},                            // 0x9c
+  {inst_shs, mode_absy},                           // 0x9b
+  {inst_shy, mode_absx},                           // 0x9c
   {inst_sta, mode_absx},                           // 0x9d
-  {inst_xxx, mode_absx},                           // 0x9e
-  {inst_xxx, mode_xxx},                            // 0x9f
+  {inst_shx, mode_absy},                           // 0x9e
+  {inst_sha, mode_absy},                           // 0x9f
 
   {inst_ldy, mode_imm},                            // 0xa0
   {inst_lda, mode_indx},                           // 0xa1
   {inst_ldx, mode_imm},                            // 0xa2
-  {inst_xxx, mode_xxx},                            // 0xa3
+  {inst_lax, mode_indx},                           // 0xa3
   {inst_ldy, mode_zp},                             // 0xa4
   {inst_lda, mode_zp},                             // 0xa5
   {inst_ldx, mode_zp},                             // 0xa6
-  {inst_xxx, mode_xxx},                            // 0xa7
+  {inst_lax, mode_zp},                             // 0xa7
   {inst_tay, mode_imp},                            // 0xa8
   {inst_lda, mode_imm},                            // 0xa9
   {inst_tax, mode_acc},                            // 0xaa
-  {inst_xxx, mode_xxx},                            // 0xab
+  {inst_lax, mode_imm},                            // 0xab
   {inst_ldy, mode_abs},                            // 0xac
   {inst_lda, mode_abs},                            // 0xad
   {inst_ldx, mode_abs},                            // 0xae
-  {inst_xxx, mode_xxx},                            // 0xaf
+  {inst_lax, mode_abs},                            // 0xaf
 
   {inst_bcs, mode_rel},                            // 0xb0
   {inst_lda, mode_indy},                           // 0xb1
   {inst_xxx, mode_xxx},                            // 0xb2
-  {inst_xxx, mode_xxx},                            // 0xb3
+  {inst_lax, mode_indy},                           // 0xb3
   {inst_ldy, mode_zpx},                            // 0xb4
   {inst_lda, mode_zpx},                            // 0xb5
   {inst_ldx, mode_zpy},                            // 0xb6
-  {inst_xxx, mode_xxx},                            // 0xb7
+  {inst_lax, mode_zpy},                            // 0xb7
   {inst_clv, mode_imp},                            // 0xb8
   {inst_lda, mode_absy},                           // 0xb9
   {inst_tsx, mode_acc},                            // 0xba
@@ -286,7 +286,7 @@ static volatile instruction opcodes[256] =
   {inst_ldy, mode_absx},                           // 0xbc
   {inst_lda, mode_absx},                           // 0xbd
   {inst_ldx, mode_absy},                           // 0xbe
-  {inst_xxx, mode_xxx},                            // 0xbf
+  {inst_lax, mode_absy},                           // 0xbf
 
   {inst_cpy, mode_imm},                            // 0xc0
   {inst_cmp, mode_indx},                           // 0xc1
@@ -299,7 +299,7 @@ static volatile instruction opcodes[256] =
   {inst_iny, mode_imp},                            // 0xc8
   {inst_cmp, mode_imm},                            // 0xc9
   {inst_dex, mode_acc},                            // 0xca
-  {inst_xxx, mode_xxx},                            // 0xcb
+  {inst_axs, mode_imm},                            // 0xcb
   {inst_cpy, mode_abs},                            // 0xcc
   {inst_cmp, mode_abs},                            // 0xcd
   {inst_dec, mode_abs},                            // 0xce

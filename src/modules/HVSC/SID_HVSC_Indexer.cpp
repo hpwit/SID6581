@@ -428,6 +428,8 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
     MD5Index->progressCb = cfg->progressCb;
   }
 
+  log_e("Accessing FS from core #%d", xPortGetCoreID() );
+
   if( !cfg->fs->exists( cfg->md5idxpath ) ) {
     log_w("[%d] Now indexing MD5 paths into %s file, this is a one-time operation", ESP.getFreeHeap(), cfg->md5idxpath );
     if( ! MD5Index->buildSIDPathIndex( cfg->md5filepath, cfg->md5idxpath ) ) {
