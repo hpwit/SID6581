@@ -7,39 +7,34 @@
 #include <SID6581.h> // https://github.com/hpwit/SID6581
 
 // use SPIFFS
-//#include <SPIFFS.h>
-//#define SID_FS SPIFFS
+#include <SPIFFS.h>
+#define SID_FS SPIFFS
 
 // or SD
 //#include <SD.h>
 //#define SID_FS SD
 
 // or LittleFS
-#include <LITTLEFS.h> // https://github.com/lorol/LITTLEFS
-#define SID_FS LITTLEFS
+//#include <LITTLEFS.h> // https://github.com/lorol/LITTLEFS
+//#define SID_FS LITTLEFS
 
 static SIDTunesPlayer *sidPlayer = nullptr;
-static SID_Meta_t tmpsonginfo;
 
-std::vector<SID_Meta_t> songList;
-size_t songIndex = 0;
-
+std::vector<SID_Meta_t> songList; // for storing SID tracks
+size_t songIndex = 0; // the current song being played
 
 
 void playNextSong( SIDTunesPlayer* player )
 {
-  if( songIndex < songList.size()-1 ) {
-    songIndex++;
-  } else {
-    songIndex = 0;
-  }
+  songIndex++;
+  songIndex = (songIndex)%(songList.size());
 
-  bool playable = player->getInfoFromSIDFile( songList[songIndex].filename/*, &tmpsonginfo*/ );
+  bool playable = player->getInfoFromSIDFile( songList[songIndex].filename);
 
   if( !playable ) {
     playNextSong( player );
   } else {
-    player->playSID( /*&tmpsonginfo*/ );
+    player->playSID();
   }
 }
 
@@ -66,7 +61,6 @@ static void eventCallback( SIDTunesPlayer* player, sidEvent event )
     case SID_END_PLAY:
       Serial.printf( "[%d] SID_END_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
       // eternal loop on all SID tracks
-      vTaskDelay(100);
       playNextSong( player );
     break;
     case SID_PAUSE_PLAY:
@@ -105,7 +99,7 @@ void setup()
     while(1);
   }
 
-  File root = SID_FS.open("/i"); // "/i" for SID with illegal instructions, and "/f" for failing to play
+  File root = SID_FS.open("/"); //
   if(!root){
     Serial.println("- failed to open directory");
     return;
@@ -136,27 +130,13 @@ void setup()
   sidPlayer->setMaxVolume(15); //value between 0 and 15
   sidPlayer->setDefaultDuration( 10000 ); // 10 seconds per song max for this example, comment this out to get full songs
 
-  sidPlayer->setPlayMode( SID_ALL_SONGS ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
+  sidPlayer->setPlayMode( SID_ONE_SONG ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
   sidPlayer->setLoopMode( SID_LOOP_OFF );  // applies to subsongs in a track, values = SID_LOOP_ON, SID_LOOP_RANDOM or SID_LOOP_OFF
 
-  int randIndex = 0;
   srand(time(NULL));
-  int attempts = micros()%47 + 53;
+  songIndex = random(songList.size());
 
-  while( attempts-- > 0 ) {
-    srand(time(NULL));
-    randIndex = random(songList.size());
-  }
-
-  bool playable = sidPlayer->getInfoFromSIDFile( songList[randIndex].filename/*, &tmpsonginfo*/ );
-
-  if( !playable ) {
-    Serial.println("SID File is not readable!");
-    while(1);
-  }
-
-  //sidPlayer->playSID(); //it will play all songs in loop
-  sidPlayer->playSID( /*&tmpsonginfo*/ ); //it will play all songs in loop
+  playNextSong( sidPlayer );
 
 }
 
