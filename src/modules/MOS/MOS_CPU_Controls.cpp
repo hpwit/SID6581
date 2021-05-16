@@ -717,6 +717,45 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
       break;
+	  
+// Routines for some undocumented opcodes
+
+    case inst_slo:
+	  bval = getaddr(addr);
+	  setflags(flag_C, bval >> 7);
+	  bval <<= 1;
+	  setaddr(addr, bval);
+	  a |= bval;
+	  setflags(flag_Z, !a);
+	  setflags(flag_N, a & 0x80);
+	  break;
+	case inst_axs: // same at SBX
+      bval=getaddr(addr);
+	  x = (a & x) - bval;
+	  setflags(flag_Z, !x);
+	  setflags(flag_N, x > 127);
+      setflags(flag_C,x>=bval);
+	  break;
+	case inst_lax:
+	  a = x = getaddr(addr);
+	  setflags(flag_Z, !a);
+	  setflags(flag_N, a & 0x80);
+	  break;
+    case inst_sax:
+      putaddr(addr,a & x);
+      break;
+    case inst_shy:
+	  putaddr(addr, y & (((addr - x) >> 8) + 1));
+      break;
+    case inst_shx:
+      putaddr(addr, x & (((addr - y) >> 8) + 1));
+      break;
+    case inst_sha:
+      putaddr(addr, a & x & (((addr - y) >> 8) + 1));
+      break;
+    case inst_shs:
+      putaddr(addr, (s = a & x) & (((addr - y) >> 8) + 1));
+      break;
     default:
       break;
   }
