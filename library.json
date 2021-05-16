@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/hpwit/SID6581"
   },
-  "version": "2.1.1",
+  "version": "3.0.0-beta",
   "frameworks": "arduino",
   "platforms": "espressif32",
   "authors" :
@@ -15,6 +15,10 @@
      {
        "name":"Yves BAZIN",
        "email":"hpwit@noreply.github.com"
+     },
+     {
+       "name":"tobozo",
+       "email":"tobozo@noreply.github.com"
      }
   ]
 }
