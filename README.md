@@ -943,7 +943,9 @@ void loop() {
 }
 ```
 
- Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
+ Here you can hear that during the release part (when the sound goes slowly down the wobling effect
+ has disappeared. This is normal as the release will only take count of the last note played.
+ To arrange that we can make use of the after_off function as such
 
  ```C
 
@@ -1072,6 +1074,7 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 1) Let me know if you're using the library
 2) Do not hesitate if you have questions
+3) Contributions warmly welcome !
 
 
 Updated 8 April 2020
