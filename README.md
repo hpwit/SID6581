@@ -1095,6 +1095,3 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 1) Let me know if you're using the library
 2) Do not hesitate if you have questions
 3) Contributions warmly welcome !
-
-
-Updated 8 April 2020
