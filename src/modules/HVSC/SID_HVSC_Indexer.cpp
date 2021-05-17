@@ -51,7 +51,7 @@ BufferedIndex::BufferedIndex( fs::FS *_fs ) : fs(_fs)
 
 bool BufferedIndex::open( const char *name, bool readonly )
 {
-  log_d("Opening %s as %s from core %d", name, readonly ? "ro" : "rw", xPortGetCoreID() );
+  //log_d("Opening %s as %s from core %d", name, readonly ? "ro" : "rw", xPortGetCoreID() );
 
   if( readonly ) {
     indexFile = fs->open( name );
@@ -173,6 +173,10 @@ void BufferedIndex::debugItem()
     }
     if( !open( name ) ) return -1;
     size_t fileSize = indexFile.size();
+    if( fileSize == 0 ) {
+      log_e("Empty index file, giving up");
+      return false;
+    }
     log_d("Creating ramdisk cache for file %s (%d bytes)", name, fileSize );
     psramInit();
     ramDiskFile.data = (uint8_t*)ps_calloc( fileSize, sizeof(uint8_t) + 1 );
@@ -421,6 +425,8 @@ bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpa
 
 MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
 {
+  if( cfg->lookupMethod == MD5_RAW_READ ) return;
+
   if( MD5Index == nullptr ) {
     MD5Index = new BufferedIndex( cfg->fs );
   }
@@ -428,7 +434,7 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
     MD5Index->progressCb = cfg->progressCb;
   }
 
-  log_e("Accessing FS from core #%d", xPortGetCoreID() );
+  //log_e("Accessing FS from core #%d", xPortGetCoreID() );
 
   if( !cfg->fs->exists( cfg->md5idxpath ) ) {
     log_w("[%d] Now indexing MD5 paths into %s file, this is a one-time operation", ESP.getFreeHeap(), cfg->md5idxpath );
@@ -438,19 +444,24 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
       return;
     }
   }
+
   #ifdef BOARD_HAS_PSRAM
   //else {
     MD5Index->openRamDiskFile( cfg->md5idxpath );
   //}
   #endif
 
-  char path[255] = {0};
-  sprintf( path, "%s/.HashIndexDone", cfg->md5folder );
+  if( cfg->lookupMethod == MD5_RAINBOW_LOOKUP ) {
 
-  if( !cfg->fs->exists( path ) ) {
-    // hash index is missing, rebuild it
-    log_w("[%d] Now spreading MD5 hashes across %s folder, this is a one-time operation", ESP.getFreeHeap(), cfg->md5folder );
-    MD5Index->buildSIDHashIndex( cfg->md5filepath, cfg->md5folder, true );
+    char path[255] = {0};
+    sprintf( path, "%s/.HashIndexDone", cfg->md5folder );
+
+    if( !cfg->fs->exists( path ) ) {
+      // hash index is missing, rebuild it
+
+      log_w("[%d] Now spreading MD5 hashes across %s folder, this is a one-time operation", ESP.getFreeHeap(), cfg->md5folder );
+      MD5Index->buildSIDHashIndex( cfg->md5filepath, cfg->md5folder, true );
+    }
   }
 
 }
@@ -551,7 +562,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
       log_w("Hash not found for %s", MD5FilePath );
     }
   } else {
-    log_w("Offset not found for %s", MD5FolderPath );
+    log_w("Offset not found in folder '%s' for file '%s'", MD5FolderPath, song->filename );
   }
   log_d("Seeking md5 hash info took %d millis for %s and %s", int( millis()-start_seek ), song->filename, found ? "succeeded" : "failed" );
 
@@ -627,13 +638,13 @@ bool MD5FileParser::getDurationsFromMD5Hash( SID_Meta_t *song )
     if( buffer.c_str()[0] == ';' ) continue; // skip filename
     if( buffer.startsWith( song->md5 ) ) {
       found = true;
-      log_d("Found song lengths for hash %s => %s", song->md5, buffer.c_str() );
+      log_v("Found a string entry for hash '%s' => %s", song->md5, buffer.c_str() );
       if( song->durations != nullptr ) free( song->durations );
       song->durations = (uint32_t*)sid_calloc( song->subsongs, sizeof(uint32_t) );
       int subsongs = getDurationsFromMd5String( buffer, song );
       if( subsongs == song->subsongs ) {
         for( int i=0; i<subsongs; i++ ) {
-          log_d("Subsong #%d: %d millis", i, int( song->durations[i] ) );
+          log_v("Subsong #%d: %d millis", i, int( song->durations[i] ) );
         }
       } else {
         log_e("Subsongs count mismatch %d vs %d", subsongs, song->subsongs );
@@ -679,7 +690,7 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
           int mm,ss,SSS; // for storing the extracted time values
           sscanf( parsedTime, "%d:%d.%d", &mm, &ss, &SSS );
           song->durations[parsedTimeCount] = (mm*60*1000)+(ss*1000)+SSS;
-          log_d("Subsong #%d: %s (mm:ss.SSS) / %d (ms)", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );
+          log_v("Subsong #%d: %s (mm:ss.SSS) / %d (ms)", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );
           parsedTimeCount++;
         }
         parsedIndex = 0;
@@ -694,12 +705,12 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
         parsedIndex++;
     }
     if( parsedTimeCount >= song->subsongs ) { // prevent stack smashing
-      log_d("Found enough subsongs (max=%d), stopping at index %d", song->subsongs, parsedTimeCount-1);
+      log_v("Found enough subsongs (max=%d), stopping at index %d", song->subsongs, parsedTimeCount-1);
       break;
     }
   }
   if( parsedTimeCount > 0 ) {
-    log_d("Found %d subsong length(s)", parsedTimeCount );
+    log_v("Found %d subsong length(s)", parsedTimeCount );
   }
   _end:
   return parsedTimeCount;

@@ -99,7 +99,7 @@ void setup()
     while(1);
   }
 
-  File root = SID_FS.open("/"); //
+  File root = SID_FS.open("/");
   if(!root){
     Serial.println("- failed to open directory");
     return;
@@ -128,7 +128,9 @@ void setup()
   }
 
   sidPlayer->setMaxVolume(15); //value between 0 and 15
-  sidPlayer->setDefaultDuration( 10000 ); // 10 seconds per song max for this example, comment this out to get full songs
+
+  //sidPlayer->setDefaultDuration( 180000 ); // 3mn per song max for this example, comment this out to get full songs
+  sidPlayer->setDefaultDuration( 10000 ); // 10s per song max for this example, comment this out to get full songs
 
   sidPlayer->setPlayMode( SID_ONE_SONG ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
   sidPlayer->setLoopMode( SID_LOOP_OFF );  // applies to subsongs in a track, values = SID_LOOP_ON, SID_LOOP_RANDOM or SID_LOOP_OFF

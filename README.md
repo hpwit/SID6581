@@ -46,8 +46,10 @@ NB1: the sid tunes do not have an end hence they will play by default for 3 minu
 ```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-bool play(); //play in loop the playlist
-bool playSongAtPosition(int position); //play song at a specific position of the playlist.
+bool playSID();
+bool playSID( SID_Meta_t* sid_info );
+~~bool play(); //play in loop the playlist~~
+~~bool playSongAtPosition(int position); //play song at a specific position of the playlist.~~
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void togglePause(); //pause/play the player
@@ -69,7 +71,9 @@ Possible `loopmode` values:
 
 ```C
 
-bool getPlayerStatus(); //tells you if the runner is playing or not
+~~bool getPlayerStatus(); //tells you if the runner is playing or not~~
+
+bool isPlaying();
 
 // Specific functions to have info on the current sid file
 char * getFilename(); //return the filename of the current Sidfile playing
@@ -1052,8 +1056,10 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 # Credits & Thanks
 
-- [tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
+- [tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction as well as ideas for the functionalities to implements for the SID players.
     Please check his repo where he's using this library to implement not only a full player but also a [SID vizualizer](https://github.com/tobozo/ESP32-SIDView).
+
+- [XadNightfall](https://github.com/XadNightfall) For implementing the undocumented opcodes and improving in the cpu emulator
 
 - [Ken Händel](https://haendel.ddns.net/~ken/#_latest_beta_version) for his advices and his tools
 

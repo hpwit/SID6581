@@ -61,11 +61,20 @@ SID6581::~SID6581()
 SID6581::SID6581()
 {
   #ifdef BOARD_HAS_PSRAM
-    psramInit();
+    if( !psramInit() ) {
+      log_e("Failed to init psram, crash will probably occur");
+    } else {
+      log_d("Psram successfully detected");
+    }
   #endif
-  sidregisters = (uint8_t*)sid_calloc(15*32, sizeof(uint8_t));
   if( sidregisters == NULL ) {
-    log_e("Failed to allocate 15*32 bytes for SID Registers :-(");
+    log_d("Allocating 15x32 bytes");
+    sidregisters = (uint8_t*)sid_calloc(15*32, sizeof(uint8_t));
+    if( sidregisters == NULL ) {
+      log_e("[bytes free=%d] Failed to allocate 15*32 bytes for SID Registers :-(", ESP.getFreeHeap() );
+    }
+  } else {
+    log_d("sidregisters already allocated");
   }
 }
 
@@ -483,6 +492,14 @@ void SID6581::sidSetVolume(int chip, uint8_t vol)
   pushRegister(chip,0x18,sid_control[chip].mode_vol);
 }
 
+
+void SID6581::setMaxVolume(uint8_t vol)
+{
+  for(int i=0;i<5;i++) {
+    volume[i] = vol;
+    sidSetVolume(i,  vol);
+  }
+}
 
 
 void SID6581::soundOn()

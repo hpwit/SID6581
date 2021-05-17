@@ -225,7 +225,7 @@ class SID6581
     void cls();
     void soundOn();
     void soundOff();
-
+    void setMaxVolume(uint8_t vol);
 
   protected:
 
@@ -246,10 +246,10 @@ class SID6581
 #endif
 
 #ifdef SID_INSTRUMENTS
-  #ifndef SID_PLAYER
-    static SID6581 sid;
-    #include "modules/Player/SID_Player.h"
-  #endif
+  //#ifndef SID_PLAYER
+  //  static SID6581 sid;
+  //  #include "modules/Player/SID_Player.h"
+  //#endif
   #include "modules/Instruments/SID_Instruments.h"
 #endif
 
