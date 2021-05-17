@@ -385,14 +385,12 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_N, a & 0x80);
       break;
     case inst_asl:
-    {
       wval = getaddr(addr);
       wval <<= 1;
       setaddr(addr, wval & 0xff);
       setflags(flag_Z,!(wval&0xff)); // warn: compliler doesn't like this inside 'case'
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, wval & 0x100);
-    }
     break;
     case inst_bcc:
       branch(!(p & flag_C));
