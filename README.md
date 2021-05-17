@@ -1,14 +1,34 @@
 # SID 6581 library
 ===========
 
-This library is to control up to 5 SID 6581 chips from the 1980s era using an esp32.
-The program allows you to :
-* Directly push the register to the  SID chip. Hence you can program like in the good old times :)
-* Play old (or new) sid tunes [video here](https://youtu.be/_N8GZVB5zfM)
-* Play notes over up to 15 voices (3 voices per SID chip)
-* Design and play different instruments [video here with MIDI and 6 voices](https://youtu.be/iHB7V7PAqJQ)
-* Assign up to one instrument per voice
-The sound is played is the background so your mcu can do something else at the same time.
+[![arduino-library-badge](https://www.ardu-badge.com/badge/SID6581.svg?)](https://www.ardu-badge.com/SID6581-targz)
+
+
+An ESP32 library to control up to 5 SID 6581 chips from the 1980s era.
+
+
+<p align="center">
+<img src="extras/project_logo.png" alt="SID6581 for ESP32 logo" width="512" />
+</p>
+
+
+Hardware requirements
+---------------------
+- ESP32-Wroom of ESP32-Wrover (dual core required)
+- Any SID Chip model (original, clone)
+- Any pcb using 74HC595 adressing (see [schematics](extras/Schematic_SIDESP32_Sheet_1_20200319160853.png)
+
+
+Features
+--------
+- Directly push the register to the  SID chip. Hence you can program like in the good old times :)
+- Play old (or new) sid tunes [video here](https://youtu.be/_N8GZVB5zfM)
+- Play notes over up to 15 voices (3 voices per SID chip)
+- Design and play different instruments [video here with MIDI and 6 voices](https://youtu.be/iHB7V7PAqJQ)
+- Assign up to one instrument per voice
+
+The sound is played in the background so your mcu can do something else at the same time.
+
 
 NB: the SID chip requires a 1Mhz clock signal to work  **you can either provide it with an external clock circuit or use a pin of the esp32 to do it**  (clock generated thanks to I2s).
 
