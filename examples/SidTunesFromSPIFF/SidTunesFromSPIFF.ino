@@ -20,6 +20,7 @@
 
 static SIDTunesPlayer *sidPlayer = nullptr;
 
+#include <vector>
 std::vector<SID_Meta_t> songList; // for storing SID tracks
 size_t songIndex = 0; // the current song being played
 

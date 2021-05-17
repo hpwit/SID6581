@@ -44,6 +44,7 @@ static MD5FileConfig MD5Config =
 static SIDTunesPlayer *sidPlayer = nullptr;
 
 // It's up to the app to maintain the files list
+#include <vector>
 std::vector<String> songListStr; // for storing SID filenames
 std::vector<SID_Meta_t> songList; // for storing SID tracks
 size_t songIndex = 0; // the current song being played
