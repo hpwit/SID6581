@@ -348,30 +348,16 @@ void MOS_CPU_Controls::putaddr( mode_enum mode, uint8_t val )
   }
 }
 
-
-
-
 void MOS_CPU_Controls::branch( bool flag )
 {
-  uint16_t dist = getaddr(mode_imm);
-  // FIXME: while this was checked out, it still seems too complicated
-  // make signed
-  //log_v("dist:%d\n",dist);
-  if (dist & 0x80) {
-    dist = 0 - ((~dist & 0xff) + 1);
-  }
-  //dist=dist&0xff;
-  // this here needs to be extracted for general 16-bit rounding needs
-  wval= pc + dist;
-  // FIXME: added boundary checks to wrap around. Not sure this is whats needed
-  //if (wval < 0) wval += 65536;
-  wval &= 0xffff;
-  if (flag) {
+ if (flag) {
+ 	int8_t dist = (int8_t)getmem(pc++);
     cycles += ((pc & 0x100) != (wval & 0x100)) ? 2 : 1;
-    pc = wval;
-  }
+ 	pc += dist;
+ } else {
+ 	pc++;
+ }
 }
-
 
 uint16_t MOS_CPU_Controls::cpuParse()
 {
@@ -399,13 +385,15 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_N, a & 0x80);
       break;
     case inst_asl:
+    {
       wval = getaddr(addr);
       wval <<= 1;
       setaddr(addr, wval & 0xff);
       setflags(flag_Z,!(wval&0xff)); // warn: compliler doesn't like this inside 'case'
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, wval & 0x100);
-      break;
+    }
+    break;
     case inst_bcc:
       branch(!(p & flag_C));
       break;
@@ -768,7 +756,6 @@ uint16_t MOS_CPU_Controls::cpuParse()
 uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
 {
   uint16_t ccl = 0;
-
   a = na;	// Accumulator
   x = 0;	// Index Register
   y = 0;	// Index Register
