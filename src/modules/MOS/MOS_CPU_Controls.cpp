@@ -218,8 +218,7 @@ uint8_t MOS_CPU_Controls::getaddr( mode_enum mode )
       cycles += 2;
       return a;
     default:
-    return 0;
-
+      return 0;
   }
   return 0;
 }
@@ -260,7 +259,6 @@ void MOS_CPU_Controls::setaddr( mode_enum mode, uint8_t val )
     case mode_acc:
       a = val;
       return;
-
     case mode_imm:
     case mode_absy:
     case mode_zpy:
@@ -270,7 +268,7 @@ void MOS_CPU_Controls::setaddr( mode_enum mode, uint8_t val )
     case mode_rel:
     case mode_xxx:
     default:
-    return;
+      return;
   }
 }
 
@@ -346,7 +344,7 @@ void MOS_CPU_Controls::putaddr( mode_enum mode, uint8_t val )
     case mode_rel:
     case mode_xxx:
     default:
-    return;
+      return;
   }
 }
 
@@ -389,8 +387,8 @@ uint16_t MOS_CPU_Controls::cpuParse()
     case inst_asl:
       wval = getaddr(addr);
       wval <<= 1;
-      setaddr(addr,wval);
-      setflags(flag_Z,!(wval&0xff));
+      setaddr(addr, wval & 0xff);
+      setflags(flag_Z,!(wval&0xff)); // warn: compliler doesn't like this inside 'case'
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, wval & 0x100);
     break;
@@ -648,7 +646,8 @@ uint16_t MOS_CPU_Controls::cpuParse()
       a = wval & 0xff;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-	    setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
+      // warn: compiler doesn't like that in 'case' => enclosing in curly brackets
+      setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
     }
     break;
     case inst_sec:
@@ -710,32 +709,31 @@ uint16_t MOS_CPU_Controls::cpuParse()
 // Routines for some undocumented opcodes
 
     case inst_slo:
-	  bval = getaddr(addr);
-	  setflags(flag_C, bval >> 7);
-	  bval <<= 1;
-	  setaddr(addr, bval);
-	  a |= bval;
-	  setflags(flag_Z, !a);
-	  setflags(flag_N, a & 0x80);
-	  break;
-	case inst_axs: // same at SBX
+      bval = getaddr(addr);
+      setflags(flag_C, bval >> 7);
+      bval <<= 1;
+      setaddr(addr, bval);
+      a |= bval;
+      setflags(flag_Z, !a);
+      setflags(flag_N, a & 0x80);
+    break;
+    case inst_axs: // same at SBX
       bval=getaddr(addr);
       setflags(flag_C, (x & a) >= bval);
-	  x = ((x & a) - bval) & 0xff;
+      x = ((x & a) - bval) & 0xff;
       setflags(flag_Z,!x);
       setflags(flag_N, x & 0x80);
-	  break;
-	case inst_lax:
-	  a = getaddr(addr);
-	  x = a;
-	  setflags(flag_Z, !a);
-	  setflags(flag_N, a & 0x80);
-	  break;
+    break;
+    case inst_lax:
+      a = x = getaddr(addr);
+      setflags(flag_Z, !a);
+      setflags(flag_N, a & 0x80);
+    break;
     case inst_sax:
       putaddr(addr,a & x);
       break;
     case inst_shy:
-	  putaddr(addr, y & (((addr - x) >> 8) + 1));
+      putaddr(addr, y & (((addr - x) >> 8) + 1));
       break;
     case inst_shx:
       putaddr(addr, x & (((addr - y) >> 8) + 1));
