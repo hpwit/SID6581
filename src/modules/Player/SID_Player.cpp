@@ -126,6 +126,7 @@ void SIDTunesPlayer::kill()
 
 void SIDTunesPlayer::reset()
 {
+  // this is more of a "panic button"
   kill(); // kill tasks first
   delay(100);
 
@@ -573,8 +574,8 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
       play_addr=(mem[0xffff] << 8) + mem[0xfffe];
       mem[1]=0x37;
     }
-  } else {
-    cpuJSR( init_addr, songnumber );
+  } else { // pre-selected adress for first song
+    cpuJSR( play_addr, songnumber );
   }
   log_d("Play_addr = $%04x, Init_addr = $%04x (song %d/%d), clockspeed=%d, songspeed=%d", play_addr, init_addr, songnumber+1, subsongs, speed, speedsong[songnumber]);
 

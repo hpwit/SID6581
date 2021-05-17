@@ -1,5 +1,5 @@
 # SID 6581 library
-===========
+
 
 [![arduino-library-badge](https://www.ardu-badge.com/badge/SID6581.svg?)](https://www.ardu-badge.com/SID6581-targz)
 
