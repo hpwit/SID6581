@@ -350,30 +350,16 @@ void MOS_CPU_Controls::putaddr( mode_enum mode, uint8_t val )
   }
 }
 
-
-
-
 void MOS_CPU_Controls::branch( bool flag )
 {
-  uint16_t dist = getaddr(mode_imm);
-  // FIXME: while this was checked out, it still seems too complicated
-  // make signed
-  //log_v("dist:%d\n",dist);
-  if (dist & 0x80) {
-    dist = 0 - ((~dist & 0xff) + 1);
-  }
-  //dist=dist&0xff;
-  // this here needs to be extracted for general 16-bit rounding needs
-  wval= pc + dist;
-  // FIXME: added boundary checks to wrap around. Not sure this is whats needed
-  //if (wval < 0) wval += 65536;
-  wval &= 0xffff;
-  if (flag) {
+ if (flag) {
+ 	int8_t dist = (int8_t)getmem(pc++);
     cycles += ((pc & 0x100) != (wval & 0x100)) ? 2 : 1;
-    pc = wval;
-  }
+ 	pc += dist;
+ } else {
+ 	pc++;
+ }
 }
-
 
 uint16_t MOS_CPU_Controls::cpuParse()
 {
@@ -654,7 +640,6 @@ uint16_t MOS_CPU_Controls::cpuParse()
       cycles += 6;
       break;
     case inst_sbc:
-    {
       bval = getaddr(addr) ^ 0xff;
       uint8_t save_a = a;
       wval = a + bval + (( p & flag_C) ? 1 : 0);
@@ -662,8 +647,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       a = wval & 0xff;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-	    setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
-    }
+	  setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
     break;
     case inst_sec:
       cycles += 2;
@@ -734,13 +718,14 @@ uint16_t MOS_CPU_Controls::cpuParse()
 	  break;
 	case inst_axs: // same at SBX
       bval=getaddr(addr);
-	  x = (a & x) - bval;
-	  setflags(flag_Z, !x);
-	  setflags(flag_N, x > 127);
-      setflags(flag_C,x>=bval);
+      setflags(flag_C, (x & a) >= bval);
+	  x = ((x & a) - bval) & 0xff;
+      setflags(flag_Z,!x);
+      setflags(flag_N, x & 0x80);
 	  break;
 	case inst_lax:
-	  a = x = getaddr(addr);
+	  a = getaddr(addr);
+	  x = a;
 	  setflags(flag_Z, !a);
 	  setflags(flag_N, a & 0x80);
 	  break;
@@ -769,12 +754,12 @@ uint16_t MOS_CPU_Controls::cpuParse()
 uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
 {
   uint16_t ccl = 0;
-  a = na;
-  x = 0;
-  y = 0;
-  p = 0;
-  s = 255;
-  pc = npc;
+  a = na;	// Accumulator
+  x = 0;	// Index Register
+  y = 0;	// Index Register
+  p = 0;	// Status Register
+  s = 253;	// Stack Pointer (0xFD)
+  pc = npc;	// Program Counter
   push(0);
   push(0);
   int g=100;
