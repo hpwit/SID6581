@@ -151,7 +151,7 @@ void SIDTunesPlayer::reset()
 // Getters/Setters
 
 void     SIDTunesPlayer::fireEvent( SIDTunesPlayer* player, sidEvent event) { if (eventCallback) (*eventCallback)(player, event); }
-void     SIDTunesPlayer::setMaxVolume( uint8_t vol ) { volume=vol; }
+void     SIDTunesPlayer::setMaxVolume( uint8_t vol ) { volume=vol;  sid.setMaxVolume(vol); }
 void     SIDTunesPlayer::setDefaultDuration(uint32_t duration) { default_song_duration=duration; }
 void     SIDTunesPlayer::setLoopMode(loopmode mode) { currentloopmode=mode; }
 void     SIDTunesPlayer::setPlayMode(playmode mode) { currentplaymode=mode; }
@@ -193,7 +193,7 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
     log_e("File %s does not exist", path);
     return false;
   }
-  log_e("Opening FS from core #%d", xPortGetCoreID() );
+  //log_e("Opening FS from core #%d", xPortGetCoreID() );
   File file = fs->open( path );
   if(!file) {
     log_e("Unable to open %s", path);
@@ -245,7 +245,7 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
   bool playable = true;
 
   if( preferred_SID_model[0]!= 6581 || preferred_SID_model[1]!= 6581 || preferred_SID_model[2]!= 6581 ) {
-    log_d("Unsupported SID Model?:  0: %d  1: %d  2: %d  in file %s",
+    log_v("Unsupported SID Model?:  0: %d  1: %d  2: %d  in file %s",
       preferred_SID_model[0],
       preferred_SID_model[1],
       preferred_SID_model[2],
@@ -259,14 +259,18 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
 
     snprintf( songinfo->md5, 33, "%s", Sid_md5::calcMd5( file ) );
     file.close();
-
+    if( !MD5Parser->getDuration( songinfo ) ) {
+      log_d("[%d] lookup failed for '%s' / '%s' ", ESP.getFreeHeap(), songinfo->name, songinfo->md5 );
+    }
+    /*
     if( !MD5Parser->getDurationsFromSIDPath( songinfo ) ) {
       if( MD5Parser->getDurationsFastFromMD5Hash( songinfo ) ) {
         log_d("[%d] Hash lookup success after SID Path lookup failed for '%s' ", ESP.getFreeHeap(), songinfo->name );
       } else {
         log_e("[%d] Both Hash lookup and SID Path lookup failed for '%s' / '%s' ", ESP.getFreeHeap(), songinfo->name, songinfo->md5 );
       }
-    } else {
+    }*/
+    else {
       log_d("[%d] SID Path lookup success for song '%s' ", ESP.getFreeHeap(), songinfo->name );
     }
   } else {
@@ -285,9 +289,10 @@ bool SIDTunesPlayer::getInfoFromSIDFile( const char * path, SID_Meta_t *songinfo
 
 bool SIDTunesPlayer::playSidFile()
 {
+
   if( TunePlayerTaskRunning ) {
-    if( TunePlayerTaskPlaying ) {
-      log_w("Marking the current song as stopped");
+    if( paused || TunePlayerTaskPlaying ) {
+      log_w("Stopping the current song");
       stop();
     }
   }
@@ -326,7 +331,7 @@ bool SIDTunesPlayer::playSidFile()
 
   // TODO check semaphore before using SPI
 
-  log_e("Accessing FS from core #%d", xPortGetCoreID() );
+  //log_e("Accessing FS from core #%d", xPortGetCoreID() );
 
   if( !fs->exists( currenttrack->filename ) ) {
     log_e("File %s does not exist", currenttrack->filename );
@@ -417,7 +422,7 @@ bool SIDTunesPlayer::playSidFile()
   file.close();
   #ifdef _SID_HVSC_FILE_INDEXER_H_
   if( MD5Parser != NULL ) {
-    //if( currenttrack->durations == nullptr ) {
+    if( currenttrack->durations == nullptr ) {
       log_d("[%d] Fetching durations", ESP.getFreeHeap() );
       if( !MD5Parser->getDuration( currenttrack ) ) {
         log_e("Can't get duration for this song (md5:%s):-(", currenttrack->md5 );
@@ -425,9 +430,9 @@ bool SIDTunesPlayer::playSidFile()
         currenttrack->durations = (uint32_t*)sid_calloc(1, sizeof(uint32_t));
         currenttrack->durations[0] = 0;
       }
-    //} else {
-    //  log_w("[%d] Durations don't need parsing", ESP.getFreeHeap() );
-    //}
+    } else {
+      log_d("[%d] Durations don't need parsing", ESP.getFreeHeap() );
+    }
   } else {
     log_v("[%d] No MD5 Parser", ESP.getFreeHeap() );
     if( currenttrack->durations == nullptr ) {
@@ -470,17 +475,26 @@ bool SIDTunesPlayer::playPrevSongInSid()
 
 void SIDTunesPlayer::stop()
 {
+  if( xTunePlayerTaskHandle != NULL ) {
 
-  if( TunePlayerTaskRunning ) {
     if( TunePlayerTaskPlaying ) {
+      if( paused ) {
+        togglePause();
+      }
+      ExitTunePlayerLoop = true;
+      while( ExitTunePlayerLoop ) {
+        vTaskDelay(1);
+      }
       sid.soundOff();
       sid.resetsid();
+
+      fireEvent( this, SID_STOP_TRACK );
+    } else {
+      log_e("[Cannot stop] Player task is not playing");
     }
-    TunePlayerTaskPlaying = false;
-    vTaskDelay(1);
-    fireEvent( this, SID_STOP_TRACK );
+  } else {
+    log_e("[Cannot stop] Player task is not running");
   }
-  vTaskDelay(1);
 }
 
 
@@ -532,8 +546,11 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
   //sid.resetsid();
 
   if( TunePlayerTaskPlaying ) {
-    log_w("Marking the current song as stopped");
-    stop();
+    //log_w("Marking the current song as stopped");
+    //stop();
+    //TunePlayerTaskPlaying = false;
+    //paused = false;
+    //vTaskDelay(10);
   }
 
   currentoffset = 0;
@@ -617,8 +634,9 @@ void SIDTunesPlayer::SIDTunePlayerTask(void * parameters)
     uint32_t now_time = 0;
     //uint32_t pause_time = 0;
     cpu->TunePlayerTaskPlaying = true;
+    cpu->ExitTunePlayerLoop = false;
 
-    while( cpu->TunePlayerTaskPlaying == true ) {
+    while( cpu->TunePlayerTaskPlaying == true && cpu->ExitTunePlayerLoop==false ) {
 
       cpu->totalinframe += cpu->cpuJSR( cpu->play_addr, 0 );
       cpu->wait += cpu->waitframe;
@@ -653,6 +671,7 @@ void SIDTunesPlayer::SIDTunePlayerTask(void * parameters)
     log_d("Track ended");
     cpu->sid.soundOff();
     cpu->TunePlayerTaskPlaying = false;
+    cpu->ExitTunePlayerLoop    = false;
     cpu->fireEvent( cpu, SID_END_TRACK );
 
     //xTaskNotifyGive( xTunePlayerTaskLocker );

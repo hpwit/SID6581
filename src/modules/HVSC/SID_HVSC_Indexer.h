@@ -166,7 +166,7 @@ struct MD5FileParser
 
     bool reset();
     bool getDuration( SID_Meta_t *song);
-
+  private:
     // fastest lookup for HVSC
     bool getDurationsFromSIDPath( SID_Meta_t *song );
     // faster lookup for custom playlists
@@ -174,7 +174,7 @@ struct MD5FileParser
     // sluggish as hell, no hash lookup, legacy failsafe method
     bool getDurationsFromMD5Hash( SID_Meta_t *song );
 
-  private:
+
     MD5FileConfig *cfg      = nullptr;
     int  getDurationsFromMd5String( String md5line, SID_Meta_t *song );
 

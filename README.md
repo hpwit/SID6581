@@ -1,14 +1,34 @@
 # SID 6581 library
 ===========
 
-This library is to control up to 5 SID 6581 chips from the 1980s era using an esp32.
-The program allows you to :
-* Directly push the register to the  SID chip. Hence you can program like in the good old times :)
-* Play old (or new) sid tunes [video here](https://youtu.be/_N8GZVB5zfM)
-* Play notes over up to 15 voices (3 voices per SID chip)
-* Design and play different instruments [video here with MIDI and 6 voices](https://youtu.be/iHB7V7PAqJQ)
-* Assign up to one instrument per voice
-The sound is played is the background so your mcu can do something else at the same time.
+[![arduino-library-badge](https://www.ardu-badge.com/badge/SID6581.svg?)](https://www.ardu-badge.com/SID6581-targz)
+
+
+An ESP32 library to control up to 5 SID 6581 chips from the 1980s era.
+
+
+<p align="center">
+<img src="extras/project_logo.png" alt="SID6581 for ESP32 logo" width="512" />
+</p>
+
+
+Hardware requirements
+---------------------
+- ESP32-Wroom of ESP32-Wrover (dual core required)
+- Any SID Chip model (original, clone)
+- Any pcb using 74HC595 adressing (see [schematics](extras/Schematic_SIDESP32_Sheet_1_20200319160853.png)
+
+
+Features
+--------
+- Directly push the register to the  SID chip. Hence you can program like in the good old times :)
+- Play old (or new) sid tunes [video here](https://youtu.be/_N8GZVB5zfM)
+- Play notes over up to 15 voices (3 voices per SID chip)
+- Design and play different instruments [video here with MIDI and 6 voices](https://youtu.be/iHB7V7PAqJQ)
+- Assign up to one instrument per voice
+
+The sound is played in the background so your mcu can do something else at the same time.
+
 
 NB: the SID chip requires a 1Mhz clock signal to work  **you can either provide it with an external clock circuit or use a pin of the esp32 to do it**  (clock generated thanks to I2s).
 
@@ -46,8 +66,10 @@ NB1: the sid tunes do not have an end hence they will play by default for 3 minu
 ```C
 begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
-bool play(); //play in loop the playlist
-bool playSongAtPosition(int position); //play song at a specific position of the playlist.
+bool playSID();
+bool playSID( SID_Meta_t* sid_info );
+~~bool play(); //play in loop the playlist~~
+~~bool playSongAtPosition(int position); //play song at a specific position of the playlist.~~
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void togglePause(); //pause/play the player
@@ -69,7 +91,9 @@ Possible `loopmode` values:
 
 ```C
 
-bool getPlayerStatus(); //tells you if the runner is playing or not
+~~bool getPlayerStatus(); //tells you if the runner is playing or not~~
+
+bool isPlaying();
 
 // Specific functions to have info on the current sid file
 char * getFilename(); //return the filename of the current Sidfile playing
@@ -939,7 +963,9 @@ void loop() {
 }
 ```
 
- Here you can hear that during the release part (when the sound goes slowly down the wobling effect has disappeared. This is normal as the release will only take count of the last note played. To arrange that we can make use of the after_off function as such
+ Here you can hear that during the release part (when the sound goes slowly down the wobling effect
+ has disappeared. This is normal as the release will only take count of the last note played.
+ To arrange that we can make use of the after_off function as such
 
  ```C
 
@@ -1052,8 +1078,10 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 # Credits & Thanks
 
-- [tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction  as well as ideas for the functionalities to implements for the SID players.
+- [tobozo](https://github.com/tobozo) for helping not only testing but giving me inputs, code review and readme.md correction as well as ideas for the functionalities to implements for the SID players.
     Please check his repo where he's using this library to implement not only a full player but also a [SID vizualizer](https://github.com/tobozo/ESP32-SIDView).
+
+- [XadNightfall](https://github.com/XadNightfall) For implementing the undocumented opcodes and improving in the cpu emulator
 
 - [Ken Händel](https://haendel.ddns.net/~ken/#_latest_beta_version) for his advices and his tools
 
@@ -1066,6 +1094,4 @@ To plug the Midi to the esp32 please look around internet it will depend on what
 
 1) Let me know if you're using the library
 2) Do not hesitate if you have questions
-
-
-Updated 8 April 2020
+3) Contributions warmly welcome !

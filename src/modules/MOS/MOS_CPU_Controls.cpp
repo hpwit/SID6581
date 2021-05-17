@@ -654,14 +654,17 @@ uint16_t MOS_CPU_Controls::cpuParse()
       cycles += 6;
       break;
     case inst_sbc:
+    {
       bval = getaddr(addr) ^ 0xff;
+      uint8_t save_a = a;
       wval = a + bval + (( p & flag_C) ? 1 : 0);
       setflags(flag_C, wval & 0x100);
       a = wval & 0xff;
       setflags(flag_Z, !a);
-      setflags(flag_N, a > 127);
-      setflags(flag_V, ((p & flag_C) ? 1 : 0) ^ ((p & flag_N) ? 1 : 0));
-      break;
+      setflags(flag_N, a & 0x80);
+	    setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
+    }
+    break;
     case inst_sec:
       cycles += 2;
       setflags(flag_C, 1);

@@ -7,6 +7,9 @@
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
+
+static SID6581 sid;
+
 static QueueHandle_t _serial_sid_queue;
 static TaskHandle_t SIDSerialPlayerTaskHandle = NULL;
 static TaskHandle_t SIDSerialPlayerTaskLock= NULL;

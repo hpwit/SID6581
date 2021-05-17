@@ -196,6 +196,7 @@ class SIDTunesPlayer : public MOS_CPU_Controls
 
     bool TunePlayerTaskRunning = false;
     bool TunePlayerTaskPlaying = false;
+    bool ExitTunePlayerLoop    = false;
     bool LoopPlayerTaskRunning = false;
     bool is_error = false;
 

@@ -333,7 +333,7 @@ static volatile instruction opcodes[256] =
   {inst_inx, mode_imp},                            // 0xe8
   {inst_sbc, mode_imm},                            // 0xe9
   {inst_nop, mode_acc},                            // 0xea
-  {inst_xxx, mode_xxx},                            // 0xeb
+  {inst_sbc, mode_imm},                            // 0xeb
   {inst_cpx, mode_abs},                            // 0xec
   {inst_sbc, mode_abs},                            // 0xed
   {inst_inc, mode_abs},                            // 0xee

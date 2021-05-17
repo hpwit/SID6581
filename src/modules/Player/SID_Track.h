@@ -50,11 +50,15 @@ typedef struct
 } SID_Meta_t;
 
 
+#ifndef SID_SONG_DEBUG_PATTERN
+  #define SID_SONG_DEBUG_PATTERN "Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d "
+#endif
+
 
 __attribute__((unused))
 static void songdebug( SID_Meta_t* SIDMeta )
 {
-  Serial.printf("Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d ",
+  Serial.printf(SID_SONG_DEBUG_PATTERN,
     SIDMeta->filename,
     (const char*)SIDMeta->name,
     (const char*)SIDMeta->author,

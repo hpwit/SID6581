@@ -1,5 +1,6 @@
 //#include <Softwareserial.h>
 //HardwareSerial Serial11(1);
+#define SID_INSTRUMENTS
 #include "SID6581.h"
 #define SID_CLOCK 25
 #define SID_DATA 33
@@ -23,6 +24,8 @@
 
 #define NUMBER_OF_VOICES 6
 
+static SID6581 sid;
+
 int voices[NUMBER_OF_VOICES];
 int lastvoice=0;
 
@@ -31,7 +34,7 @@ void playNote(int note) {
     int new_voice=(lastvoice+1+i)%NUMBER_OF_VOICES;
     if(voices[new_voice]==0) {
       voices[new_voice]=note;
-      SIDKeyBoardPlayer::playNote(new_voice,_sid_play_notes[note-21+9],0);
+      SIDKeyBoardPlayer::playNote(new_voice,SID_PlayNotes[note-21+9],0);
       lastvoice=new_voice;
       break;
     }
@@ -56,7 +59,7 @@ void setup() {
   Serial.begin(115200);
   Serial1.begin(31250,SERIAL_8N1, 34);    //start listening on pin 34 for midi instruction
   sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-  SIDKeyBoardPlayer::KeyBoardPlayer(NUMBER_OF_VOICES);
+  SIDKeyBoardPlayer::KeyBoardPlayer(&sid, NUMBER_OF_VOICES);
   sid.sidSetVolume(0,15);
   sid.sidSetVolume(1,15);
 }
@@ -74,18 +77,18 @@ void  change_instrument() {
   switch(MID_LSB) {
     case 122:
       if(MID_PRG==0)
-        SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>();
+        SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>( &sid );
       else
-          SIDKeyBoardPlayer::changeAllInstruments<sid_piano5>();
+          SIDKeyBoardPlayer::changeAllInstruments<sid_piano5>( &sid );
     break;
     case 112:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano>();
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano>( &sid );
     break;
     case 123:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano3>();
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano3>( &sid );
     break;
     case 125:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano4>();
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano4>( &sid );
     break;
   }
 }
