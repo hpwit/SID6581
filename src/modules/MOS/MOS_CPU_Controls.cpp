@@ -401,7 +401,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
     case inst_asl:
       wval = getaddr(addr);
       wval <<= 1;
-      setaddr(addr, wval & 0xff);
+      setaddr(addr,wval);
       setflags(flag_Z,!(wval&0xff)); // warn: compliler doesn't like this inside 'case'
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, wval & 0x100);
