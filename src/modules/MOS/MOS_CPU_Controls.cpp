@@ -652,7 +652,6 @@ uint16_t MOS_CPU_Controls::cpuParse()
       cycles += 6;
       break;
     case inst_sbc:
-    {
       bval = getaddr(addr) ^ 0xff;
       uint8_t save_a = a;
       wval = a + bval + (( p & flag_C) ? 1 : 0);
@@ -660,9 +659,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       a = wval & 0xff;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      // warn: compiler doesn't like that in 'case' => enclosing in curly brackets
       setflags(flag_V, (~(save_a^bval)) & (save_a^a) & 0x80);
-    }
     break;
     case inst_sec:
       cycles += 2;
@@ -739,7 +736,8 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_N, x & 0x80);
     break;
     case inst_lax:
-      a = x = getaddr(addr);
+      a = getaddr(addr);
+      x = a;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
     break;
@@ -759,6 +757,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       putaddr(addr, (s = a & x) & (((addr - y) >> 8) + 1));
       break;
     default:
+	  getaddr(addr);
       break;
   }
   return cycles;
