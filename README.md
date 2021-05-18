@@ -1,5 +1,4 @@
 # SID 6581 library
-===========
 
 [![arduino-library-badge](https://www.ardu-badge.com/badge/SID6581.svg?)](https://www.ardu-badge.com/SID6581-targz)
 
@@ -68,8 +67,6 @@ begin(int clock_pin,int data_pin, int latch);
 begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
 bool playSID();
 bool playSID( SID_Meta_t* sid_info );
-~~bool play(); //play in loop the playlist~~
-~~bool playSongAtPosition(int position); //play song at a specific position of the playlist.~~
 void soundOff(); //cut off the sound
 void soundOn(); //trun the sound on
 void togglePause(); //pause/play the player
