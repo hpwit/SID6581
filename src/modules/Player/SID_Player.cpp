@@ -490,10 +490,10 @@ void SIDTunesPlayer::stop()
 
       fireEvent( this, SID_STOP_TRACK );
     } else {
-      log_e("[Cannot stop] Player task is not playing");
+      log_d("[Cannot stop] Player task is not playing");
     }
   } else {
-    log_e("[Cannot stop] Player task is not running");
+    log_d("[Cannot stop] Player task is not running");
   }
 }
 
@@ -596,7 +596,7 @@ bool SIDTunesPlayer::playSongNumber( int songnumber )
 
   if((int)currenttrack->durations[currentsong]<=0 || MD5Parser == NULL ) {
     song_duration = default_song_duration;
-    log_w("[%d] Playing task (4Kb) with default song duration %d ms", ESP.getFreeHeap(), song_duration);
+    log_i("[%d] Playing track with default song duration %d ms", ESP.getFreeHeap(), song_duration);
   } else {
     song_duration = currenttrack->durations[currentsong];
     log_d("[%d] Playing track %d with md5 database song duration %d ms", ESP.getFreeHeap(), currentsong, song_duration);
