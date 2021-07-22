@@ -21,21 +21,43 @@
 static SIDTunesPlayer *sidPlayer = nullptr;
 
 #include <vector>
+std::vector<String> songListStr; // for storing SID filenames
 std::vector<SID_Meta_t> songList; // for storing SID tracks
 size_t songIndex = 0; // the current song being played
 
+// Arduino 2.0.0-alpha brutally changed the behaviour of fs::File->name()
+const char* fs_file_path( fs::File *file ) {
+  #if defined ESP_IDF_VERSION_MAJOR && ESP_IDF_VERSION_MAJOR >= 4
+    return file->path();
+  #else
+    return file->name();
+  #endif
+}
 
-void playNextSong( SIDTunesPlayer* player )
+
+bool playNextTrack()
 {
-  songIndex++;
-  songIndex = (songIndex)%(songList.size());
+  if( songIndex+1 < songListStr.size() ) {
+    songIndex++;
+  } else {
+    songIndex = 0;
+  }
 
-  bool playable = player->getInfoFromSIDFile( songList[songIndex].filename);
+  bool playable = false;
+
+  if( songList[songIndex].filename[0] == '\0' ) {
+    // store song info in songList cache
+    playable = sidPlayer->getInfoFromSIDFile( songListStr[songIndex].c_str(), &songList[songIndex] );
+  } else {
+    playable = true;
+  }
 
   if( !playable ) {
-    playNextSong( player );
+    log_e("Track %s is NOT playable", songListStr[songIndex].c_str() );
+    return playNextTrack();
   } else {
-    player->playSID();
+    songdebug( &songList[songIndex] );
+    return sidPlayer->playSID( &songList[songIndex] );
   }
 }
 
@@ -44,37 +66,45 @@ static void eventCallback( SIDTunesPlayer* player, sidEvent event )
 {
   switch( event ) {
     case SID_NEW_FILE:
-      Serial.printf( "[%d] SID_NEW_FILE: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_NEW_FILE: %s (%d songs)\n", ESP.getFreeHeap(), player->getFilename(), player->getSongsCount() );
     break;
     case SID_NEW_TRACK:
-      Serial.printf( "[%d] SID_NEW_TRACK: %s (%02d:%02d) %d/%d subsongs\n",
+      log_n( "[%d] SID_NEW_TRACK: %s (%02dm %02ds) %d/%d subsongs\n",
         ESP.getFreeHeap(),
         player->getName(),
         player->getCurrentTrackDuration()/60000,
         (player->getCurrentTrackDuration()/1000)%60,
-        player->currentsong+1,
-        player->subsongs
+        player->getCurrentSong()+1,
+        player->getSongsCount()
       );
     break;
     case SID_START_PLAY:
-      Serial.printf( "[%d] SID_START_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_START_PLAY: #%d from %s\n", ESP.getFreeHeap(), player->getCurrentSong()+1, player->getFilename() );
+    break;
+    case SID_END_FILE:
+      log_n( "[%d] SID_END_FILE: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      //if( autoplay ) {
+        playNextTrack();
+      // } else {
+      //   log_n("All %d tracks have been played\n", songList.size() );
+      //   while(1) vTaskDelay(1);
+      //   play_ended = true;
+      // }
     break;
     case SID_END_PLAY:
-      Serial.printf( "[%d] SID_END_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
-      // eternal loop on all SID tracks
-      playNextSong( player );
+      log_n( "[%d] SID_END_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
     break;
     case SID_PAUSE_PLAY:
-      Serial.printf( "[%d] SID_PAUSE_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_PAUSE_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
     break;
     case SID_RESUME_PLAY:
       Serial.printf( "[%d] SID_RESUME_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
     break;
     case SID_END_TRACK:
-      Serial.printf("[%d] SID_END_TRACK\n", ESP.getFreeHeap());
+      log_n("[%d] SID_END_TRACK\n", ESP.getFreeHeap());
     break;
     case SID_STOP_TRACK:
-      Serial.printf("[%d] SID_STOP_TRACK\n", ESP.getFreeHeap());
+      log_n("[%d] SID_STOP_TRACK\n", ESP.getFreeHeap());
     break;
   }
 }
@@ -111,35 +141,40 @@ void setup()
   }
 
   File file = root.openNextFile();
-  while(file){
-    if(file.isDirectory()){
-      Serial.printf("Ignoring DIR: %s\n", file.name() );
+  while(file) {
+    if(file.isDirectory()) {
+      Serial.printf("Ignoring DIR: %s\n", file.path() );
     } else {
-      if( String( file.name() ).endsWith(".sid" ) ) {
+      if( String( file.path() ).endsWith(".sid" ) ) {
+        songListStr.push_back( file.path() );
         SID_Meta_t songinfo;
-        if( sidPlayer->getInfoFromSIDFile( file.name(), &songinfo ) ) {
-          Serial.printf("[+] FILE: %-32s %6d bytes\n", file.name(), file.size() );
-          songList.push_back( songinfo );
-        } else {
-          Serial.printf("[!] FILE: %-32s %6d bytes\n", file.name(), file.size() );
-        }
+        songList.push_back( songinfo );
+        Serial.printf("[+] FILE: %-32s %6d bytes\n", file.path(), file.size() );
       }
     }
     file = root.openNextFile();
   }
+
+  if( songListStr.size() == 0 ) {
+    Serial.println("No SID files have been found, go to 'Tools-> ESP32 Scketch data upload'");
+    Serial.println("Halting");
+    while(1) vTaskDelay(1);
+  }
+
+  Serial.printf("Tracks list has %d items\n", songList.size() );
 
   sidPlayer->setMaxVolume(15); //value between 0 and 15
 
   //sidPlayer->setDefaultDuration( 180000 ); // 3mn per song max for this example, comment this out to get full songs
   sidPlayer->setDefaultDuration( 10000 ); // 10s per song max for this example, comment this out to get full songs
 
-  sidPlayer->setPlayMode( SID_ONE_SONG ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
+  sidPlayer->setPlayMode( SID_ALL_SONGS ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
   sidPlayer->setLoopMode( SID_LOOP_OFF );  // applies to subsongs in a track, values = SID_LOOP_ON, SID_LOOP_RANDOM or SID_LOOP_OFF
 
   srand(time(NULL));
   songIndex = random(songList.size());
 
-  playNextSong( sidPlayer );
+  playNextTrack();
 
 }
 

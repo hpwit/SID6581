@@ -29,11 +29,25 @@
 \*/
 
 #include "SID6581.h"
-#include "SPI.h"
+#include <SPI.h>
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-#include "driver/i2s.h"
+
 //#include "freertos/queue.h"
+
+#define SID_CS 2
+#define SID_WRITE 1
+#define SID_CS_1 1
+#define SID_WRITE_1 0
+
+#define SID_CS_2 3
+#define SID_WRITE_2 2
+
+#define SID_CS_3 5
+#define SID_WRITE_3 4
+
+#define SID_CS_4 7
+#define SID_WRITE_4 6
 
 
 static TaskHandle_t  xPushToRegisterHandle = NULL;
@@ -42,6 +56,7 @@ static SPIClass      *sid_spi = NULL;
 static uint8_t       *sidregisters = NULL; // 15*32 bytes
 static bool          i2s_begun = false;
 static bool          spi_begun = false;
+static bool          exitRegisterTask = false;
 
 typedef struct
 {
@@ -53,13 +68,85 @@ typedef struct
 
 SID6581::~SID6581()
 {
-  if( sidregisters != NULL )
+  end();
+  if( sidregisters != NULL ) {
     free( sidregisters );
+  }
 }
 
 
 SID6581::SID6581()
 {
+
+}
+
+
+void SID6581::end()
+{
+  if( spi_begun ) {
+    exitRegisterTask = true;
+    soundOff();
+    while(exitRegisterTask) vTaskDelay(1);
+    sid_spi->end();
+    spi_begun = false;
+  }
+  if( i2s_begun ) {
+    i2s_driver_uninstall( i2s_num );
+    i2s_begun = false;
+  }
+  log_w("SID6581 successfully ended");
+}
+
+
+
+bool SID6581::begin(int spi_clock_pin,int spi_data_pin, int latch,int sid_clock_pin)
+{
+
+  if( !i2s_begun )
+  {
+    //const i2s_port_t i2s_num = (i2s_port_t)2;
+    const i2s_config_t i2s_config =
+    {
+      .mode =(i2s_mode_t) (I2S_MODE_MASTER | I2S_MODE_TX),
+      .sample_rate = 31250,
+      .bits_per_sample = (i2s_bits_per_sample_t)16,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+    #if defined ESP_IDF_VERSION_MAJOR && ESP_IDF_VERSION_MAJOR >= 4
+      .communication_format = (i2s_comm_format_t)(I2S_COMM_FORMAT_STAND_I2S | I2S_COMM_FORMAT_STAND_MSB),
+    #else
+      .communication_format = (i2s_comm_format_t) (I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+    #endif
+      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL3, // 0 = default interrupt priority
+      .dma_buf_count = 8,
+      .dma_buf_len = 64,
+      .use_apll = false
+    };
+    const i2s_pin_config_t pin_config =
+    {
+      .bck_io_num = sid_clock_pin,
+      .ws_io_num = -1,//NULL,
+      .data_out_num = -1, //NULL,
+      .data_in_num = I2S_PIN_NO_CHANGE
+    };
+
+    i2s_driver_install( i2s_num, &i2s_config, 0, NULL );   //install and start i2s driver
+
+    i2s_set_pin( i2s_num, &pin_config );
+
+    i2s_begun = true;
+    log_d("I2S config done, using port#%d", i2s_num);
+  } else {
+    log_d("Skipping I2S config");
+  }
+
+  return begin( spi_clock_pin, spi_data_pin, latch );
+}
+
+
+
+bool SID6581::begin( int spi_clock_pin,int spi_data_pin, int latch )
+{
+
   #ifdef BOARD_HAS_PSRAM
     if( !psramInit() ) {
       log_e("Failed to init psram, crash will probably occur");
@@ -76,79 +163,42 @@ SID6581::SID6581()
   } else {
     log_d("sidregisters already allocated");
   }
-}
 
-
-
-bool SID6581::begin(int clock_pin,int data_pin, int latch,int sid_clock_pin)
-{
-  if( !i2s_begun )
-  {
-    const i2s_port_t i2s_num = ( i2s_port_t)0;
-    const i2s_config_t i2s_config =
-    {
-      .mode =(i2s_mode_t) (I2S_MODE_MASTER | I2S_MODE_TX),
-      .sample_rate = 31250,
-      .bits_per_sample = (i2s_bits_per_sample_t)16,
-      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-      .communication_format = (i2s_comm_format_t) (I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
-      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL3, // 0 = default interrupt priority
-      .dma_buf_count = 8,
-      .dma_buf_len = 64,
-      .use_apll = false
-    };
-    const i2s_pin_config_t pin_config =
-    {
-      .bck_io_num = sid_clock_pin,
-      .ws_io_num = -1,//NULL,
-      .data_out_num = -1, //NULL,
-      .data_in_num = I2S_PIN_NO_CHANGE
-    };
-
-    i2s_driver_install(i2s_num, &i2s_config, 0, NULL);   //install and start i2s driver
-
-    i2s_set_pin(i2s_num, &pin_config);
-
-    i2s_begun = true;
-    log_d("I2S config done");
-  } else {
-    log_d("Skipping I2S config");
-  }
-
-  return begin(clock_pin,data_pin,latch );
-}
-
-
-
-bool SID6581::begin(int clock_pin,int data_pin, int latch )
-{
   /*
     We set up the spi bus which connects to the 74HC595
     */
 
-  if( !spi_begun )
-  {
-    sid_spi = new SPIClass(HSPI);
-    if(sid_spi==NULL)
-        return false;
-    sid_spi->begin(clock_pin,-1,data_pin,-1);
-    latch_pin=latch;
-    pinMode(latch, OUTPUT);
-
-    log_i("SID Initialized");
+  if( !spi_begun ) {
+    switch( SID_SPI_HOST ) {
+      case SID_SPI1_HOST: sid_spi = new SPIClass(HSPI); break;
+      case SID_SPI2_HOST: sid_spi = new SPIClass(VSPI); break;
+      default:
+      case SID_SPI3_HOST: sid_spi = new SPIClass(SPI); break;
+    }
+    if( sid_spi==NULL ) return false;
+    sid_spi->begin( spi_clock_pin, MISO, spi_data_pin, -1 );
+    latch_pin = latch;
+    pinMode( latch, OUTPUT );
+    log_i("SID Initialized (clock pin=%d, data_pin=%d", spi_clock_pin, spi_data_pin);
     spi_begun = true;
   }
 
-  if( xPushToRegisterHandle == NULL )
-  {
+  if( xPushToRegisterHandle == NULL ) {
+    log_w("Launching SID Register Queue from core #%d with priority %d", SID_QUEUE_CORE, SID_QUEUE_PRIORITY );
     xSIDQueue = xQueueCreate( SID_QUEUE_SIZE, sizeof( SID_Register_t ) );
-    xTaskCreate(SID6581::xPushRegisterTask, "xPushRegisterTask", 2048, this, 3, &xPushToRegisterHandle);
+    xTaskCreatePinnedToCore(SID6581::xPushRegisterTask, "xPushRegisterTask", 2048, this, SID_QUEUE_PRIORITY, &xPushToRegisterHandle, SID_QUEUE_CORE);
   }
   // sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
   resetsid();
   return true;
 }
 
+void SID6581::clearQueue()
+{
+  if( xSIDQueue != NULL ) {
+    xQueueReset( xSIDQueue );
+  }
+}
 
 
 void SID6581::feedTheDog()
@@ -488,7 +538,7 @@ int SID6581::getLP(int chip)
 void SID6581::sidSetVolume(int chip, uint8_t vol)
 {
   sid_control[chip].volume=vol;
-  sid_control[chip].mode_vol=(sid_control[chip].mode_vol & 0xf0 )+( vol & 0x0F);
+  sid_control[chip].mode_vol=(sid_control[chip].mode_vol & 0xf0 )+( vol & 0x0f);
   pushRegister(chip,0x18,sid_control[chip].mode_vol);
 }
 
@@ -507,7 +557,9 @@ void SID6581::soundOn()
   for(int i=0;i<5;i++) {
     int currentVolume = getSidVolume(i);
     if( currentVolume == volume[i] ) continue; // no change
+    sidSetVolume(i,  volume[i]);
     // fade to
+    /*
     if( currentVolume < volume[i] ) {
       for( int j=currentVolume; j<=volume[i]; j++)
         sidSetVolume(i,  j);
@@ -515,6 +567,7 @@ void SID6581::soundOn()
       for( int j=currentVolume; j>=volume[i]; j--)
         sidSetVolume(i,  j);
     }
+    */
   }
 }
 
@@ -524,11 +577,14 @@ void SID6581::soundOff()
 {
   for(int i=0;i<5;i++) {
     volume[i]=getSidVolume(i);
+    sidSetVolume(i,  0);
     if(volume[i]>0) {
       // fade out
+      sidSetVolume(i,  0);
+      /*
       for(int j=volume[i];j>=0;j-- ) {
         sidSetVolume(i,j);
-      }
+      }*/
     }
   }
 }
@@ -647,14 +703,14 @@ int SID6581::getFilterEX(int chip)
 
 void SID6581::clearcsw(int chip)
 {
-  //adcswrre = (adcswrre ^ (1<<WRITE) ) ^ (1<<CS) ;
+  //adcswrre = (adcswrre ^ (1<<SID_WRITE) ) ^ (1<<SID_CS) ;
   chipcontrol=0xff;
   switch(chip) {
-    case 0: adcswrre = (adcswrre ^ (1<<WRITE) ) ^ (1<<CS);   break;
-    case 1: chipcontrol=  0xff ^ ((1<<WRITE_1) | (1<<CS_1)); break;
-    case 2: chipcontrol=  0xff ^ ((1<<WRITE_2) | (1<<CS_2)); break;
-    case 3: chipcontrol=  0xff ^ ((1<<WRITE_3) | (1<<CS_3)); break;
-    case 4: chipcontrol=  0xff ^ ((1<<WRITE_4) | (1<<CS_4)); break;
+    case 0: adcswrre = (adcswrre ^ (1<<SID_WRITE) ) ^ (1<<SID_CS);   break;
+    case 1: chipcontrol=  0xff ^ ((1<<SID_WRITE_1) | (1<<SID_CS_1)); break;
+    case 2: chipcontrol=  0xff ^ ((1<<SID_WRITE_2) | (1<<SID_CS_2)); break;
+    case 3: chipcontrol=  0xff ^ ((1<<SID_WRITE_3) | (1<<SID_CS_3)); break;
+    case 4: chipcontrol=  0xff ^ ((1<<SID_WRITE_4) | (1<<SID_CS_4)); break;
   }
   push();
 }
@@ -663,8 +719,8 @@ void SID6581::clearcsw(int chip)
 
 void SID6581::setcsw()
 {
-  adcswrre = adcswrre | (1<<WRITE) | (1<<CS);
-  chipcontrol= 0xff;//(1<<WRITE_1) | (1<<CS_1);;
+  adcswrre = adcswrre | (1<<SID_WRITE) | (1<<SID_CS);
+  chipcontrol= 0xff;//(1<<SID_WRITE_1) | (1<<SID_CS_1);;
   dataspi=0;
   push();
 }
@@ -705,18 +761,34 @@ int SID6581::getRegister(int chip,int addr)
 
 
 
+bool SID6581::xQueueIsQueueEmpty()
+{
+  if( xSIDQueue == NULL ) return true;
+  SID_Register_t tmp;
+  if( xQueuePeek( xSIDQueue, &tmp, 0 )  == pdTRUE ) {
+    return false;
+  }
+  return true;
+}
+
+
 void SID6581::xPushRegisterTask(void *pvParameters)
 {
   SID6581 * sid= (SID6581 *)pvParameters;
-  SID_Register_t sid_data;
+  SID_Register_t* sid_data = (SID_Register_t*)sid_calloc(1, sizeof(SID_Register_t*));
   for(;;) {
-    xQueueReceive(xSIDQueue, &sid_data, portMAX_DELAY);
+    xQueueReceive(xSIDQueue, sid_data, portMAX_DELAY);
     // log_v("core s:%d\n",xPortGetCoreID());
     sid->setcsw();
-    sid->setA(sid_data.address);
-    sid->setD(sid_data.data);
-    sid->clearcsw(sid_data.chip);
+    sid->setA(sid_data->address);
+    sid->setD(sid_data->data);
+    sid->clearcsw(sid_data->chip);
+    if( exitRegisterTask ) break;
   }
+  exitRegisterTask = false;
+  free( sid_data );
+  log_w("Leaving push register task");
+  vTaskDelete(NULL);
 }
 
 
@@ -731,14 +803,16 @@ void SID6581::pushToVoice(int voice,uint8_t address,uint8_t data)
 
 void SID6581::push()
 {
-  sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
-  digitalWrite(latch_pin, 0);
-  sid_spi->transfer(chipcontrol);
-  sid_spi->transfer(adcswrre);
-  sid_spi->transfer(dataspi);
-  sid_spi->endTransaction();
-  digitalWrite(latch_pin, 1);
-  //delayMicroseconds(1);
+  if( spi_begun ) {
+    sid_spi->beginTransaction(SPISettings(sid_spiClk, LSBFIRST, SPI_MODE0));
+    digitalWrite(latch_pin, 0);
+    sid_spi->transfer(chipcontrol);
+    sid_spi->transfer(adcswrre);
+    sid_spi->transfer(dataspi);
+    sid_spi->endTransaction();
+    digitalWrite(latch_pin, 1);
+    //delayMicroseconds(1);
+  }
 }
 
 

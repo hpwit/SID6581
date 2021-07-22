@@ -38,20 +38,21 @@
 typedef struct
 {
 
-  char     filename[255]; // This eliminates SPIFFS which is limited to 32 chars
-  uint8_t  name[32];      // Song title
-  uint8_t  author[32];    // Original author
-  char     md5[32];       // The MD5 hash according to HVSC MD5 File
-  uint8_t  published[32]; // This is NOT a copyright
+  char     filename[256]; // WARNING: SPIFFS which is limited to 32 chars
+  uint8_t  name[33];      // Song title
+  uint8_t  author[33];    // Original author
+  char     md5[33];       // The MD5 hash according to HVSC MD5 File
+  uint8_t  published[33]; // This is NOT a copyright
   uint8_t  subsongs;      // How many subsongs in this track (up to 255)
-  uint8_t  startsong;     // Which song should be played first
+  uint8_t  startsong;     // Which song should be played first (0=invalid)
   uint32_t *durations = nullptr; // up to 255 durations in a song
 
 } SID_Meta_t;
 
 
+
 #ifndef SID_SONG_DEBUG_PATTERN
-  #define SID_SONG_DEBUG_PATTERN "Fname: %s, name: %s, author: %s, md5: %s, pub: %s, sub/start: %d/%d "
+  #define SID_SONG_DEBUG_PATTERN "Fname: %s, name: %s, author: %s, md5: %s, pub: %s, songs: %d, start: %d "
 #endif
 
 
@@ -72,7 +73,12 @@ static void songdebug( SID_Meta_t* SIDMeta )
       size_t found = 0;
       for( int i=0; i < SIDMeta->subsongs; i++ ) {
         if( SIDMeta->durations[i] > 0 ) {
-          Serial.printf("%d ms ", int(SIDMeta->durations[i]));
+          uint16_t mm,ss,SSS;
+          SSS = SIDMeta->durations[i]%1000;
+          ss  = (SIDMeta->durations[i]/1000)%60;
+          mm  = (SIDMeta->durations[i]/60000);
+          //Serial.printf("%lu ms ", SIDMeta->durations[i]);
+          Serial.printf("%d:%d.%d ", mm, ss, SSS );
           found++;
         }
       }
@@ -87,5 +93,6 @@ static void songdebug( SID_Meta_t* SIDMeta )
   }
   Serial.println();
 }
+
 
 #endif

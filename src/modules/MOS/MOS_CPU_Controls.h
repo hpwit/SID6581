@@ -55,6 +55,7 @@ class MOS_CPU_Controls
     uint8_t  getmem( uint16_t addr );
     void     cpuReset();
     uint16_t cpuJSR( uint16_t npc, uint8_t na );
+    void     setSpeed( uint32_t _speed );
 
   private:
 
@@ -79,7 +80,6 @@ class MOS_CPU_Controls
     void push( uint8_t val );
     void getNextFrame( uint16_t npc, uint8_t na );
     void branch( bool flag );
-    void setSpeed( uint32_t speed );
 
 };
 

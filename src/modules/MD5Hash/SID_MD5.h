@@ -32,61 +32,50 @@
 #define _SID_MD5_H_
 
 #include <FS.h>
-#include "mbedtls/md5.h"
 
 
-class Sid_md5
-{
+//#include "esp32/rom/md5_hash.h"
+#include <MD5Builder.h>
+
+static MD5Builder sid_md5;
+static char sid_md5result[33];
+static uint8_t sid_fbuf[256];
+
+class Sid_md5 {
 
   public:
 
-    static char* calcMd5(fs::File &file)
-    {
+    static char* calcMd5(fs::File *file ) {
 
-      static char md5result[33];
-      mbedtls_md5_context _ctx;
+      int len = file->size();
+      //if( file->position() != 0 )
+      file->seek(0); // make sure to read from the start
 
-      uint8_t i;
-      uint8_t * _buf = (uint8_t*)malloc(16);
+      sid_md5.begin();
 
-      if(_buf == NULL) {
-        log_e("Error can't malloc 16 bytes for md5 hashing");
-        return md5result;
-      }
+      int bufSize = len > 256 ? 256 : len;
+      //uint8_t *sid_fbuf = (uint8_t*)malloc(bufSize+1);
 
-      int len = file.size();
-      file.seek(0);
-
-      memset(_buf, 0x00, 16);
-      mbedtls_md5_init(&_ctx);
-      mbedtls_md5_starts(&_ctx);
-
-      size_t bufSize = len > 4096 ? 4096 : len;
-      uint8_t *fbuf = (uint8_t*)malloc(bufSize+1);
-      size_t bytes_read = file.read( fbuf, bufSize );
+      size_t bytes_read = file->read( sid_fbuf, bufSize );
 
       do {
         len -= bytes_read;
         if( bufSize > len ) bufSize = len;
-        mbedtls_md5_update(&_ctx, (const uint8_t *)fbuf, bytes_read );
+        sid_md5.add( sid_fbuf, bytes_read );
         if( len == 0 ) break;
-        bytes_read = file.read( fbuf, bufSize );
+        bytes_read = file->read( sid_fbuf, bufSize );
       } while( bytes_read > 0 );
 
-      mbedtls_md5_finish(&_ctx, _buf);
+      sid_md5.calculate();
 
-      for(i = 0; i < 16; i++) {
-        sprintf(md5result + (i * 2), "%02x", _buf[i]);
-      }
+      snprintf( sid_md5result, 33, "%s", sid_md5.toString().c_str() );
 
-      md5result[32] = 0;
+      return sid_md5result;
 
-      free(_buf);
-      free(fbuf);
-
-      return md5result;
     }
-
 };
+
+
+
 
 #endif

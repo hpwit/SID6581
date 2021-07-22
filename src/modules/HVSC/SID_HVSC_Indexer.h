@@ -120,7 +120,7 @@ class BufferedIndex
     // a database of [PATH => line number] in the md5 file for faster seek
     // this only applies to HVSC folder structure
     bool buildSIDPathIndex( const char* md5Path, const char* idxpath );
-    // build folders structure and store md5 hashes in different
+    // build folders structure and shard md5 hashes in different
     // files for faster lookup, only useful with custom-made
     // folders or non-HVSC SID collection
     bool buildSIDHashIndex( const char* md5Path, const char* folderpath, bool purge = false );
@@ -140,17 +140,27 @@ class BufferedIndex
 
     fs::FS      *fs;
     fs::File    indexFile;
+    // Arduino 2.0.0-alpha brutally changed the behaviour of fs::File->name()
+    const char* fs_file_path( fs::File *file ) {
+      #if defined ESP_IDF_VERSION_MAJOR && ESP_IDF_VERSION_MAJOR >= 4
+        return file->path();
+      #else
+        return file->name();
+      #endif
+    }
+
     char        *outBuffer = nullptr;
+    char        *lastSearch = nullptr;
     fileIndex_t *IndexItem = nullptr;
     size_t      outBufferSize = 4096;
     size_t      bufferPos = 0;
+    size_t      lastOffset = -1;
 
     void addItem( size_t offset, const char *folderName );
+    void indexItemWords( size_t offset, const char *folderName );
     void write();
     void writeIndexBuffer();
     void debugItem();
-
-
 
 };
 
@@ -165,17 +175,21 @@ struct MD5FileParser
     MD5FileParser( MD5FileConfig *config );
 
     bool reset();
-    bool getDuration( SID_Meta_t *song);
+    bool getDurations( SID_Meta_t *song);
+    int64_t getOffsetFromSIDPath( SID_Meta_t *song, bool populate = false );
+    void progressCb( size_t progress, size_t total ) { if( cfg && cfg->progressCb ) cfg->progressCb(progress, total); };
+
   private:
+
+    MD5FileConfig *cfg      = nullptr;
+
     // fastest lookup for HVSC
     bool getDurationsFromSIDPath( SID_Meta_t *song );
     // faster lookup for custom playlists
     bool getDurationsFastFromMD5Hash( SID_Meta_t *song );
     // sluggish as hell, no hash lookup, legacy failsafe method
     bool getDurationsFromMD5Hash( SID_Meta_t *song );
-
-
-    MD5FileConfig *cfg      = nullptr;
+    // helper for SongLengths entry parser
     int  getDurationsFromMd5String( String md5line, SID_Meta_t *song );
 
 };

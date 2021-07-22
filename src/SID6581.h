@@ -32,26 +32,15 @@
 #define _SID6581_H_
 
 #ifdef BOARD_HAS_PSRAM
-  #define sid_malloc ps_malloc
-  #define sid_calloc ps_calloc
+  #define sid_malloc  ps_malloc
+  #define sid_calloc  ps_calloc
+  #define sid_realloc ps_realloc
 #else
-  #define sid_malloc malloc
-  #define sid_calloc calloc
+  #define sid_malloc  malloc
+  #define sid_calloc  calloc
+  #define sid_realloc realloc
 #endif
 
-#define CS 2
-#define WRITE 1
-#define CS_1 1
-#define WRITE_1 0
-
-#define CS_2 3
-#define WRITE_2 2
-
-#define CS_3 5
-#define WRITE_3 4
-
-#define CS_4 7
-#define WRITE_4 6
 
 #define RESET 0
 #define MASK_ADDRESS 0b11111000
@@ -112,9 +101,9 @@
 
 #define SID_QUEUE_SIZE 2000
 
-
 #include "FS.h"
 #include "modules/MD5Hash/SID_MD5.h"
+#include "driver/i2s.h"
 
 
 typedef struct
@@ -130,7 +119,13 @@ typedef struct
   uint8_t sync;
   uint8_t test;
   uint8_t ringmode;
-  uint8_t freq_lo,freq_hi,pw_lo,pw_hi,control_reg,attack_decay,sustain_release;
+  uint8_t freq_lo,
+          freq_hi,
+          pw_lo,
+          pw_hi,
+          control_reg,
+          attack_decay,
+          sustain_release;
 } SID_Voice_t;
 
 
@@ -139,11 +134,27 @@ typedef struct
   uint8_t volume;
   uint8_t filterfrequency;
   uint8_t res;
-  uint8_t filt1,filt2,filt3,filtex;
-  uint8_t _3off,hp,bp,lp;
-  uint8_t fc_lo,fc_hi,res_filt,mode_vol;
+  uint8_t filt1,
+          filt2,
+          filt3,
+          filtex;
+  uint8_t _3off,
+          hp,
+          bp,
+          lp;
+  uint8_t fc_lo,
+          fc_hi,
+          res_filt,
+          mode_vol;
 } SID_Control_t;
 
+
+typedef enum {
+//SPI1 can be used as GPSPI only on ESP32
+    SID_SPI1_HOST=0,    ///< SPI1
+    SID_SPI2_HOST=1,    ///< SPI2
+    SID_SPI3_HOST=2,    ///< SPI3
+} sid_spi_host_device_t;
 
 
 
@@ -154,8 +165,19 @@ class SID6581
     SID6581();
     ~SID6581();
 
-    bool begin(int clock_pin,int data_pin, int latch );
-    bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+    BaseType_t  SID_QUEUE_CORE = 0; // for SPI task
+    UBaseType_t SID_QUEUE_PRIORITY = 3;
+
+    bool begin(int spi_clock_pin,int spi_data_pin, int latch );
+    bool begin(int spi_clock_pin,int spi_data_pin, int latch,int sid_clock_pin);
+    void end();
+
+    void setTaskCore( BaseType_t uxCoreId ) { SID_QUEUE_CORE = uxCoreId; };
+    void setTaskPriority( UBaseType_t uxPriority ) { SID_QUEUE_PRIORITY = uxPriority; };
+    void clearQueue();
+    bool xQueueIsQueueEmpty();
+
+    void setSPIHost( sid_spi_host_device_t devnum ) { SID_SPI_HOST = devnum; }
 
     void sidSetVolume( int chip,uint8_t vol);
     void setFrequency(int voice, uint16_t frequency);
@@ -229,8 +251,11 @@ class SID6581
 
   protected:
 
+    sid_spi_host_device_t SID_SPI_HOST = SID_SPI1_HOST; // SID_SPI1_HOST=SPI, SID_SPI2_HOST=HSPI, SID_SPI3_HOST=VSPI_HOST
+
+    const i2s_port_t i2s_num = (i2s_port_t)0;
     int  latch_pin;
-    const int sid_spiClk = 20000000;
+    const uint32_t sid_spiClk = 25000000;
     int volume[5];
     SID_Control_t sid_control[5];
     uint8_t adcswrre, dataspi, chipcontrol;

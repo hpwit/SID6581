@@ -54,8 +54,8 @@
 
 // Only one USB port is necessary in this demo, but all pins must be declared.
 // /!\ Not all pins can be used, see the USB_Soft_Host examples for full pins list
-#define DP_P0  22  // always enabled
-#define DM_P0  21  // always enabled
+#define DP_P0  SCL  // always enabled
+#define DM_P0  SDA  // always enabled
 #define DP_P1  -1
 #define DM_P1  -1
 #define DP_P2  -1
@@ -65,7 +65,7 @@
 
 
 // uncomment this if you have a display supported by LovyanGFX
-//#define USE_DISPLAY
+#define USE_DISPLAY
 
 #ifdef USE_DISPLAY
 
@@ -87,7 +87,7 @@
 #endif
 
 
-static SID6581 sid;
+static SID6581* sid;
 KbdRptParser Prs;
 
 
@@ -120,23 +120,25 @@ static void my_USB_DetectCB( uint8_t usbNum, void * dev )
 void  change_instrument()
 {
   selectedIntrument = selectedIntrument%5;
+
   switch(selectedIntrument) {
     case 0:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>( &sid );
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano2>( sid );
     break;
     case 1:
-       SIDKeyBoardPlayer::changeAllInstruments<sid_piano5>( &sid );
+       SIDKeyBoardPlayer::changeAllInstruments<sid_piano5>( sid );
     break;
     case 2:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano>( &sid );
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano>( sid );
     break;
     case 3:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano3>( &sid );
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano3>( sid );
     break;
     case 4:
-      SIDKeyBoardPlayer::changeAllInstruments<sid_piano4>( &sid );
+      SIDKeyBoardPlayer::changeAllInstruments<sid_piano4>( sid );
     break;
   }
+  vTaskDelay(20);
   Serial.printf("Changed instrument to #%d\n", selectedIntrument);
   selectedIntrument++;
 }
@@ -226,7 +228,7 @@ void HIDEventHandler( uint8_t mod, uint8_t key, keyToMidiEvents evt )
   }
 }
 
-
+static const float deg2rad = M_PI / 180.0;
 
 
 void setup()
@@ -239,16 +241,19 @@ void setup()
     Serial.begin(115200);
   #endif
 
-  // start the SID
-  sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
-  SIDKeyBoardPlayer::KeyBoardPlayer(&sid, NUMBER_OF_VOICES);
+  sid = new SID6581();
 
-  sid.sidSetVolume(0,15);
-  sid.sidSetVolume(1,15);
-  sid.sidSetVolume(2,15);
+  // start the SID
+  sid->begin(SID_CLOCK,SID_DATA,SID_LATCH);
+  SIDKeyBoardPlayer::KeyBoardPlayer( sid, NUMBER_OF_VOICES);
+
+  sid->sidSetVolume(0,15);
+  sid->sidSetVolume(1,15);
+  sid->sidSetVolume(2,15);
 
   // attach to USB event handler
   Prs.setEventHandler( HIDEventHandler );
+  USH.setTaskCore(0);
   // init the USB Host
   USH.init(
     (usb_pins_config_t){

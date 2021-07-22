@@ -168,7 +168,7 @@ void BufferedIndex::debugItem()
   bool BufferedIndex::openRamDiskFile( const char* name )
   {
     if( ramDiskFile.size > 0 ) {
-      log_d("RamDisk cache hit!");
+      log_v("RamDisk cache hit!");
       return true;
     }
     if( !open( name ) ) return -1;
@@ -177,8 +177,11 @@ void BufferedIndex::debugItem()
       log_e("Empty index file, giving up");
       return false;
     }
-    log_d("Creating ramdisk cache for file %s (%d bytes)", name, fileSize );
-    psramInit();
+    log_d("Creating ramdisk version of %s (%d bytes) from core #%d", name, fileSize, xPortGetCoreID() );
+    if( !psramInit() ) {
+      log_e("No psram detected, aborting");
+      return false;
+    }
     ramDiskFile.data = (uint8_t*)ps_calloc( fileSize, sizeof(uint8_t) + 1 );
     if( ramDiskFile.data == NULL ) {
       log_e("Failed to allocate %d bytes for ramdisk cache :-(", fileSize );
@@ -211,6 +214,24 @@ void BufferedIndex::debugItem()
   {
 
     if( !openRamDiskFile( haystack ) ) return -1;
+    if( needle == NULL || needle[0] == '\0' ) return -1;
+
+    size_t needlelen = strlen(needle);
+
+    if( lastSearch!= nullptr ) {
+      if( strcmp( needle, lastSearch ) == 0 ) {
+        log_v("Repeat search hit");
+        return lastOffset;
+      }
+      if( needlelen > strlen( lastSearch ) ) {
+        free( lastSearch );
+        lastSearch = (char*)sid_calloc(1, needlelen+1 );
+      }
+    } else {
+      lastSearch = (char*)sid_calloc(1, needlelen+1 );
+    }
+
+    snprintf( lastSearch, needlelen, "%s", needle);
 
     size_t offset = 0;
 
@@ -223,6 +244,8 @@ void BufferedIndex::debugItem()
       IndexItem->path[IndexItem->pathlen] = '\0';
       offset += IndexItem->pathlen;
       if( strcmp( needle, IndexItem->path ) == 0 ) {
+        log_d("Found offset: %d for %s", IndexItem->offset, needle );
+        lastOffset = IndexItem->offset;
         return IndexItem->offset;
       } // else debugItem();
     } while( offset + sizeof( size_t ) + 1 < ramDiskFile.size );
@@ -237,6 +260,25 @@ void BufferedIndex::debugItem()
   int64_t BufferedIndex::find( const char* haystack, const char* needle )
   {
     if( !open( haystack ) ) return -1;
+    if( needle == NULL || needle[0] == '\0' ) return -1;
+
+    size_t needlelen = strlen(needle);
+
+    if( lastSearch!= nullptr ) {
+      if( strcmp( needle, lastSearch ) == 0 ) {
+        log_v("Repeat search hit");
+        return lastOffset;
+      }
+      if( needlelen > strlen( lastSearch ) ) {
+        free( lastSearch );
+        lastSearch = (char*)sid_calloc(1, needlelen+1 );
+      }
+    } else {
+      lastSearch = (char*)sid_calloc(1, needlelen+1 );
+    }
+
+    snprintf( lastSearch, needlelen, "%s", needle);
+
     while( indexFile.available() ) {
       indexFile.readBytes( (char*)&IndexItem->offset, sizeof( size_t ) );
       IndexItem->pathlen = indexFile.read();
@@ -244,6 +286,7 @@ void BufferedIndex::debugItem()
       IndexItem->path[IndexItem->pathlen] = '\0';
       if( strcmp( needle, IndexItem->path ) == 0 ) {
         close();
+        lastOffset = IndexItem->offset;
         return IndexItem->offset;
       } // else debugItem();
     }
@@ -252,6 +295,7 @@ void BufferedIndex::debugItem()
   }
 
 #endif
+
 
 
 // build an index based on FILE PATH in order to provide
@@ -304,6 +348,7 @@ bool BufferedIndex::buildSIDPathIndex( const char* md5Path, const char* idxpath 
       snprintf( folderName, bfrsize, "%s", tmpName );
       foldersCount++;
       addItem( offset, folderName );
+      // TODO: index item words
       if( progressCb != nullptr ) progressCb( offset, md5Size );
     }
   }
@@ -316,11 +361,12 @@ bool BufferedIndex::buildSIDPathIndex( const char* md5Path, const char* idxpath 
   free( bufferstr  );
 
   log_d("[%d] Total folders: %d", ESP.getFreeHeap(), foldersCount );
+
   return true;
 }
 
 
-// build folders structure and store md5 hashes in different
+// build folders structure and shard md5 hashes in different
 // files for faster lookup, only useful with custom-made
 // folders or non-HVSC SID collection
 bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpath, bool purge )
@@ -333,14 +379,14 @@ bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpa
 
   if( purge ) {
     // recursively delete files
-    char folders[] = "0123456789abcdef";
+    char shards[] = "0123456789abcdef";
     String fname = gnu_basename( md5Path );
     size_t pathlen = strlen( md5Path ) - fname.length();
     memcpy( path, md5Path, pathlen );
     path[pathlen] = '\0';
     for( int i=0;i<16;i++ ) {
       char folder[255] = {0};
-      char sub[2] = { folders[i], '\0' };
+      char sub[2] = { shards[i], '\0' };
       sprintf( folder, "%s%s", path, sub );
       File root = fs->open( folder );
       if(!root){
@@ -353,8 +399,8 @@ bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpa
       }
       File file = root.openNextFile();
       while( file ) {
-        log_w("Deleting %s", file.name() );
-        fs->remove( file.name() );
+        log_w("Deleting %s", fs_file_path( &file ) );
+        fs->remove( fs_file_path( &file ) );
         file = root.openNextFile();
       }
       root.close();
@@ -467,7 +513,7 @@ MD5FileParser::MD5FileParser( MD5FileConfig *config ) : cfg( config)
 }
 
 
-bool MD5FileParser::getDuration( SID_Meta_t *song)
+bool MD5FileParser::getDurations( SID_Meta_t *song)
 {
 
   if( strcmp( song->md5, "00000000000000000000000000000000" ) == 0 && cfg->lookupMethod == MD5_RAINBOW_LOOKUP )
@@ -498,8 +544,21 @@ bool MD5FileParser::reset()
 }
 
 
-// fastest lookup for HVSC
+
+
+// fastest lookup for HVSC, search *folder name* offset in md5 *index* first,
+// then seek and search *file name* in md5 *file*
+// this is assuming all MD5 Hashes are alphabetically ordered (at least their folder names)
 bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
+{
+  int64_t offset = getOffsetFromSIDPath( song, true );
+  return offset > -1;
+}
+
+
+// same as getDurationsFromSIDPath but returns the offset in the md5 file
+// can be used for keyword indexing
+int64_t MD5FileParser::getOffsetFromSIDPath( SID_Meta_t *song, bool populate )
 {
   if( ! cfg->fs->exists( cfg->md5idxpath ) ) {
     log_e("MD5 Index file is missing, aborting");
@@ -513,11 +572,21 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
   char MD5FolderPath[255] = {0};
   char MD5FilePath[255]   = {0};
 
-  memcpy( MD5FilePath, track+strlen(cfg->sidfolder), strlen(track)+1 ); //
-  memcpy( MD5FolderPath, track+strlen(cfg->sidfolder), strlen(track)+1 ); // remove SID_FOLDER from 'dirty' path
+  if( String(track).startsWith( cfg->sidfolder ) ) {
+    memcpy( MD5FilePath,   track+strlen(cfg->sidfolder), strlen(track)+1 ); // remove SID_FOLDER from 'dirty' path
+    memcpy( MD5FolderPath, track+strlen(cfg->sidfolder), strlen(track)+1 ); // remove SID_FOLDER from 'dirty' path
+  } else {
+    memcpy( MD5FilePath,   track, strlen(track)+1 );
+    memcpy( MD5FolderPath, track, strlen(track)+1 );
+  }
+
   MD5FolderPath[strlen(MD5FolderPath)-MD5Index->gnu_basename(MD5FolderPath).length()] = '\0'; // remove filename from path (truncate)
 
+  // TODO: respoffset will probably be -1, give up there
+  if( MD5FolderPath[0] == '\0' ) return -1;
+
   int64_t respoffset =  MD5Index->find( cfg->md5idxpath, MD5FolderPath);
+  int64_t foundoffset = -1;
 
   if( respoffset > -1 ) {
     log_v("Offset for %s is %d", MD5FolderPath, int(respoffset) );
@@ -528,6 +597,7 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
     String sidneedle = String("; ") + String( MD5FilePath );
 
     while( MD5File.available() ) {
+      int64_t itemoffset = MD5File.position();
       fname  = MD5File.readStringUntil('\n'); // read filename
       md5line = MD5File.readStringUntil('\n'); // read md5 hash and song lengths
       if( fname[0]!=';') {
@@ -535,38 +605,43 @@ bool MD5FileParser::getDurationsFromSIDPath( SID_Meta_t *song )
         break; // something wrong, not a valid offset
       }
       if( !fname.startsWith( md5needle ) ) {
+        // out of folder, no need to seek further
         log_d("Broke out of folder at offset %d while md5needle=%s, sidneedle=%s, fname=%s, md5line=%s", MD5File.position(), md5needle.c_str(), sidneedle.c_str(), fname.c_str(), md5line.c_str() );
-        break; // out of folder
+        break;
       }
       if( fname.startsWith( sidneedle ) ) { // found !
         found = true;
+        foundoffset = itemoffset;
         break;
       } else {
         log_v("[SKIPPING] [%s]!=[%s], md5needle=%s, md5line=%s", fname.c_str(), sidneedle.c_str(), md5needle.c_str(), md5line.c_str() );
       }
     }
     MD5File.close();
+
     if( found ) {
-      log_d("Found hash for file %s ( %s => %s ) : %s", track, MD5FilePath, MD5FolderPath, md5line.c_str() );
-      if( song->durations != nullptr ) free( song->durations );
-      song->durations = (uint32_t*)sid_calloc( song->subsongs, sizeof(uint32_t) );
-      int subsongs = getDurationsFromMd5String( md5line, song );
-      if( subsongs == song->subsongs ) {
-        for( int i=0; i<subsongs; i++ ) {
-          log_d("Subsong #%d: %d millis", i, int( song->durations[i] ) );
+      log_v("Found song lengths at offset %d for file %s ( %s => %s ) : %s", int(foundoffset), track, MD5FilePath, MD5FolderPath, md5line.c_str() );
+      if( populate ) {
+        if( song->durations != nullptr ) free( song->durations );
+        song->durations = (uint32_t*)sid_calloc( song->subsongs, sizeof(uint32_t) );
+        int subsongs = getDurationsFromMd5String( md5line, song );
+        if( subsongs == song->subsongs ) {
+          for( int i=0; i<subsongs; i++ ) {
+            log_v("Subsong #%d: %d millis", i, int( song->durations[i] ) );
+          }
+        } else {
+          log_e("Subsongs count mismatch %d vs %d", subsongs, song->subsongs );
         }
-      } else {
-        log_e("Subsongs count mismatch %d vs %d", subsongs, song->subsongs );
       }
     } else {
-      log_w("Hash not found for %s", MD5FilePath );
+      log_w("Info not found for %s", MD5FilePath );
     }
   } else {
     log_w("Offset not found in folder '%s' for file '%s'", MD5FolderPath, song->filename );
   }
-  log_d("Seeking md5 hash info took %d millis for %s and %s", int( millis()-start_seek ), song->filename, found ? "succeeded" : "failed" );
+  log_v("Seeking info took %d millis for %s and %s", int( millis()-start_seek ), song->filename, found ? "succeeded" : "failed" );
 
-  return found;
+  return foundoffset;
 }
 
 
@@ -687,7 +762,7 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
       case ' ': // next or last duration
         if( parsedIndex > 0 ) {
           parsedTime[parsedIndex+1] = '\0'; // null terminate
-          int mm,ss,SSS; // for storing the extracted time values
+          uint16_t mm,ss,SSS; // for storing the extracted time values
           sscanf( parsedTime, "%d:%d.%d", &mm, &ss, &SSS );
           song->durations[parsedTimeCount] = (mm*60*1000)+(ss*1000)+SSS;
           log_v("Subsong #%d: %s (mm:ss.SSS) / %d (ms)", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );

@@ -72,17 +72,19 @@ void MOS_CPU_Controls::setmem( uint16_t addr,uint8_t value )
 {
   if (addr >= 0xd400 and addr <=0xd620) {
     mem[addr] = value;
-    int based=(addr>>8)-0xd4;
+    int based = (addr>>8) - 0xd4;
     long int t = 0;
 
     if(frame) {
-      if(wait == 0)
+      if(wait == 0) {
         t = 20000;
-      else
+      } else {
         t = wait;
+      }
       t = t-totalinframe;
-      if(t<0)
+      if(t<0) {
         t = 20000;
+      }
       frame = false;
       //reset = 0;
       wait = 0;
@@ -90,31 +92,29 @@ void MOS_CPU_Controls::setmem( uint16_t addr,uint8_t value )
     }
 
     uint16_t decal = t+currentoffset-previousoffset;
-    addr = (addr&0xFF)+32*based;
+    addr = ( addr & 0xff ) + 32*based;
     //log_v("%x %x %d\n",addr,value,decal);
-    //log_v("%d %d %ld")
-    if((addr%32)%24==0 and (addr%32)>0) { //we deal with the sound
+    auto addrmod32 = addr%32;
+    if( addrmod32%24 == 0 && addrmod32 > 0 ) { // we deal with the sound
       //log_v("sound :%x %x\n",addr,value&0xf);
       //sidReg->save24=*(uint8_t*)(d+1);
       value = (value& 0xf0) + ( ((value& 0x0f)*volume)/15 );
-
     }
     // if((addr%32)%7==4) {
     //   int d=value&0xf0;
     //   if(d!=128 && d!=64 && d!=32 && d!=16 && d!=0)
     //   log_v("waveform:%d %d\n",value&0xf0,addr);
     // }
-    sid.pushRegister(addr/32,addr%32,value);
-    decal=(decal*int_speed)/100;
-    //log_v("ff %d\n",decal);
+    sid.pushRegister( addr/32, addrmod32, value );
+    decal = ( decal*int_speed ) / 100; //log_v("ff %d\n",decal);
     // vTaskDelay only takes milliseconds and the delays are in microseconds but the frame switch can be up to 19ms hence to avoid blocking the cpu
     // we do a delayMicroseconds for the microseconds part and and vTaskDelay for the millisecond part
-    // maybe a minus to be added in oder to cope with the time to push and stuff
+    // maybe a minus to be added in order to cope with the time to push and stuff
     delayMicroseconds(decal%1000);
-    delay(decal/1000);
-    // sid.feedTheDog();
+    vTaskDelay(decal/1000);
+    sid.feedTheDog();
     //mem[addr] = value;
-    previousoffset=currentoffset;
+    previousoffset = currentoffset;
   } else {
     mem[addr] = value;
   }
@@ -131,24 +131,24 @@ uint16_t MOS_CPU_Controls::pcinc()
 
 void MOS_CPU_Controls::cpuReset()
 {
-  a    = 0;
-  x    = 0;
-  y    = 0;
-  p    = 0;
-  s    = 255;
-  pc   = getmem(0xfffc);
-  pc  |= 256 * getmem(0xfffd);
+  a   = 0;
+  x   = 0;
+  y   = 0;
+  p   = 0;
+  s   = 255;
+  pc  = getmem(0xfffc);
+  pc |= 256 * getmem(0xfffd);
 }
 
 
 void MOS_CPU_Controls::cpuResetTo( uint16_t npc, uint16_t na )
 {
-  a    = na | 0;
-  x    = 0;
-  y    = 0;
-  p    = 0;
-  s    = 255;
-  pc   = npc;
+  a  = na | 0;
+  x  = 0;
+  y  = 0;
+  p  = 0;
+  s  = 255;
+  pc = npc;
 }
 
 
@@ -391,13 +391,13 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
       setflags(flag_V, ((p & flag_C) ? 1 : 0) ^ ((p & flag_N) ? 1 : 0));
-      break;
+    break;
     case inst_and:
       bval = getaddr(addr);
       a &= bval;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
     case inst_asl:
       wval = getaddr(addr);
       wval <<= 1;
@@ -405,39 +405,39 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z,!(wval&0xff)); // warn: compliler doesn't like this inside 'case'
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, wval & 0x100);
-      break;
+    break;
     case inst_bcc:
       branch(!(p & flag_C));
-      break;
+    break;
     case inst_bcs:
       branch(p & flag_C);
-      break;
+    break;
     case inst_bne:
       branch(!(p & flag_Z));
-      break;
+    break;
     case inst_beq:
       branch(p & flag_Z);
-      break;
+    break;
     case inst_bpl:
       branch(!(p & flag_N));
-      break;
+    break;
     case inst_bmi:
       branch(p & flag_N);
-      break;
+    break;
     case inst_bvc:
       branch(!(p & flag_V));
-      break;
+    break;
     case inst_bvs:
       branch(p & flag_V);
-      break;
+    break;
     case inst_bit:
       bval = getaddr(addr);
       setflags(flag_Z, !(a & bval));
       setflags(flag_N, bval & 0x80);
       setflags(flag_V, bval & 0x40);
-      break;
+    break;
     case inst_brk:
-      pc=0;    // just quit per rockbox
+      pc = 0;    // just quit per rockbox
       //push(pc & 0xff);
       //push(pc >> 8);
       //push(p);
@@ -445,23 +445,23 @@ uint16_t MOS_CPU_Controls::cpuParse()
       // FIXME: should Z be set as well?
       //pc = getmem(0xfffe);
       //cycles += 7;
-      break;
+    break;
     case inst_clc:
       cycles += 2;
       setflags(flag_C, 0);
-      break;
+    break;
     case inst_cld:
       cycles += 2;
       setflags(flag_D, 0);
-      break;
+    break;
     case inst_cli:
       cycles += 2;
       setflags(flag_I, 0);
-      break;
+    break;
     case inst_clv:
       cycles += 2;
       setflags(flag_V, 0);
-      break;
+    break;
     case inst_cmp:
       bval = getaddr(addr);
       wval = a - bval;
@@ -471,7 +471,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !wval);
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, a >= bval);
-      break;
+    break;
     case inst_cpx:
       bval = getaddr(addr);
       wval = x - bval;
@@ -481,7 +481,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !wval);
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, x >= bval);
-      break;
+    break;
     case inst_cpy:
       bval = getaddr(addr);
       wval = y - bval;
@@ -491,7 +491,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !wval);
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, y >= bval);
-      break;
+    break;
     case inst_dec:
       bval = getaddr(addr);
       bval--;
@@ -501,7 +501,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setaddr(addr, bval);
       setflags(flag_Z, !bval);
       setflags(flag_N, bval & 0x80);
-      break;
+    break;
     case inst_dex:
       cycles += 2;
       x--;
@@ -509,7 +509,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       //if(x < 0) x += 256;
       setflags(flag_Z, !x);
       setflags(flag_N, x & 0x80);
-      break;
+    break;
     case inst_dey:
       cycles += 2;
       y--;
@@ -517,13 +517,13 @@ uint16_t MOS_CPU_Controls::cpuParse()
       //if(y < 0) y += 256;
       setflags(flag_Z, !y);
       setflags(flag_N, y & 0x80);
-      break;
+    break;
     case inst_eor:
       bval = getaddr(addr);
       a ^= bval;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
     case inst_inc:
       bval = getaddr(addr);
       bval++;
@@ -531,21 +531,21 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setaddr(addr, bval);
       setflags(flag_Z, !bval);
       setflags(flag_N, bval & 0x80);
-      break;
+    break;
     case inst_inx:
       cycles += 2;
       x++;
       x &= 0xff;
       setflags(flag_Z, !x);
       setflags(flag_N, x & 0x80);
-      break;
+    break;
     case inst_iny:
       cycles += 2;
       y++;
       y &= 0xff;
       setflags(flag_Z, !y);
       setflags(flag_N, y & 0x80);
-      break;
+    break;
     case inst_jmp:
       cycles += 3;
       wval = getmem(pcinc());
@@ -562,7 +562,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
         default:
         break; // wat ?
       }
-      break;
+    break;
     case inst_jsr:
       cycles += 6;
       push(((pc + 1) & 0xffff) >> 8);
@@ -570,22 +570,22 @@ uint16_t MOS_CPU_Controls::cpuParse()
       wval = getmem(pcinc());
       wval |= 256 * getmem(pcinc());
       pc = wval;
-      break;
+    break;
     case inst_lda:
       a = getaddr(addr);
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
     case inst_ldx:
       x = getaddr(addr);
       setflags(flag_Z, !x);
       setflags(flag_N, x & 0x80);
-      break;
+    break;
     case inst_ldy:
       y = getaddr(addr);
       setflags(flag_Z, !y);
       setflags(flag_N, y & 0x80);
-      break;
+    break;
     case inst_lsr:
       bval = getaddr(addr);
       wval = bval;
@@ -594,34 +594,34 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_Z, !wval);
       setflags(flag_N, wval & 0x80);
       setflags(flag_C, bval & 1);
-      break;
+    break;
     case inst_nop:
       cycles += 2;
-      break;
+    break;
     case inst_ora:
       bval = getaddr(addr);
       a |= bval;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
     case inst_pha:
       push(a);
       cycles += 3;
-      break;
+    break;
     case inst_php:
       push(p);
       cycles += 3;
-      break;
+    break;
     case inst_pla:
       a = pop();
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
       cycles += 4;
-      break;
+    break;
     case inst_plp:
       p = pop();
       cycles += 4;
-      break;
+    break;
     case inst_rol:
       bval = getaddr(addr);
       c = (p & flag_C) ? 1 : 0;
@@ -632,7 +632,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setaddr(addr, bval);
       setflags(flag_N, bval & 0x80);
       setflags(flag_Z, !bval);
-      break;
+    break;
     case inst_ror:
       bval = getaddr(addr);
       c = (p & flag_C) ? 128 : 0;
@@ -642,7 +642,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setaddr(addr, bval);
       setflags(flag_N, bval & 0x80);
       setflags(flag_Z, !bval);
-      break;
+    break;
     case inst_rti:
       // treat like RTS
     case inst_rts:
@@ -650,7 +650,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       wval |= 256 * pop();
       pc = wval + 1;
       cycles += 6;
-      break;
+    break;
     case inst_sbc:
     {
       bval = getaddr(addr) ^ 0xff;
@@ -666,60 +666,60 @@ uint16_t MOS_CPU_Controls::cpuParse()
     case inst_sec:
       cycles += 2;
       setflags(flag_C, 1);
-      break;
+    break;
     case inst_sed:
       cycles += 2;
       setflags(flag_D, 1);
-      break;
+    break;
     case inst_sei:
       cycles += 2;
       setflags(flag_I, 1);
-      break;
+    break;
     case inst_sta:
       putaddr(addr, a);
-      break;
+    break;
     case inst_stx:
       putaddr(addr, x);
-      break;
+    break;
     case inst_sty:
       putaddr(addr, y);
-      break;
+    break;
     case inst_tax:
       cycles += 2;
       x = a;
       setflags(flag_Z, !x);
       setflags(flag_N, x & 0x80);
-      break;
+    break;
     case inst_tay:
       cycles += 2;
       y = a;
       setflags(flag_Z, !y);
       setflags(flag_N, y & 0x80);
-      break;
+    break;
     case inst_tsx:
       cycles += 2;
       x = s;
       setflags(flag_Z, !x);
       setflags(flag_N, x & 0x80);
-      break;
+    break;
     case inst_txa:
       cycles += 2;
       a = x;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
     case inst_txs:
       cycles += 2;
       s = x;
-      break;
+    break;
     case inst_tya:
       cycles += 2;
       a = y;
       setflags(flag_Z, !a);
       setflags(flag_N, a & 0x80);
-      break;
+    break;
 
-// Routines for some undocumented opcodes
+    // Routines for some undocumented opcodes
 
     case inst_slo:
       bval = getaddr(addr);
@@ -731,7 +731,7 @@ uint16_t MOS_CPU_Controls::cpuParse()
       setflags(flag_N, a & 0x80);
     break;
     case inst_axs: // same at SBX
-      bval=getaddr(addr);
+      bval = getaddr(addr);
       setflags(flag_C, (x & a) >= bval);
       x = ((x & a) - bval) & 0xff;
       setflags(flag_Z,!x);
@@ -745,22 +745,22 @@ uint16_t MOS_CPU_Controls::cpuParse()
     break;
     case inst_sax:
       putaddr(addr,a & x);
-      break;
+    break;
     case inst_shy:
       putaddr(addr, y & (((addr - x) >> 8) + 1));
-      break;
+    break;
     case inst_shx:
       putaddr(addr, x & (((addr - y) >> 8) + 1));
-      break;
+    break;
     case inst_sha:
       putaddr(addr, a & x & (((addr - y) >> 8) + 1));
-      break;
+    break;
     case inst_shs:
       putaddr(addr, (s = a & x) & (((addr - y) >> 8) + 1));
-      break;
+    break;
     default:
-	  getaddr(addr);
-      break;
+      getaddr(addr);
+    break;
   }
   return cycles;
 }
@@ -770,26 +770,29 @@ uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
 {
   uint16_t ccl = 0;
 
-  a = na;	// Accumulator
-  x = 0;	// Index Register
-  y = 0;	// Index Register
-  p = 0;	// Status Register
-  s = 253;	// Stack Pointer (0xFD)
-  pc = npc;	// Program Counter
+  a = na;   // Accumulator
+  x = 0;    // Index Register
+  y = 0;    // Index Register
+  p = 0;    // Status Register
+  s = 253;  // Stack Pointer (0xFD)
+  pc = npc; // Program Counter
   push(0);
   push(0);
   int g=100;
   int timeout=0;
-  while (pc > 1 && timeout<100000 && g>0 ) {
+  while (pc > 1 && timeout<=100000 && g>0 ) {
     timeout++;
-    g=cpuParse();
-    currentoffset+=g;
-    ccl +=g;
-    //sid.feedTheDog ();
+    g = cpuParse();
+    currentoffset += g;
+    ccl += g;
+    sid.feedTheDog(); // arf arf arf
     //printf("cycles %d\n",currentoffset);
     //if(pc>64000)
     //if(plmo>=13595)
     //log_v("pc: %d net instr:%d\n",pc,mem[pc+1]);
+  }
+  if( timeout == 100000 ) {
+    log_e("Timeout!");
   }
   //plmo++;
   sid.feedTheDog();
@@ -802,14 +805,14 @@ uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
 void MOS_CPU_Controls::getNextFrame( uint16_t npc, uint8_t na )
 {
   for(int i=0;i<15000;i++) {
-    totalinframe=cpuJSR(npc,na);
-    wait=waitframe;
-    frame=true;
+    totalinframe = cpuJSR(npc,na);
+    wait = waitframe;
+    frame = true;
     //waitframe=0;
     int nRefreshCIA = (int)( ((19954 * (getmem(0xdc04) | (getmem(0xdc05) << 8)) / 0x4c00) + (getmem(0xdc04) | (getmem(0xdc05) << 8))  )  /2 )    ;
     if ((nRefreshCIA == 0) || speed==0) nRefreshCIA = 48000;
     // printf("tota l:%d\n",nRefreshCIA);
-    waitframe=nRefreshCIA;
+    waitframe = nRefreshCIA;
   }
 }
 

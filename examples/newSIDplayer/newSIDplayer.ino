@@ -5,7 +5,7 @@
 #define SID_PLAYER // load the sidPlayer module over the SID library
 #define SID_INSTRUMENTS // load the instruments along with the sidPlayer
 // pattern used by songdebug()
-#define SID_SONG_DEBUG_PATTERN "Fname: %s\nName: %s\nauthor: %s\nmd5: %s\npub: %s\nsub/start: %d/%d\nDurations: "
+#define SID_SONG_DEBUG_PATTERN "  Fname: %s\n  Name: %s\n  Author: %s\n  MD5: %s\n  Published: %s\n  Sub/start: %d/%d\n  Durations: "
 
 
 #include <SID6581.h> // https://github.com/hpwit/SID6581
@@ -23,7 +23,7 @@
 //#define SID_FS LITTLEFS
 
 
-static MD5Archive HSVC =
+static MD5Archive HVSC =
 {
   "local", // just a fancy name
   "local"  // dotfile name will be derivated from that
@@ -32,7 +32,7 @@ static MD5Archive HSVC =
 static MD5FileConfig MD5Config =
 {
   &SID_FS,          // SD, SPIFFS, LittleFS, Whatever filesystem
-  &HSVC,            // High Voltage SID Collection info, not needed for this demo but required by the object
+  &HVSC,            // High Voltage SID Collection info, not needed for this demo but required by the object
   "/s",             // path to the folder containing SID Files
   "/md5",           // path to the folder containing md5 stuff (where the indexes are created)
   "/md5/soundlength.md5", // full path to the md5 file
@@ -51,7 +51,7 @@ size_t songIndex = 0; // the current song being played
 bool autoplay = false;
 bool play_ended = false;
 
-bool playNextSong()
+bool playNextTrack()
 {
   if( songIndex+1 < songListStr.size() ) {
     songIndex++;
@@ -66,6 +66,7 @@ bool playNextSong()
     }
 
     if( !playable ) {
+      log_e("Track %s is NOT playable", songListStr[songIndex].c_str() );
       return false;
     } else {
       songdebug( &songList[songIndex] );
@@ -82,49 +83,61 @@ static void eventCallback( SIDTunesPlayer* player, sidEvent event )
 {
   switch( event ) {
     case SID_NEW_FILE:
-      Serial.printf( "[%d] SID_NEW_FILE: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_NEW_FILE: %s (%d songs)\n", ESP.getFreeHeap(), player->getFilename(), player->getSongsCount() );
     break;
     case SID_NEW_TRACK:
-      Serial.printf( "[%d] SID_NEW_TRACK: %s (%02d:%02d) %d/%d subsongs\n",
+      log_n( "[%d] SID_NEW_TRACK: %s (%02dm %02ds) %d/%d subsongs\n",
         ESP.getFreeHeap(),
         player->getName(),
         player->getCurrentTrackDuration()/60000,
         (player->getCurrentTrackDuration()/1000)%60,
-        player->currentsong+1,
-        player->subsongs
+        player->getCurrentSong()+1,
+        player->getSongsCount()
       );
     break;
     case SID_START_PLAY:
-      Serial.printf( "[%d] SID_START_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_START_PLAY: #%d from %s\n", ESP.getFreeHeap(), player->getCurrentSong()+1, player->getFilename() );
     break;
-    case SID_END_PLAY:
-      Serial.printf( "[%d] SID_END_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+    case SID_END_FILE:
+      log_n( "[%d] SID_END_FILE: %s\n", ESP.getFreeHeap(), player->getFilename() );
       if( autoplay ) {
-        playNextSong();
+        playNextTrack();
       } else {
+        log_n("All %d tracks have been played\n", songList.size() );
+        while(1) vTaskDelay(1);
         play_ended = true;
       }
     break;
+    case SID_END_PLAY:
+      log_n( "[%d] SID_END_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+    break;
     case SID_PAUSE_PLAY:
-      Serial.printf( "[%d] SID_PAUSE_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
+      log_n( "[%d] SID_PAUSE_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
     break;
     case SID_RESUME_PLAY:
       Serial.printf( "[%d] SID_RESUME_PLAY: %s\n", ESP.getFreeHeap(), player->getFilename() );
     break;
     case SID_END_TRACK:
-      Serial.printf("[%d] SID_END_TRACK\n", ESP.getFreeHeap());
+      log_n("[%d] SID_END_TRACK\n", ESP.getFreeHeap());
     break;
     case SID_STOP_TRACK:
-      Serial.printf("[%d] SID_STOP_TRACK\n", ESP.getFreeHeap());
+      log_n("[%d] SID_STOP_TRACK\n", ESP.getFreeHeap());
     break;
   }
 }
 
-
+#include <esp32/rom/rtc.h> // reset reason
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
+
+  // keep sanity
+  int rstinfo = rtc_get_reset_reason(0);
+  if( rstinfo == SW_CPU_RESET || rstinfo == TG1WDT_SYS_RESET ) {
+    Serial.println("Killing crashloop, press reset to restart");
+    while(1) vTaskDelay(1);
+  }
 
   if(!SID_FS.begin()) {
     Serial.println("Filesystem Mount Failed");
@@ -153,13 +166,13 @@ void setup() {
   // Do not forget to do "Tools-> ESP32 Scketch data upload"
   while(file) {
     if(file.isDirectory()) {
-      Serial.printf("Ignoring DIR: %s\n", file.name() );
+      Serial.printf("Ignoring DIR: %s\n", file.path() );
     } else {
-      if( String( file.name() ).endsWith(".sid" ) ) {
-        songListStr.push_back( file.name() );
+      if( String( file.path() ).endsWith(".sid" ) ) {
+        songListStr.push_back( file.path() );
         SID_Meta_t songinfo;
         songList.push_back( songinfo );
-        Serial.printf("[+] FILE: %-32s %6d bytes\n", file.name(), file.size() );
+        Serial.printf("[+] FILE: %-32s %6d bytes\n", file.path(), file.size() );
       }
     }
     file = root.openNextFile();
@@ -176,18 +189,20 @@ void setup() {
   sidPlayer->setPlayMode( SID_ALL_SONGS ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
   sidPlayer->setLoopMode( SID_LOOP_OFF );  // applies to subsongs in a track, values = SID_LOOP_ON, SID_LOOP_RANDOM or SID_LOOP_OFF
 
-  if( !playNextSong() ) {
+  if( !playNextTrack() ) {
     Serial.printf("[Error, %s is not playable ?", songListStr[songIndex].c_str() );
     Serial.println("Halting");
     while(1) vTaskDelay(1);
   }
-
+/*
   Serial.println();
-  Serial.printf("author:%s\n", sidPlayer->getAuthor());
-  Serial.printf("published:%s\n", sidPlayer->getPublished());
-  Serial.printf("name:%s\n", sidPlayer->getName());
-  Serial.printf("nb tunes:%d default tunes:%d\n", sidPlayer->getNumberOfTunesInSid(), sidPlayer->getDefaultTuneInSid() );
-
+  Serial.printf("sidPlayer->getAuthor()     = %s\n", sidPlayer->getAuthor());
+  Serial.printf("sidPlayer->getPublished()  = %s\n", sidPlayer->getPublished());
+  Serial.printf("sidPlayer->getName()       = %s\n", sidPlayer->getName());
+  Serial.printf("sidPlayer->getSongsCount() = %d\n", sidPlayer->getSongsCount() );
+  Serial.printf("sidPlayer->getStartSong()  = %d\n", sidPlayer->getStartSong() );
+*/
+  /*
   unsigned long now = millis();
   do {
     Serial.printf("Waveforms: [ 0x%02x, 0x%02x, 0x%02x ]\n",
@@ -196,6 +211,7 @@ void setup() {
       sidPlayer->sid.getWaveForm(2)
     );
   } while( now+5000 > millis() );
+  */
 
 
   delay(5000);
@@ -203,13 +219,19 @@ void setup() {
   sidPlayer->playNextSongInSid();
   delay(5000);
 
-  playNextSong();
-  delay(5000);
+  //while(1);
+
+  Serial.println("Playing next SID track");
+  playNextTrack();
+
   Serial.println();
-  Serial.printf("author:%s\n", sidPlayer->getAuthor());
-  Serial.printf("published:%s\n", sidPlayer->getPublished());
-  Serial.printf("name:%s\n", sidPlayer->getName());
-  Serial.printf("nb tunes:%d default tunes:%d\n", sidPlayer->getNumberOfTunesInSid(), sidPlayer->getDefaultTuneInSid() );
+  Serial.printf("sidPlayer->getAuthor()     = %s\n", sidPlayer->getAuthor());
+  Serial.printf("sidPlayer->getPublished()  = %s\n", sidPlayer->getPublished());
+  Serial.printf("sidPlayer->getName()       = %s\n", sidPlayer->getName());
+  Serial.printf("sidPlayer->getSongsCount() = %d\n", sidPlayer->getSongsCount() );
+  Serial.printf("sidPlayer->getStartSong()  = %d\n", sidPlayer->getStartSong() );
+
+  autoplay = true;
 
   //Serial.println("Halting");
   while(!play_ended) {
@@ -217,25 +239,9 @@ void setup() {
   }
 
   //sidPlayer->setDefaultDuration( 10000 ); // 10s per song max
-  autoplay = true;
-  playNextSong();
 
-  //delay(5000);
-  Serial.println("Pause the song");
-  sidPlayer->togglePause();
-  delay(4000);
-  Serial.println("restart the song");
-  sidPlayer->togglePause();
-  delay(3000);
-  Serial.println("low volume ");
-  sidPlayer->sid.setMaxVolume(3);
-  delay(3000);
-  Serial.println("medium");
-  sidPlayer->sid.setMaxVolume(7);
-  delay(3000);
-  Serial.println("hi volume");
-  sidPlayer->sid.setMaxVolume(15);
-  delay(6000);
+  //playNextTrack();
+
 
 }
 

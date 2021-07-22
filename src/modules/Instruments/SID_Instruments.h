@@ -33,6 +33,10 @@
 #include "SID6581.h"
 #include "samples.h"
 
+
+//#define SID_INSTRUMENTS_CORE 1-SID_QUEUE_CORE
+
+
 typedef struct
 {
   int note;
@@ -58,6 +62,8 @@ class sid_instrument
 
   public:
 
+    // allow destructor in inheritance
+    virtual ~sid_instrument() { }
     SID6581 *sid;
 
     int32_t  attack;
@@ -83,6 +89,13 @@ class sid_instrument
 
 static sid_instrument *current_instruments[15];
 
+static void assertInstrument( int voice )
+{
+  while( current_instruments[voice] == nullptr ) {
+    vTaskDelay(1);
+  }
+}
+
 
 template<int voice>
 class VoiceTask
@@ -104,22 +117,27 @@ class VoiceTask
       uint32_t sustain_time;
       SID_Command_t element;
       current_instruments[voice]->sid = sid;
+
+
       for( ;; ) {
-        xQueueReceive(SID_VoicesQueues[voice], &element, portMAX_DELAY);
-        if(element.velocity>0) {
+        xQueueReceive( SID_VoicesQueues[voice], &element, portMAX_DELAY );
+        assertInstrument( voice );
+        if( element.velocity > 0 ) {
           current_instruments[voice]->release=0;
           current_instruments[voice]->current_note=element.note;
           current_instruments[voice]->start_sample(voice,element.note);
           current_instruments[voice]->release = sid->voices[voice].release;
         }
         start_time=millis();
-        while(uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0) {
-          if(element.duration>0) {
-            if(millis()-start_time>=element.duration) {
+        while( uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0 ) {
+          assertInstrument( voice );
+          if( element.duration>0 ) {
+            if( millis()-start_time >= element.duration ) {
               sustain_time=millis();
               sid->setGate(voice,0);
-              while(uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0) {
-                if(millis()-sustain_time>=SID_SD_to_duration_ms[current_instruments[voice]->release]) {
+              while( uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0) {
+                assertInstrument( voice );
+                if( millis()-sustain_time >= SID_SD_to_duration_ms[current_instruments[voice]->release] ) {
                   sid->setFrequency(voice,0);
                   SID_VoicesBusy[voice]=false;
                   break;
@@ -132,15 +150,17 @@ class VoiceTask
               break;
             }
           }
-          if(element.velocity>0) {
+          assertInstrument( voice );
+          if( element.velocity > 0 ) {
             current_instruments[voice]->next_instruction(voice,element.note);
             vTaskDelay(1);
           } else {
             sustain_time=millis();
             sid->setGate(voice,0);
             SID_VoicesBusy[voice]=false;
-            while(uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0) {
-              if(millis()-sustain_time>=SID_SD_to_duration_ms[current_instruments[voice]->release]) {
+            while( uxQueueMessagesWaiting( SID_VoicesQueues[voice] )==0 ) {
+              assertInstrument( voice );
+              if( millis()-sustain_time >= SID_SD_to_duration_ms[current_instruments[voice]->release] ) {
                 sid->setFrequency(voice,0);
                 SID_VoicesBusy[voice]=false;
                 break;
@@ -191,8 +211,6 @@ class sid_piano5 : public sid_instrument
 
       vTaskDelay(df2[i*3+2]/1000+2);
     }
-
-
 };
 
 
@@ -337,6 +355,7 @@ class SIDKeyBoardPlayer
       keyboardnbofvoices=(nbofvoices%16);
       for( int i=0; i<nbofvoices; i++ ) {
         SID_TaskReadyBusy[i]=false;
+        current_instruments[i] = nullptr;
       }
       for( int i=0; i<nbofvoices; i++ ) {
         SID_VoicesQueues[i]= xQueueCreate( 10, sizeof( SID_Command_t ) );
@@ -348,52 +367,52 @@ class SIDKeyBoardPlayer
           //taskName(I);
         }
       }
-
+      BaseType_t SID_INSTRUMENTS_CORE = 1-sid->SID_QUEUE_CORE;
 
       if(nbofvoices>=1) {
-        xTaskCreate( VoiceTask<0>::vTaskCode, "VoiceTask1",  2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[0] );
+        xTaskCreatePinnedToCore( VoiceTask<0>::vTaskCode, "VoiceTask1",  2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[0], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=2) {
-        xTaskCreate( VoiceTask<1>::vTaskCode, "VoiceTask2", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[1] );
+        xTaskCreatePinnedToCore( VoiceTask<1>::vTaskCode, "VoiceTask2", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[1], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=3) {
-        xTaskCreate( VoiceTask<2>::vTaskCode, "VoiceTask3", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[2] );
+        xTaskCreatePinnedToCore( VoiceTask<2>::vTaskCode, "VoiceTask3", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[2], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=4) {
-        xTaskCreate( VoiceTask<3>::vTaskCode, "VoiceTask4", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[3] );
+        xTaskCreatePinnedToCore( VoiceTask<3>::vTaskCode, "VoiceTask4", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[3], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=5) {
-        xTaskCreate( VoiceTask<4>::vTaskCode, "VoiceTask5", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[4] );
+        xTaskCreatePinnedToCore( VoiceTask<4>::vTaskCode, "VoiceTask5", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[4], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=6) {
-        xTaskCreate( VoiceTask<5>::vTaskCode, "VoiceTask6", 2048,(void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[5] );
+        xTaskCreatePinnedToCore( VoiceTask<5>::vTaskCode, "VoiceTask6", 2048,(void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[5], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=7) {
-        xTaskCreate( VoiceTask<6>::vTaskCode, "VoiceTask7", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[6] );
+        xTaskCreatePinnedToCore( VoiceTask<6>::vTaskCode, "VoiceTask7", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[6], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=8) {
-        xTaskCreate( VoiceTask<7>::vTaskCode, "VoiceTask8", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[7] );
+        xTaskCreatePinnedToCore( VoiceTask<7>::vTaskCode, "VoiceTask8", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[7], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=9) {
-        xTaskCreate( VoiceTask<8>::vTaskCode, "VoiceTask9", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[8] );
+        xTaskCreatePinnedToCore( VoiceTask<8>::vTaskCode, "VoiceTask9", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[8], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=10) {
-        xTaskCreate( VoiceTask<9>::vTaskCode, "VoiceTask10", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[9] );
+        xTaskCreatePinnedToCore( VoiceTask<9>::vTaskCode, "VoiceTask10", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[9], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=11) {
-        xTaskCreate( VoiceTask<10>::vTaskCode, "VoiceTask11", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[10] );
+        xTaskCreatePinnedToCore( VoiceTask<10>::vTaskCode, "VoiceTask11", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[10], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=12) {
-        xTaskCreate( VoiceTask<11>::vTaskCode, "VoiceTask12", 2048,(void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[11] );
+        xTaskCreatePinnedToCore( VoiceTask<11>::vTaskCode, "VoiceTask12", 2048,(void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[11], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=13) {
-        xTaskCreate( VoiceTask<12>::vTaskCode, "VoiceTask13", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[12] );
+        xTaskCreatePinnedToCore( VoiceTask<12>::vTaskCode, "VoiceTask13", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[12], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices>=14) {
-        xTaskCreate( VoiceTask<13>::vTaskCode, "VoiceTask14", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[13] );
+        xTaskCreatePinnedToCore( VoiceTask<13>::vTaskCode, "VoiceTask14", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[13], SID_INSTRUMENTS_CORE );
       }
       if(nbofvoices==15) {
-        xTaskCreate( VoiceTask<14>::vTaskCode, "VoiceTask15", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[14] );
+        xTaskCreatePinnedToCore( VoiceTask<14>::vTaskCode, "VoiceTask15", 2048, (void*)sid, tskIDLE_PRIORITY, & SID_xTaskHandles[14], SID_INSTRUMENTS_CORE );
       }
       changeAllInstruments<sid_piano4>( sid );
       while(allTaskReady());
@@ -403,20 +422,30 @@ class SIDKeyBoardPlayer
     template <typename instrument>static void changeAllInstruments( SID6581 *sid )
     {
       for(int i=0;i<keyboardnbofvoices;i++) {
-        current_instruments[i]= new instrument;
-        current_instruments[i]->sid = sid;
         sid->voices[i].release=0;
+        if( current_instruments[i] != nullptr ) {
+          delete current_instruments[i];
+          current_instruments[i] = nullptr;
+          vTaskDelay(1);
+        }
+        current_instruments[i] = new instrument;
+        current_instruments[i]->sid = sid;
       }
+      log_w("Free mem after instruments change: %d", ESP.getFreeHeap() );
     }
 
     template <typename instrument>static void changeInstrumentOnVoice( SID6581 *sid, int voice)
     {
       if(voice<15) {
-        current_instruments[voice]= new instrument;
-        current_instruments[voice]->sid = sid;
         sid->voices[voice].release=0;
+        if( current_instruments[voice] != nullptr ) {
+          delete current_instruments[voice];
+          current_instruments[voice] = nullptr;
+          vTaskDelay(1);
+        }
+        current_instruments[voice] = new instrument;
+        current_instruments[voice]->sid = sid;
       }
-
     }
 
     static void createnot() {

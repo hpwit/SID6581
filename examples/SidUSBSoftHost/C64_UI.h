@@ -67,7 +67,7 @@ const size_t keymargin = 1;
 const size_t kbmarginx = 6;
 const size_t kbmarginy = 50;
 
-TFT_eSprite *keyNoteSprite = new TFT_eSprite( &tft );
+static TFT_eSprite *keyNoteSprite = new TFT_eSprite( &tft );
 
 
 bool drawKey( char key, bool pushed )
@@ -119,7 +119,6 @@ void setupUI()
   tft.setTextSize(1);
   tft.setFont( &Font8x8C64 );
   tft.setTextColor( fgcolor, bgcolor );
-  tft.setTextDatum( TL_DATUM );
 
   // fortunately this is a monotype font :-)
   fontWidth  = tft.fontHeight(&Font8x8C64);
@@ -129,12 +128,20 @@ void setupUI()
   const char* l2 = "READY.";
 
   // draw the decoration text
-  tft.drawString(l1, 0, fontHeight );
+  tft.setTextDatum( TC_DATUM );
+  tft.drawString(l1, tft.width()/2, fontHeight );
+  tft.setTextDatum( TL_DATUM );
   tft.drawString(l2, 0, fontHeight*3 );
 
+  log_w("heap free before sprite [%dx%d] init (core #%d): %d", tft.width(), tft.height(), xPortGetCoreID(), ESP.getFreeHeap() );
 
-  keyNoteSprite->setPsram(false);
-  keyNoteSprite->createSprite( tft.width(), tft.height() );
+  //keyNoteSprite->setPsram(false);
+  //keyNoteSprite->setColorDepth( 8 );
+  void* sptr = keyNoteSprite->createSprite( tft.width(), tft.height() );
+  if( !sptr )  {
+    log_e("Can't create sprite, aborting");
+    while(1) vTaskDelay(1);
+  }
   keyNoteSprite->fillSprite( TFT_ORANGE ); // will be used as transparent color
 
   keyNoteSprite->setTextSize(1);
