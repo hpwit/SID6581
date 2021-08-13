@@ -9,7 +9,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        ref: 3.0.2-beta
+        ref: ${GITHUB_REF} # 3.0.2-beta
 
     - name: Compile all examples
       uses: ArminJo/arduino-test-compile@v3
