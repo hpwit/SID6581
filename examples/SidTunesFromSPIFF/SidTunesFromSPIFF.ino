@@ -1,8 +1,37 @@
-#define SID_CLOCK 25
-#define SID_DATA 15
-#define SID_LATCH 2
-#define SID_CLOCK_PIN 26 // optional if the SID already has an oscillator
-#define SID_PLAYER // load the sidPlayer module over the SID library
+
+#if defined (CONFIG_IDF_TARGET_ESP32)
+
+  #define PCB_V2_0_0
+
+  #if defined PCB_V2_0_0
+
+    #define SID_CLOCK 25
+    #define SID_DATA 15
+    #define SID_LATCH 2
+    #define SID_PHI_PIN 26 // optional if the board already has an oscillator
+    #define SID_PLAYER // load the sidPlayer module over the SID library
+
+  #elif defined PCB_V2_0_1
+
+    #define SID_CLOCK 25
+    #define SID_DATA 23
+    #define SID_LATCH 22
+    #define SID_PHI_PIN 26 // optional if the board already has an oscillator
+    #define SID_PLAYER // load the sidPlayer module over the SID library
+
+  #endif
+
+#elif defined (CONFIG_IDF_TARGET_ESP32S3) //|| defined (CONFIG_IDF_TARGET_ESP32S2)
+
+  #define SID_CLOCK   16 // multiplexer bus clock
+  #define SID_DATA    1 // multiplexer bus data
+  #define SID_LATCH   2 // multiplexer bus latch
+  #define SID_PHI_PIN 17  // PHI: optional if the board already has an oscillator
+  #define SID_PLAYER // load the sidPlayer module over the SID library
+
+#else
+  #error "Unsupported architecture, feel free to unlock and contribute!"
+#endif
 
 #include <SID6581.h> // https://github.com/hpwit/SID6581
 
@@ -115,28 +144,47 @@ void setup()
 {
   Serial.begin(115200);
 
+  delay(2000);
+  log_n("hallo");
+
   if( !SID_FS.begin() ) {
-    Serial.println("Filesystem mount failed");
+    log_n("Filesystem mount failed");
     while(1);
   }
 
   sidPlayer = new SIDTunesPlayer( &SID_FS );
   sidPlayer->setEventCallback( eventCallback );
+  sidPlayer->sid.setInvertedPins( true ); // use this if pins D{0-7} to 75HC595 are in reverse order
 
-  if( sidPlayer->begin( SID_CLOCK, SID_DATA, SID_LATCH, SID_CLOCK_PIN ) ) {
-    Serial.println("SID Player Begin OK");
+  if( sidPlayer->begin( SID_CLOCK, SID_DATA, SID_LATCH, SID_PHI_PIN ) ) {
+    log_n("SID Player Begin OK");
   } else {
-    Serial.println("SID Player failed to start ... duh !");
+    log_n("SID Player failed to start ... duh !");
     while(1);
   }
 
+
+  // set volume
+  //sidPlayer->sid.pushRegister(chip,0x18,sid_control[chip].mode_vol);
+  //while(1) {
+    //for( int i=0; i<255; i++ ) {
+      sidPlayer->sid.sidSetVolume(0,15);
+      sidPlayer->sid.sidSetVolume(1,15);
+      //delay(100);
+    //}
+    //delay(1000);
+  //}
+
+
+
   File root = SID_FS.open("/");
   if(!root){
-    Serial.println("- failed to open directory");
+    log_n("- failed to open directory");
     return;
   }
+
   if(!root.isDirectory()){
-    Serial.println(" - not a directory");
+    log_n(" - not a directory");
     return;
   }
 
@@ -145,7 +193,8 @@ void setup()
     if(file.isDirectory()) {
       Serial.printf("Ignoring DIR: %s\n", file.path() );
     } else {
-      if( String( file.path() ).endsWith(".sid" ) ) {
+      String filePathStr = String( file.path() );
+      if( filePathStr.endsWith(".sid" ) && ! filePathStr.startsWith("/b/") ) {
         songListStr.push_back( file.path() );
         SID_Meta_t songinfo;
         songList.push_back( songinfo );
@@ -156,8 +205,8 @@ void setup()
   }
 
   if( songListStr.size() == 0 ) {
-    Serial.println("No SID files have been found, go to 'Tools-> ESP32 Scketch data upload'");
-    Serial.println("Halting");
+    log_n("No SID files have been found, go to 'Tools-> ESP32 Scketch data upload'");
+    log_n("Halting");
     while(1) vTaskDelay(1);
   }
 
@@ -166,9 +215,9 @@ void setup()
   sidPlayer->setMaxVolume(15); //value between 0 and 15
 
   //sidPlayer->setDefaultDuration( 180000 ); // 3mn per song max for this example, comment this out to get full songs
-  sidPlayer->setDefaultDuration( 10000 ); // 10s per song max for this example, comment this out to get full songs
+  //sidPlayer->setDefaultDuration( 20000 ); // 20s per song max for this example, comment this out to get full songs
 
-  sidPlayer->setPlayMode( SID_ALL_SONGS ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
+  sidPlayer->setPlayMode( SID_ONE_SONG ); // applies to subsongs in a track, values = SID_ONE_SONG or SID_ALL_SONGS
   sidPlayer->setLoopMode( SID_LOOP_OFF );  // applies to subsongs in a track, values = SID_LOOP_ON, SID_LOOP_RANDOM or SID_LOOP_OFF
 
   srand(time(NULL));
@@ -181,5 +230,9 @@ void setup()
 
 void loop()
 {
-
+  if( Serial.available() ) {
+    while( Serial.available() ) Serial.read();
+    playNextTrack();
+    //log_e("Stopped");
+  }
 }

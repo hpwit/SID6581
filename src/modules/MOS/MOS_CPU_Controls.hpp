@@ -31,7 +31,7 @@
 #ifndef _MOS_CPU_Controls_H_
 #define _MOS_CPU_Controls_H_
 
-#include "SID6581.h"
+#include "SID6581.hpp"
 #include "MOS_Registers.h"
 
 
@@ -80,6 +80,7 @@ class MOS_CPU_Controls
     void push( uint8_t val );
     void getNextFrame( uint16_t npc, uint8_t na );
     void branch( bool flag );
+    void feedTheDog();
 
 };
 

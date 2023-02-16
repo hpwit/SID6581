@@ -32,13 +32,17 @@
 #define _SID_PLAYER_H_
 
 #include <FS.h>
-#include "SID6581.h"
+#include "SID6581.hpp"
 
 #ifndef NO_HVSC_INDEXER
-#include "../HVSC/SID_HVSC_Indexer.h"
+#include "../HVSC/SID_HVSC_Indexer.hpp"
 #endif
 
-#include "../MOS/MOS_CPU_Controls.h"
+#ifndef NO_DEEPSID
+#include "../Deepsid/Deepsid.hpp"
+#endif
+
+#include "../MOS/MOS_CPU_Controls.hpp"
 #include "SID_Track.h"
 
 /*
@@ -55,17 +59,18 @@
   #warning "User defined PLAYER CORE"
 #endif
 */
-#ifndef SID_CPU_TASK_PRIORITY
-  #define SID_CPU_TASK_PRIORITY 5
-#else
-  #warning "User defined CPU TASK PRIORITY"
-#endif
+// #ifndef SID_CPU_TASK_PRIORITY
+//   #define SID_CPU_TASK_PRIORITY 5
+// #else
+//   #warning "User defined CPU TASK PRIORITY"
+// #endif
+//
+// #ifndef SID_PLAYER_TASK_PRIORITY
+//   #define SID_PLAYER_TASK_PRIORITY 1
+// #else
+//   #warning "User defined PLAYER TASK PRIORITY"
+// #endif
 
-#ifndef SID_PLAYER_TASK_PRIORITY
-  #define SID_PLAYER_TASK_PRIORITY 0
-#else
-  #warning "User defined PLAYER TASK PRIORITY"
-#endif
 
 
 enum sidEvent
@@ -114,6 +119,22 @@ class SIDTunesPlayer : public MOS_CPU_Controls
 
     bool begin(int clock_pin,int data_pin, int latch );
     bool begin(int clock_pin,int data_pin, int latch,int sid_clock_pin);
+
+
+    BaseType_t  SID_AUDIO_CORE  = 0; // task sending SID cpu instructions
+    BaseType_t  SID_PLAYER_CORE = 0; // task handling play/pause controls
+
+    UBaseType_t SID_AUDIO_PRIORITY  = 5;
+    UBaseType_t SID_PLAYER_PRIORITY = 1;
+    //#define SID_CPU_TASK_PRIORITY 5
+    //#define SID_PLAYER_TASK_PRIORITY 1
+
+
+    //UBaseType_t SID_QUEUE_PRIORITY = 3;
+
+    //void setTaskCore( BaseType_t uxCoreId ) { SID_QUEUE_CORE = uxCoreId; };
+    //void setTaskPriority( UBaseType_t uxPriority ) { SID_QUEUE_PRIORITY = uxPriority; };
+
 
     void reset();
     void kill();
@@ -178,6 +199,8 @@ class SIDTunesPlayer : public MOS_CPU_Controls
     uint8_t getSongsCount();
     uint8_t getCurrentSong();
     uint8_t getStartSong();
+
+    uint8_t getMaxVolume();
 
   private:
 
@@ -253,7 +276,7 @@ class SIDTune
     uint8_t  data_offset;
 
     uint8_t  currentsong; // zero-indexed song position
-    uint32_t duration;
+    uint32_t duration; // song duration
     uint32_t speed;
 
     uint8_t clock  = 0x00;
@@ -316,12 +339,12 @@ class SIDTune
 
 
 
-static void printspan( const char*title, const char*val )
+static void printspan2( const char*title, const char*val )
 {
   Serial.printf("│ %-18s%-42s │\n", title, val );
 }
 
-static void printspan( const char*t1, const char*v1, const char*t2, const char*v2 )
+static void printspan4( const char*t1, const char*v1, const char*t2, const char*v2 )
 {
   Serial.printf("│ %-18s%-12s%-18s%-12s │\n", t1, v1, t2, v2 );
 }
@@ -345,7 +368,7 @@ static void printspanln( bool openclose=false, bool is_hr=false )
     if( is_hr ) {
       Serial.printf("├─%s─┤\n", fillLine);
     } else {
-      printspan("", "", "", "");
+      printspan4("", "", "", "");
     }
   }
 }
@@ -372,21 +395,21 @@ static void tunedebug( SIDTune* tune )
   Serial.printf("│ %-60s │\n", (const char*)tune->trackinfo->filename );
   printspanln(false, true);
   printspanln();
-  printspan("  Title", (const char*)tune->trackinfo->name );
-  printspan("  Author", (const char*)tune->trackinfo->author );
-  printspan("  Released", (const char*)tune->trackinfo->published );
+  printspan2("  Title", (const char*)tune->trackinfo->name );
+  printspan2("  Author", (const char*)tune->trackinfo->author );
+  printspan2("  Released", (const char*)tune->trackinfo->published );
   printspanln();
-  printspan("  Load Address", hexString16(tune->load_addr),        "Number of tunes", String(tune->trackinfo->subsongs).c_str() );
-  printspan("  Init Address", hexString16(tune->init_addr),        "Default tune", String(tune->trackinfo->startsong).c_str() );
-  printspan("  Play Address", hexString16(tune->play_addr),        "Speed", hexString32(tune->speed) );
-  printspan("  RelocStartPage", hexString16(tune->relocStartPage), "RelocPages" , String(tune->relocPages).c_str() );
+  printspan4("  Load Address", hexString16(tune->load_addr),        "Number of tunes", String(tune->trackinfo->subsongs).c_str() );
+  printspan4("  Init Address", hexString16(tune->init_addr),        "Default tune", String(tune->trackinfo->startsong).c_str() );
+  printspan4("  Play Address", hexString16(tune->play_addr),        "Speed", hexString32(tune->speed) );
+  printspan4("  RelocStartPage", hexString16(tune->relocStartPage), "RelocPages" , String(tune->relocPages).c_str() );
   printspanln();
-  printspan("  SID Model", tune->getSidModelStr(),                 "Clock", tune->getClockStr() ); // TODO: name model (1=6581, 2=8580) and clock (1=PAL, 2=NTSC)
+  printspan4("  SID Model", tune->getSidModelStr(),                 "Clock", tune->getClockStr() ); // TODO: name model (1=6581, 2=8580) and clock (1=PAL, 2=NTSC)
   printspanln();
-  printspan("  File Format", (const char*)tune->sidtype,           "BASIC", tune->musPlay?"true":"false" );
-  printspan("  Format Version", String(tune->version).c_str(),     "PlaySID Specific", tune->psidSpecific?"true":"false" );
+  printspan4("  File Format", (const char*)tune->sidtype,           "BASIC", tune->musPlay?"true":"false" );
+  printspan4("  Format Version", String(tune->version).c_str(),     "PlaySID Specific", tune->psidSpecific?"true":"false" );
   printspanln();
-  printspan("  MD5", (const char*)tune->trackinfo->md5 );
+  printspan2("  MD5", (const char*)tune->trackinfo->md5 );
   printspanln();
   printspanln(false, true);
   //printspan("  Default Duration (ms)", String(tune->default_song_duration).c_str() );
@@ -400,8 +423,8 @@ static void tunedebug( SIDTune* tune )
 
 
   if( tune->trackinfo->subsongs>0 ) {
-    size_t found = 0;
-    printspan("  Song#", "Speed", "Duration", "" );
+    //size_t found = 0;
+    printspan4("  Song#", "Speed", "Duration", "" );
     Serial.println("│ ──────────────────────────────────────────────────────────── │");
     //printspan("  ─────", "─────", "────────", "" );
     for( int i=0; i < tune->trackinfo->subsongs; i++ ) {
@@ -421,7 +444,7 @@ static void tunedebug( SIDTune* tune )
           }
         }
       }
-      printspan( String("  #"+String(i)).c_str(), String(tune->speedsong[i]).c_str(), (const char*)songduration, "" );
+      printspan4( String("  #"+String(i)).c_str(), String(tune->speedsong[i]).c_str(), (const char*)songduration, "" );
     }
   }
   printspanln();

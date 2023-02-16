@@ -28,7 +28,42 @@
  *
 \*/
 
-#include "MOS_CPU_Controls.h"
+#include "MOS_CPU_Controls.hpp"
+
+
+
+#include "soc/timer_group_struct.h"
+#include "soc/timer_group_reg.h"
+
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+  #define TIMERG0_wdt_wprotect TIMERG0.wdtwprotect.wdt_wkey
+  #define TIMERG1_wdt_wprotect TIMERG1.wdtwprotect.wdt_wkey
+  #define TIMERG0_wdt_feed     TIMERG0.wdtfeed.wdt_feed
+  #define TIMERG1_wdt_feed     TIMERG0.wdtfeed.wdt_feed
+  #define TIMER_WRITE_ENABLE   TIMG_WDT_WKEY_V
+#elif defined (CONFIG_IDF_TARGET_ESP32) //|| defined (CONFIG_IDF_TARGET_ESP32S2)
+  #define TIMERG0_wdt_wprotect TIMERG0.wdt_wprotect
+  #define TIMERG1_wdt_wprotect TIMERG1.wdt_wprotect
+  #define TIMERG0_wdt_feed     TIMERG0.wdt_feed
+  #define TIMERG1_wdt_feed     TIMERG0.wdt_feed
+  #define TIMER_WRITE_ENABLE   TIMG_WDT_WKEY_VALUE
+#else
+  #error "Unsupported architecture!"
+#endif
+
+
+void MOS_CPU_Controls::feedTheDog()
+{
+  // feed dog 0
+  TIMERG0_wdt_wprotect=TIMER_WRITE_ENABLE; // write enable
+  TIMERG0_wdt_feed=1;                       // feed dog
+  TIMERG0_wdt_wprotect=0;                   // write protect
+  // feed dog 1
+  TIMERG1_wdt_wprotect=TIMER_WRITE_ENABLE; // write enable
+  TIMERG1_wdt_feed=1;                       // feed dog
+  TIMERG1_wdt_wprotect=0;                   // write protect
+}
+
 
 
 void MOS_CPU_Controls::setflags( flag_enum flag, int cond )
@@ -112,7 +147,7 @@ void MOS_CPU_Controls::setmem( uint16_t addr,uint8_t value )
     // maybe a minus to be added in order to cope with the time to push and stuff
     delayMicroseconds(decal%1000);
     vTaskDelay(decal/1000);
-    sid.feedTheDog();
+    feedTheDog();
     //mem[addr] = value;
     previousoffset = currentoffset;
   } else {
@@ -785,7 +820,8 @@ uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
     g = cpuParse();
     currentoffset += g;
     ccl += g;
-    sid.feedTheDog(); // arf arf arf
+    feedTheDog(); // arf arf arf
+    //vTaskDelay(1);
     //printf("cycles %d\n",currentoffset);
     //if(pc>64000)
     //if(plmo>=13595)
@@ -795,7 +831,7 @@ uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
     log_e("Timeout!");
   }
   //plmo++;
-  sid.feedTheDog();
+  feedTheDog();
   //log_v("time:%d %d %d\n",timeout,g,pc);
   //log_v("after parse:%d %d %x %x %x %ld\n",pc,wval ,mem[pc],mem[pc+1],mem[pc+2],plmo);
   return ccl;

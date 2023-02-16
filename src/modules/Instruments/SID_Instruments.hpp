@@ -30,7 +30,7 @@
 #ifndef _SID_INSTRUMENTS_H_
 #define _SID_INSTRUMENTS_H_
 
-#include "SID6581.h"
+#include "SID6581.hpp"
 #include "samples.h"
 
 

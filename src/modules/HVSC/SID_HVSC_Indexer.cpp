@@ -38,7 +38,7 @@
 
 \*/
 
-#include "SID_HVSC_Indexer.h"
+#include "SID_HVSC_Indexer.hpp"
 
 
 
@@ -372,7 +372,7 @@ bool BufferedIndex::buildSIDPathIndex( const char* md5Path, const char* idxpath 
 bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpath, bool purge )
 {
 
-  char path[255] = {0};
+  char path[256] = {0};
   sprintf( path, "%s/.HashIndexDone", folderpath );
 
   if( fs->exists( path ) ) purge = true;
@@ -385,9 +385,9 @@ bool BufferedIndex::buildSIDHashIndex( const char* md5Path, const char* folderpa
     memcpy( path, md5Path, pathlen );
     path[pathlen] = '\0';
     for( int i=0;i<16;i++ ) {
-      char folder[255] = {0};
+      char folder[264] = {0};
       char sub[2] = { shards[i], '\0' };
-      sprintf( folder, "%s%s", path, sub );
+      snprintf( folder, 265, "%s%s", path, sub );
       File root = fs->open( folder );
       if(!root){
         log_d("Skipping directory %s", folder);
@@ -566,7 +566,7 @@ int64_t MD5FileParser::getOffsetFromSIDPath( SID_Meta_t *song, bool populate )
   }
   bool found = false;
 
-  auto start_seek = millis();
+  __attribute__((unused)) auto start_seek = millis();
 
   const char* track = (const char*)&song->filename;
   char MD5FolderPath[255] = {0};
@@ -762,8 +762,9 @@ int MD5FileParser::getDurationsFromMd5String( String md5line, SID_Meta_t *song )
       case ' ': // next or last duration
         if( parsedIndex > 0 ) {
           parsedTime[parsedIndex+1] = '\0'; // null terminate
-          uint16_t mm,ss,SSS; // for storing the extracted time values
-          sscanf( parsedTime, "%d:%d.%d", &mm, &ss, &SSS );
+          unsigned int mm,ss,SSS; // for storing the extracted time values
+          int *_mm = (int*)&mm, *_ss=(int*)&ss, *_SSS=(int*)&SSS; // for stopping sscanf to complain about signed/unsigned in format
+          sscanf( parsedTime, "%d:%d.%d", _mm, _ss, _SSS );
           song->durations[parsedTimeCount] = (mm*60*1000)+(ss*1000)+SSS;
           log_v("Subsong #%d: %s (mm:ss.SSS) / %d (ms)", parsedTimeCount, parsedTime, song->durations[parsedTimeCount] );
           parsedTimeCount++;

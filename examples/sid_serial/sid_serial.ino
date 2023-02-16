@@ -23,7 +23,7 @@ struct serial_command {
 
 
 void SIDSerialPlayerTask(void * parameters) {
-      SIDSerialPlayerTaskLock  = xTaskGetCurrentTaskHandle();
+  SIDSerialPlayerTaskLock  = xTaskGetCurrentTaskHandle();
   for(;;) {
     serial_command element;
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -39,7 +39,7 @@ void SIDSerialPlayerTask(void * parameters) {
 
 
 void setup() {
-  // put your setup code here, to run once:
+
  Serial.begin(115200);
   //Serial1.begin(115200,SERIAL_8N1, 34);
   sid.begin(SID_CLOCK,SID_DATA,SID_LATCH);
