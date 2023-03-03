@@ -30,6 +30,9 @@
 
 #include "SID6581.hpp"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 
 //#include "freertos/queue.h"
 
@@ -46,7 +49,6 @@
 
 #define SID_CS_4 7
 #define SID_WRITE_4 6
-
 
 static TaskHandle_t  xPushToRegisterHandle = NULL;
 static QueueHandle_t xSIDQueue = NULL;
@@ -72,7 +74,8 @@ SID6581::~SID6581()
 
 SID6581::SID6581()
 {
-
+  reg_mux = xSemaphoreCreateMutex();
+  xSemaphoreGive(reg_mux);
 }
 
 
@@ -91,7 +94,6 @@ void SID6581::end()
   }
   log_i("SID6581 successfully ended");
 }
-
 
 
 bool SID6581::begin(int spi_clock_pin,int spi_data_pin, int latch,int sid_clock_pin)
@@ -123,6 +125,8 @@ bool SID6581::begin(int spi_clock_pin,int spi_data_pin, int latch,int sid_clock_
       .data_out_num = -1, //NULL,
       .data_in_num = I2S_PIN_NO_CHANGE
     };
+
+
 
     i2s_driver_install( i2s_num, &i2s_config, 0, NULL );   //install and start i2s driver
 
@@ -594,7 +598,7 @@ void SID6581::soundOff()
 }
 
 
-void  SID6581::setFilterFrequency(int chip,int filterfrequency)
+void SID6581::setFilterFrequency(int chip,int filterfrequency)
 {
   sid_control[chip].filterfrequency=filterfrequency;
   sid_control[chip].fc_lo=filterfrequency & 0b111;
@@ -684,7 +688,10 @@ void SID6581::resetsid()
 void SID6581::pushRegister(int chip,int address,uint8_t data)
 {
   // log_v("chip %d %x %x\n",chip,address,data);
+  xSemaphoreTake(reg_mux, portMAX_DELAY);
   sidregisters[chip*32+address] = data;
+  xSemaphoreGive(reg_mux);
+
   SID_Register_t sid_data;
   sid_data.address = address;
   sid_data.chip    = chip;
@@ -716,7 +723,7 @@ unsigned char SID6581::byte_reverse(unsigned char b)
 
 void SID6581::xPushRegisterTask(void *pvParameters)
 {
-  SID6581 * sid= (SID6581 *)pvParameters;
+  SID6581 *sid = (SID6581 *)pvParameters;
   SID_Register_t* sid_data = (SID_Register_t*)sid_calloc(1, sizeof(SID_Register_t*));
   for(;;) {
     xQueueReceive( xSIDQueue, sid_data, portMAX_DELAY );
@@ -775,3 +782,7 @@ void SID6581::cls()
 {
   dataspi=0;
 }
+
+
+
+#pragma GCC diagnostic pop

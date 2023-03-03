@@ -143,10 +143,10 @@ void MOS_CPU_Controls::setmem( uint16_t addr,uint8_t value )
     sid.pushRegister( addr/32, addrmod32, value );
     decal = ( decal*int_speed ) / 100; //log_v("ff %d\n",decal);
     // vTaskDelay only takes milliseconds and the delays are in microseconds but the frame switch can be up to 19ms hence to avoid blocking the cpu
-    // we do a delayMicroseconds for the microseconds part and and vTaskDelay for the millisecond part
+    // we do a delayMicroseconds() for the microseconds part and and delay() for the millisecond part
     // maybe a minus to be added in order to cope with the time to push and stuff
     delayMicroseconds(decal%1000);
-    vTaskDelay(decal/1000);
+    delay(decal/1000);
     feedTheDog();
     //mem[addr] = value;
     previousoffset = currentoffset;
@@ -821,7 +821,6 @@ uint16_t MOS_CPU_Controls::cpuJSR( uint16_t npc, uint8_t na )
     currentoffset += g;
     ccl += g;
     feedTheDog(); // arf arf arf
-    //vTaskDelay(1);
     //printf("cycles %d\n",currentoffset);
     //if(pc>64000)
     //if(plmo>=13595)

@@ -31,6 +31,7 @@
 #ifndef _SID6581_H_
 #define _SID6581_H_
 
+// note: its a bad idea to use psram
 // #if defined BOARD_HAS_PSRAM
 //   #define sid_malloc  ps_malloc
 //   #define sid_calloc  ps_calloc
@@ -786,6 +787,8 @@ typedef enum
   #endif
 } sid_spi_host_device_t;
 
+//static uint8_t sidregisters[15*32];// bytes
+
 
 class SID6581
 {
@@ -841,9 +844,17 @@ class SID6581
     void resetsid();
 
     uint8_t sidregisters[15*32];// bytes
-    //uint8_t* getRegisters(int chip=0) { return &sidregisters[chip*32]; }
+    xSemaphoreHandle reg_mux;
+
     uint8_t* getRegisters(int chip=0) { return &sidregisters[chip*32]; }
-    SID_Registers_t copyRegisters(int chip=0) { return SID_Registers_t( getRegisters(chip) ); }
+
+    void copyRegisters(SID_Registers_t *dest, int chip=0)
+    {
+      xSemaphoreTake(reg_mux, portMAX_DELAY);
+      //auto src = getRegisters(chip);
+      memcpy( dest, &sidregisters[chip*32], sizeof( SID_Registers_t ) );
+      xSemaphoreGive(reg_mux);
+    }
 
     // per-voice getters
     int getFrequency( int voice );
